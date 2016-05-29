@@ -248,6 +248,17 @@ class Scaper(object):
 
     def generate_soundscapes(self, fgs, bgs, outfile, bg_start=None, fg_start=None):
 
+        """
+
+        Parameters
+        ----------
+        fgs:        foreground files
+        bgs:        background files
+        outfile:    save soundscape as
+        bg_start:   background start times - needed?
+        fg_start:   foreground start times
+
+        """
         event_starts = []
         event_ends = []
         event_labels = []
