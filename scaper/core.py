@@ -31,30 +31,19 @@ class Scaper(object):
         self.num_scapes = num_scapes
         self.fg_path = fg_path              # foregrounds
         self.bg_path = bg_path              # backgrounds
-
         self.duration = duration
         self.fg_start = fg_start
         self.bg_start = bg_start
-
         self.snr = snr
-
-
         self.events = None
-        # self.fg_label = None
-        # self.bg_label = None
-
-        files = []
-        bit_rates = []
-        num_channels = []
-        samp_rates = []
 
         # # rename audio files to exclude space and comma chars
         # self.rename_files(self.fg_path)
         # self.rename_files(self.bg_path)
-
-        self.fgs = pd.DataFrame(columns=['file_name', 'bit_rate', 'num_channels', 'sample_rate'])
-        self.bgs = pd.DataFrame(columns=['file_name', 'bit_rate', 'num_channels', 'sample_rate'])
-
+        #
+        # self.fgs = pd.DataFrame(columns=['file_name', 'bit_rate', 'num_channels', 'sample_rate'])
+        # self.bgs = pd.DataFrame(columns=['file_name', 'bit_rate', 'num_channels', 'sample_rate'])
+        #
 
     def generate_jams(self, list, type, jams_outfile):
 
@@ -374,12 +363,6 @@ class Scaper(object):
         scape_file = outfile[:-4] + '.wav'
         scape_file_out = outfile + str(0) + '.wav'
 
-        print '\n'
-        print 'scape_file: '+scape_file
-        print '\n'
-        print bg_start_time
-        print self.duration
-
         # create pysox transformer for background
         bg = sox.Transformer(curr_bg_file, scape_file_out)
 
@@ -425,11 +408,10 @@ class Scaper(object):
             # tmp = 10 + len(self.fg_label)
             fg_out_file = curr_fg_file[:-4] + '_norm_out.wav'
 
-            # normalize bg to desired dB to ensure SNR
-            fg_gain = MAX_DB - self.snr
-
             # normalize fg to desired max dB
-            fg = self.normalize_file(curr_fg_file, MAX_DB, fg_out_file)
+            # this backwards
+            fg_gain = MAX_DB - self.snr
+            fg = self.normalize_file(curr_fg_file, fg_gain, fg_out_file)
 
             # pad to foreground start time
             fg.pad(fg_start_time,0)
@@ -496,5 +478,3 @@ if __name__ == '__main__':
     sc.set_snr(20)
     sc.set_duration(30)
     sc.generate_soundscapes(fg_label_paths, bg_label_paths, 'audio/output/this_scape.wav', fg_start=[5,10,15])
-
-    # print sc.fgs
