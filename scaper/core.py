@@ -8,13 +8,17 @@ SNR_MAX = 120
 MAX_DB = -3
 MIN_DURATION = 1
 
-    supported_bg_labels = ['car', 'crowd', 'music']
-supported_fg_labels = ['horn', 'machinery', 'siren', 'voice']
+# supported_bg_labels = ['car', 'crowd', 'music']
+# supported_fg_labels = ['horn', 'machinery', 'siren', 'voice']
 
 
-class Scaper_spec(object):
+class ScaperSpec(object):
 
     def __init__(self, bg_label, bg_duration=10):
+
+        print "ScaperSpec Created:"
+        print "~~~"
+
 
         # no background label provided, chose randomly
         if bg_label == None:
@@ -28,7 +32,10 @@ class Scaper_spec(object):
             labels = [bg_label]
 
         # evaluate background labels
-        self.bg_label = self.validate_label_paths(sc.bg_path, bg_label)
+        self.bg_label, self.bg_file  = self.validate_label_paths(sc.bg_path,bg_label,1)
+        print "~~~"
+        print self.bg_label
+        print self.bg_file
 
         # invalid background element duration, use default.. or random?
         if bg_duration == None or bg_duration <= 0:
@@ -37,19 +44,14 @@ class Scaper_spec(object):
         else:
             self.bg_duration = bg_duration
 
-        bg_spec = {"bg label"     : self.bg_label,
-                    "bg duration"   : self.bg_duration}
+        bg_spec = {"bg_label"       : self.bg_label,
+                    "bg_duration"   : self.bg_duration,
+                   "bg_source_file"      : self.bg_file}
 
         self.spec = []
+        self.spec.append(bg_spec)
 
-        self.build_spec(bg_spec)
-
-    def build_spec(self, the_dict):
-
-        self.spec.append(the_dict)
-
-
-    def validate_label_paths(self, path, labels):
+    def validate_label_paths(self, path, labels, num):
 
         # validate provided labels
         """
@@ -64,38 +66,48 @@ class Scaper_spec(object):
         validated_labels : the labels that have been validated, or assigned in case of failure
 
         """
+
+        # if a list of labels is passed
         for ndx in range(0, len(labels)):
 
-            # check if label directory exists
-            if not (os.path.isdir(os.path.join(path, labels[ndx]))):
-                warnings.warn("Warning, the supplied label does not exist in audio directory. Choosing label randomly")
-                available_labels = os.listdir(path)
-                # just ignores .DS_Store file
-                available_labels = [the_label for the_label in available_labels if not (the_label.startswith("."))]
-                validated_labels[ndx] = available_labels[(int(round(random.random() * len(available_labels))))]
-                # FIX currently this can assign same class.. desired?
-
-            # label exists, check if it contains any audio files
-            else:
-                tmp = os.path.join(path, labels[ndx])
-                for filename in os.listdir(tmp):
-                    if filename.endswith('.wav'):
-                        # an audio file is present, set labels and break
-                        validated_labels = labels
-                        break
-                else:
-                    # no audio files in the provided label directory
-                    warnings.warn("Warning, no audio files present in label directory " + str(
-                        tmp) + " . Choosing new label randomly")
+                # check if label directory exists
+                if not (os.path.isdir(os.path.join(path, labels[ndx]))):
+                    warnings.warn("Warning, the supplied label does not exist in audio directory. Choosing label randomly")
                     available_labels = os.listdir(path)
+                    # just ignores .DS_Store file
                     available_labels = [the_label for the_label in available_labels if not (the_label.startswith("."))]
                     validated_labels[ndx] = available_labels[(int(round(random.random() * len(available_labels))))]
+                    # FIX currently this can assign same class.. desired?
 
-        return validated_labels
+                # label exists, check if it contains any audio files
+                else:
+                    tmp = os.path.join(path, labels[ndx])
+                    for filename in os.listdir(tmp):
+                        if filename.endswith('.wav'):
+                            # an audio file is present, set labels and break
+                            validated_labels = labels
+                            break
+                    else:
+                        # no audio files in the provided label directory, chose random label that exists
+                        warnings.warn("Warning, no audio files present in label directory " + str(
+                            tmp) + " . Choosing new label randomly")
+                        available_labels = os.listdir(path)
+                        available_labels = [the_label for the_label in available_labels if not (the_label.startswith("."))]
+                        validated_labels[ndx] = available_labels[(int(round(random.random() * len(available_labels))))]
+
+                # chose audio file paths for corresponding labels
+                filepaths = []
+                for n in range(0, num):
+                    files = os.listdir(os.path.join(path, validated_labels[ndx]))
+                    files = [file for file in files if not (file.startswith("."))]
+                    filepaths.append(os.path.join(path, random.choice(files)))
+                    # print os.path.join(path, random.choice(os.listdir(os.path.join(path, validated_labels[ndx]))))
 
 
+        return validated_labels, filepaths
 
-    def add_to_spec(self, labels=None, fg_start_times=None, fg_durations=None, snrs=None, num_events=None):
+
+    def add_events(self, labels=None, fg_start_times=None, fg_durations=None, snrs=None, num_events=None):
 
         """
 
@@ -121,7 +133,12 @@ class Scaper_spec(object):
             labels = [labels]
 
         # validate foreground labels
-        self.labels = self.validate_label_paths(sc.fg_path,labels)
+        self.labels, self.filepaths = self.validate_label_paths(sc.fg_path,labels,num_events)
+
+
+        print "~~~"
+        print self.labels
+        print self.filepaths
 
         # invalid foreground element durations, use default.. or random?
         if fg_durations == None or fg_durations <= 0:
@@ -191,10 +208,60 @@ class Scaper_spec(object):
             s = {"label"        : each_label,
                 "fg_start_time" : self.fg_start_times,
                 "fg_duration"   : self.fg_durations,
+                "source_files"  : self.filepaths,
                 "snr"           : self.snrs,
                 "num_events"    : self.num_events}
 
-        self.build_spec(s)
+        # add these events to the spec object
+        self.spec.append(s)
+
+
+    def generate_jams(self, spec):
+
+        # print spec
+
+        scene_jam = jams.JAMS()
+        scene_ann = jams.Annotation(namespace='tag_open')
+
+        # everything goes into the value field as a tuple
+
+
+
+        print '\n'
+        for ndx, event in enumerate(spec):
+
+            # background file
+            if "bg_duration" in event:
+                print event
+                print ":HAS BG DURATION"
+
+                scene_ann.append(time=0.0,
+                                 duration=event["bg_duration"],
+                                 value=(event["bg_label"]),
+                                 confidence=1)
+                scene_jam.annotations.append(scene_ann)
+
+                print 'new gen jams'
+                print scene_ann.data
+                print '\n'
+
+        print '\n'
+        #
+        # for ind, event in list.iterrows():
+        #     print list['label'][ind]
+        #     scene_ann.append(time=list['start_time'][ind],
+        #                      duration=list['end_time'][ind] - list['start_time'][ind],
+        #                      value=(list['label'][ind], list['src_file'][ind],
+        #                             list['src_start'][ind], list['src_end'][ind],
+        #                             list['snr'][ind], list['role'][ind]),
+        #                      confidence=1)
+
+        # add annotation to jams file
+        # scene_jam.annotations.append(scene_ann)
+
+
+        # scene_jam.file_metadata.duration = (list['end_time'][ind] - list['start_time'][ind])
+        # scene_jam.save('./scene_out.jams')
 
 
 class Scaper(object):
@@ -234,52 +301,52 @@ class Scaper(object):
         # self.bgs = pd.DataFrame(columns=['file_name', 'bit_rate', 'num_channels', 'sample_rate'])
         #
 
-    def generate_jams(self, list, type, jams_outfile):
-
-        # for generating jams files of input and ouput files
-        if type == 'file':
-            file_jam = jams.JAMS()
-            file_ann = jams.Annotation(namespace='tag_open')
-
-            # everything goes into the value field as a tuple
-            for ind, event in list.iterrows():
-                file_ann.append(time=0, duration=1.0,
-                                 value=(list['file_name'], list['bit_rate'],
-                                        list['num_channels'], list['sample_rate']),
-                                 confidence=1)
-
-            # add annotation to jams file
-            file_jam.annotations.append(file_ann)
-            # dummy duration
-            file_jam.file_metadata.duration = 1
-            file_jam.save('./file_out.jams')
-
-            print file_ann.data
-            # file_jam.save(jams_outfile)
-
-        # for generating jam files of scene
-        elif type == 'scape':
-            scene_jam = jams.JAMS()
-            scene_ann = jams.Annotation(namespace='tag_open')
-
-            # everything goes into the value field as a tuple
-            for ind, event in list.iterrows():
-                print list['label'][ind]
-                scene_ann.append(time=list['start_time'][ind],
-                                 duration=list['end_time'][ind] - list['start_time'][ind],
-                                 value=(list['label'][ind], list['src_file'][ind],
-                                        list['src_start'][ind], list['src_end'][ind],
-                                        list['snr'][ind], list['role'][ind]),
-                                 confidence=1)
-
-            # add annotation to jams file
-            scene_jam.annotations.append(scene_ann)
-
-            print scene_ann.data
-            print '\n'
-
-            scene_jam.file_metadata.duration = (list['end_time'][ind] - list['start_time'][ind])
-            # scene_jam.save('./scene_out.jams')
+    # def generate_jams(self, list, type, jams_outfile):
+    #
+    #     # for generating jams files of input and ouput files
+    #     if type == 'file':
+    #         file_jam = jams.JAMS()
+    #         file_ann = jams.Annotation(namespace='tag_open')
+    #
+    #         # everything goes into the value field as a tuple
+    #         for ind, event in list.iterrows():
+    #             file_ann.append(time=0, duration=1.0,
+    #                              value=(list['file_name'], list['bit_rate'],
+    #                                     list['num_channels'], list['sample_rate']),
+    #                              confidence=1)
+    #
+    #         # add annotation to jams file
+    #         file_jam.annotations.append(file_ann)
+    #         # dummy duration
+    #         file_jam.file_metadata.duration = 1
+    #         file_jam.save('./file_out.jams')
+    #
+    #         print file_ann.data
+    #         # file_jam.save(jams_outfile)
+    #
+    #     # for generating jam files of scene
+    #     elif type == 'scape':
+    #         scene_jam = jams.JAMS()
+    #         scene_ann = jams.Annotation(namespace='tag_open')
+    #
+    #         # everything goes into the value field as a tuple
+    #         for ind, event in list.iterrows():
+    #             print list['label'][ind]
+    #             scene_ann.append(time=list['start_time'][ind],
+    #                              duration=list['end_time'][ind] - list['start_time'][ind],
+    #                              value=(list['label'][ind], list['src_file'][ind],
+    #                                     list['src_start'][ind], list['src_end'][ind],
+    #                                     list['snr'][ind], list['role'][ind]),
+    #                              confidence=1)
+    #
+    #         # add annotation to jams file
+    #         scene_jam.annotations.append(scene_ann)
+    #
+    #         print scene_ann.data
+    #         print '\n'
+    #
+    #         scene_jam.file_metadata.duration = (list['end_time'][ind] - list['start_time'][ind])
+    #         # scene_jam.save('./scene_out.jams')
 
 
     def normalize_file(self, file, max_db, out_file):
@@ -645,52 +712,29 @@ class Scaper(object):
         events.loc[len(events)] = [0, self.duration, bgs[0], curr_bg_file, bg_start_time, bg_start_time + self.duration, 0, 'background']
 
         # generate jams file
-        self.generate_jams(events, 'scape', 'scape.jams')
+        # self.generate_jams(events, 'scape', 'scape.jams')
 
 
 if __name__ == '__main__':
-
-    # sc.set_path('foreground', 'audio/sfg')
-    # sc.set_path('background', 'audio/bjg')
-
-
-    # dict = {"bg":"bgpath", "fg":"fgpath", "bglabel":"bglabel"}
-    # sc = Scaper(dict)
-    # then check each path within ini
-    # check if there are audio files inside, issue empty folder warning
-
-    # fg_labels = ['voice', 'siren', 'horn']
-    # bg_labels = ['car']
-    #
-    # fg_label_paths = sc.set_label('foreground', fg_labels)
-    # bg_label_paths = sc.set_label('background', bg_labels)
-    #
-    # print '======'
-    # print 'return fg_label_paths'
-    # for each_label in fg_label_paths:
-    #     print each_label
-    #
-    # print '======'
-    # print 'return bg_label_paths'
-    # for each_label in bg_label_paths:
-    #     print each_label
-    #
-    # sc.set_snr(20)
 
 
     sc = Scaper('audio/fg','audio/bg')
 
     # init spec with background label and duration
-    sp = Scaper_spec(['crowd'],10)
+    sp = ScaperSpec(['crowd'],10)
 
     # add foreground events
     # add_to_spec(labels, fg_start_times, fg_durations, snrs, num_events)
-    sp.add_to_spec(['horn'],1,None, None, 2)
-    sp.add_to_spec(['voice'], 3, [1, 2], [11, 20], 2)
-    sp.add_to_spec(['machinery'], [3,1], [6, 2], [61, 20], 7)
+    sp.add_events(['horn'],1,None, None, 2)
+    sp.add_events(['voice'], 3, [1, 2], [11, 20], 2)
+    sp.add_events(['machinery'], [3,1], [6, 2], [61, 20], 7)
 
     print "\n"
     for entry in sp.spec:
         print entry
     print "\n"
+
+    sp.generate_jams(sp.spec)
+
+
     # sc.generate_soundscapes(fg_label_paths, bg_label_paths, 'audio/output/this_scape.wav', fg_start=[5,10,15])
