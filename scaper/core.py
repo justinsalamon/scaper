@@ -10,57 +10,80 @@ MIN_DURATION = 1
 
 class ScaperSpec(object):
 
-    def __init__(self, bg_label, bg_duration=10):
+    def __init__(self, *args, **kwargs):
+
+        # argument checks
+        if len(args) == 0:
+            bg_label = None
+            bg_duration = None
+        elif len(args) == 1:
+            sc = args[0]
+            bg_label = None
+            bg_duration = None
+        elif len(args) == 2:
+            sc = args[0]
+            bg_label = args[1]
+            bg_duration = None
+        else:
+            sc = args[0]
+            bg_label = args[1]
+            bg_duration = args[2]
+
+
+        # if args are key value pairs
+        for key, val in kwargs.iteritems():
+            if key == "labels":
+                bg_label = val
+            elif key == "duration":
+                bg_duration = val
+            elif key == "scape":
+                sc = val
 
         print '~~~'
         print 'ScaperSpec Created:'
 
         # this is the spec
         self.spec = []
+        self.sc = sc
+
+        available_labels = os.listdir(sc.bg_path)
+        available_labels = [the_label for the_label in available_labels if not (the_label.startswith('.'))]
 
         # no background label provided, chose randomly
         if bg_label == None:
-            available_labels = os.listdir(sc.bg_path)
-            available_labels = [the_label for the_label in available_labels if not (the_label.startswith('.'))]
-            self.bg_label = available_labels[(int(round(random.random() * len(available_labels))))]
+            bg_label = available_labels[(int(round(random.random() * (len(available_labels)-1))))]
 
         # if list not provided
         if type(bg_label) is not list:
-            warnings.warn('Warning, Labels should be provided in list format.')
-            labels = [bg_label]
+            self.bg_label = [bg_label]
+
         # list provided
         else:
             # specific path provided
             if len(bg_label) == 1:
                 if os.path.exists(bg_label[0]):
-                    print "YEP"
-                else:
-                    warnings.warn('Warning, background audio file path provided does not exist. Using random background audio.')
-                    # FIX: should this be random or throw exception?
+                    print "not yet implemented! fix"
 
-                    # validate background labels -- FIX: change name..
-                    self.bg_label, self.bg_file = self.validate_label_paths(sc.bg_path, ['crowd'], 1)
+                # FIX
 
             # list of labels provided
             else:
+                bg_label = bg_label[(int(round(random.random() * (len(bg_label) - 1))))]
 
-                # validate background labels -- FIX: change name..
-                self.bg_label, self.bg_file  = self.validate_label_paths(sc.bg_path,bg_label,1)
+        self.bg_label, self.bg_file = self.validate_label_paths(sc.bg_path, bg_label, 1)
 
-            # invalid background element duration, use default.. or random?
-            if bg_duration == None or bg_duration <= 0 or not isinstance(bg_duration, int):
-                self.bg_duration = 10
-                warnings.warn('Warning, scape must have global duration > 0. Setting duration to default: 10 seconds')
-            else:
-                self.bg_duration = bg_duration
-
+        # invalid background element duration
+        if bg_duration == None or bg_duration <= 0 or not isinstance(bg_duration, int):
+            self.bg_duration = 10
+            warnings.warn('Warning, scape must have global duration > 0. Setting duration to default: 10 seconds')
+        else:
+            self.bg_duration = bg_duration
 
         bg_spec = {'bg_label'       : self.bg_label,
                    'bg_duration'    : self.bg_duration,
                    'bg_source_file' : self.bg_file}
 
-
-
+        # append to spec
         self.spec.append(bg_spec)
 
     def validate_label_paths(self, path, labels, num):
@@ -80,17 +103,17 @@ class ScaperSpec(object):
         """
 
         validated_labels = [None] * len(labels)
-        print labels
+
+        available_labels = os.listdir(path)
+        available_labels = [the_label for the_label in available_labels if not (the_label.startswith('.'))]
+
         # if a list of labels is passed
         for ndx in range(0, len(labels)):
 
             # check if label directory exists
             if not (os.path.isdir(os.path.join(path, labels[ndx]))):
                 warnings.warn('Warning, the supplied label does not exist in audio directory. Choosing label randomly')
-                available_labels = os.listdir(path)
-                # just ignores .DS_Store file
-                available_labels = [the_label for the_label in available_labels if not (the_label.startswith('.'))]
-                validated_labels[ndx] = available_labels[(int(round(random.random() * len(available_labels))))]
+                validated_labels[ndx] = available_labels[(int(round(random.random() * (len(available_labels)-1))))]
                 # FIX currently this can assign same class.. desired?
 
             # label exists, check if it contains any audio files
@@ -103,19 +126,15 @@ class ScaperSpec(object):
                         break
                 else:
                     # no audio files in the provided label directory, chose random label that exists
-                    warnings.warn('Warning, no audio files present in label directory ' +
-                                  str(tmp) + ' . Choosing new label randomly')
-                    available_labels = os.listdir(path)
-                    available_labels = [the_label for the_label in available_labels if not (the_label.startswith('.'))]
-                    validated_labels[ndx] = available_labels[(int(round(random.random() * len(available_labels))))]
+                    warnings.warn('Warning, no audio files present in label directory ' + str(tmp) + ' . Choosing new label randomly')
+                    validated_labels[ndx] = available_labels[(int(round(random.random() * (len(available_labels) - 1))))]
 
             # chose audio file paths for corresponding labels
-            filepaths = []
 
             files = os.listdir(os.path.join(path, validated_labels[ndx]))
             filepaths = [file for file in files if not (file.startswith('.'))]
 
-            for ndx, each_label in enumerate(validated_labels):
+            for n, each_label in enumerate(validated_labels):
                 # print os.path.join(path, validated_labels[ndx])
                 this_path = os.path.join(path, validated_labels[ndx])
                 for n, each_file in enumerate(filepaths):
@@ -140,9 +159,9 @@ class ScaperSpec(object):
 
         # no labels provided, chose randomly
         if labels == None:
-            available_labels = os.listdir(sc.fg_path)
+            available_labels = os.listdir(self.sc.fg_path)
             available_labels = [the_label for the_label in available_labels if not(the_label.startswith('.'))]
-            labels = available_labels[(int(round(random.random() * len(available_labels))))]
+            labels = available_labels[(int(round(random.random() * (len(available_labels)-1))))]
 
         # if list not provided
         if type(labels) is not list:
@@ -150,7 +169,7 @@ class ScaperSpec(object):
             labels = [labels]
 
         # validate foreground labels
-        self.labels, self.filepaths = self.validate_label_paths(sc.fg_path,labels,num_events)
+        self.labels, self.filepaths = self.validate_label_paths(self.sc.fg_path,labels,num_events)
 
         # invalid number of events
         if num_events == None or num_events <= 0:
@@ -236,11 +255,6 @@ class ScaperSpec(object):
 
         chosen_files = []
         for ndx, this_durr in enumerate(self.fg_durations):
-            print "\n"
-            print ndx
-            print "file duration: " + str(sox.file_info.duration(self.filepaths[ndx]))
-            print "requested duration: " + str(this_durr)
-            print "requested start time: " + str(self.fg_start_times[ndx])
 
             # duration and start time larger than file duration
             if (this_durr + self.fg_start_times[ndx]) > sox.file_info.duration(self.filepaths[ndx]):
@@ -259,6 +273,9 @@ class ScaperSpec(object):
 
         # set the filepaths member to be the updated list of chosen files
         self.filepaths = chosen_files
+
+        print "\n"
+        print "Add Events:"
 
         print "-----------------------------------"
         for eachfile in chosen_files:
@@ -322,20 +339,44 @@ class ScaperSpec(object):
 
 class Scaper(object):
 
-    def __init__(self, fpath, bpath):
+    def __init__(self, *args, **kwargs):
 
-        # check if background/foreground directories exist
+        print '~~~'
+        print 'Scaper Created:'
+
+        # argument checks
+        if len(args) == 0:
+            warnings.warn('Warning, no audio paths provided. Using default directories: audio/fg     audio/bg')
+            fpath = 'audio/fg'
+            bpath = 'audio/bg'
+        elif len(args) == 1:
+            warnings.warn('Warning, no background path provided. Using default directory: audio/bg ')
+            fpath = args[0]
+            bpath = 'audio/bg'
+        else:
+            fpath = args[0]
+            bpath = args[1]
+
+        # if args are key value pairs
+        for key, val in kwargs.iteritems():
+            if key == "fpath":
+                fpath = val
+            elif key == "bpath":
+                bpath = val
+
+        # filepath checks
         if not (os.path.isdir(fpath)):
-            warnings.warn('Warning, foreground path not valid. Using default directory audio/fg ')
+            warnings.warn('Warning, foreground path not valid. Using default directory: audio/fg ')
             self.fg_path = 'audio/fg'
         else:
             self.fg_path = fpath
 
         if not (os.path.isdir(bpath)):
-            warnings.warn('Warning, background path not valid. Using default directory audio/bg ')
+            warnings.warn('Warning, background path not valid. Using default directory: audio/bg ')
             self.bg_path = 'audio/bg'
         else:
             self.bg_path = bpath
+
 
 
     def generate_soundscapes(self, j_file=None, s_file=None):
@@ -438,21 +479,22 @@ class Scaper(object):
         # create the output file
         mix.build()
 
-
-if __name__ == '__main__':
-
-    # init scaper
-    sc = Scaper('audio/fg','audio/bg')
-
-    # init spec with background label and duration
-    sp = ScaperSpec(['audio/bg/music/14-indian-stredet-music.wav'],10)
-
-    # add foreground events
-    sp.add_events(['horn'],[1,2] ,[2,2], None, 2)
-    sp.add_events(['voice'], [3,4,5], [1,2,3], None, 2)
-
-    jams_outfile = './output_jams.jams'
-    returned_jams = sp.generate_jams(sp.spec, jams_outfile)
-
-    print "======================="
-    sc.generate_soundscapes(jams_outfile, './audio/output/output_audio.wav')
+#
+# if __name__ == '__main__':
+#
+#     # init scaper
+#     sc = Scaper('audio/fg','audio/bg')
+#
+#     # init spec with background label and duration
+#     # sp = ScaperSpec(sc,['audio/bg/music/14-indian-stredet-music.wav'],10)
+#     sp = ScaperSpec(sc)
+#
+#     # add foreground events
+#     sp.add_events(['horn'],[1,2] ,[2,2], None, 2)
+#     sp.add_events(['voice'], [3,4,5], [1,2,3], None, 2)
+#
+#     jams_outfile = './output_jams.jams'
+#     returned_jams = sp.generate_jams(sp.spec, jams_outfile)
+#
+#     print "======================="
+#     sc.generate_soundscapes(jams_outfile, './audio/output/output_audio.wav')
