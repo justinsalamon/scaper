@@ -85,9 +85,13 @@ class ScaperSpec(object):
                 self.bg_file = file
                 break
 
+        print "bg_label: ", self.bg_label
+
         bg_spec = {'bg_label'       : self.bg_label,
                    'bg_duration'    : self.bg_duration,
                    'bg_source_file' : self.bg_file}
+
+        print "bg_spec: ", bg_spec
 
         # append to spec
         self.spec.append(bg_spec)
@@ -383,7 +387,7 @@ class ScaperSpec(object):
             if 'bg_duration' in events:
                 # add background annotation
                 scene_ann.append(value=(['background', events['bg_label'][0],
-                                        events['bg_source_file'][0]]
+                                        events['bg_source_file']]
                                         ),
                                  time=0.0,
                                  duration=events['bg_duration'],
@@ -574,16 +578,16 @@ class Scaper(object):
 if __name__ == '__main__':
     # main()
 
-    sc = Scaper(bpath='audio/bg', fpath='audio/fg')
-    # sc = Scaper()
-
-    sp = ScaperSpec(sc, labels=['crowd'], duration=8)
-    print sp.bg_duration
-    print sp.bg_label
-
-
-    # labels, start times, durations, snrs, num events
-    sp.add_events(['horn', 'voice'], [1, 2], [1, 1], [2, 5], 2)
-
-
-    sp.generate_jams(sp.spec, 'jammyjamm.jams')
+    # sc = Scaper(bpath='audio/bg', fpath='audio/fg')
+    # # sc = Scaper()
+    #
+    # sp = ScaperSpec(sc, labels=['crowd'], duration=8)
+    # print sp.bg_duration
+    # print sp.bg_label
+    #
+    #
+    # # labels, start times, durations, snrs, num events
+    # sp.add_events(['horn', 'voice'], [1, 2], [1, 1], [2, 5], 2)
+    #
+    #
+    # sp.generate_jams(sp.spec, 'jammyjamm.jams')
