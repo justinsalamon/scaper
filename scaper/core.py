@@ -8,6 +8,18 @@ SNR_MAX = 120
 MAX_DB = -3
 MIN_DURATION = 1
 
+
+# overload my warnings
+def _warning(
+    message,
+    category = UserWarning,
+    filename = '',
+    lineno = -1):
+    print(message)
+
+warnings.showwarning = _warning
+
+
 class ScaperSpec(object):
 
     def __init__(self, *args, **kwargs):
@@ -28,8 +40,6 @@ class ScaperSpec(object):
             sc = args[0]
             bg_label = args[1]
             bg_duration = args[2]
-
-        print len(args)
 
         # if args are key value pairs
         for key, val in kwargs.iteritems():
@@ -85,13 +95,9 @@ class ScaperSpec(object):
                 self.bg_file = file
                 break
 
-        print "bg_label: ", self.bg_label
-
         bg_spec = {'bg_label'       : self.bg_label,
                    'bg_duration'    : self.bg_duration,
                    'bg_source_file' : self.bg_file}
-
-        print "bg_spec: ", bg_spec
 
         # append to spec
         self.spec.append(bg_spec)
@@ -216,9 +222,9 @@ class ScaperSpec(object):
             if key == "labels":
                 labels = val
             elif key == "fg_start_times":
-                start_times = val
+                fg_start_times = val
             elif key == "fg_durations":
-                durations = val
+                fg_durations = val
             elif key == "snrs":
                 snrs = val
             elif key == "num_events":
@@ -329,9 +335,10 @@ class ScaperSpec(object):
                 # print "file duration: ", sox.file_info.duration(file)
                 # print "fg_start_times: ", self.fg_start_times[ndx]
                 # print "fg_durations: ", self.fg_durations[ndx]
+                # print "\n"
 
                 # if the file satisfies the start times and durations
-                if (self.fg_durations[ndx] + self.fg_start_times[ndx]) <= sox.file_info.duration(file):
+                if self.fg_durations[ndx] <= sox.file_info.duration(file):
                     chosen_files.append(file)
                     break
 
@@ -398,6 +405,7 @@ class ScaperSpec(object):
 
             elif 'fg_duration' in events:
                 # append annotation for each event
+
                 for n in range(0,events['num_events']):
                     scene_ann.append(value=(['foreground', events['label'],
                                             events['source_files'][n],
@@ -479,38 +487,42 @@ class Scaper(object):
         -------
 
         """
+
+        print os.path.dirname(s_file)
+
         if j_file == None or not os.path.isfile(j_file):
             warnings.warn("Warning, no jams file, or invalid jams file provided. Generate_soundscapes() process terminated.")
             return
 
         # check output scaper file
         if os.path.exists(s_file):
-            warnings.warn("Warning, output file " +str(s_file)+ " already exists. Continuing will overwrite.")
+            warnings.warn("Warning, output file %s already exists. Continuing will overwrite." % j_file )
 
             while True:
                 response = raw_input("Proceed: y/n?")
                 if response == "y":
-                    warnings.warn("Overwriting file " + str(s_file))
+                    warnings.warn("Overwriting file %s" % str(s_file))
                     break
                 if response == "n":
-                    warnings.warn("File " +str(s_file)+ " will not be overwritten. Generate_soundscapes() process terminated.")
+                    warnings.warn("File %s will not be overwritten. Generate_soundscapes() process terminated." % s_file)
                     return
                 warnings.warn("Warning, invalid response. Please select \"y\" or \"no\" :")
 
         elif os.access(os.path.dirname(s_file), os.W_OK):
-            print "Output file " + str(s_file)+ "selected."
+            print "Output file %s selected." % s_file
         else:
             warnings.warn("Warning, provided scaper output file is invalid. Generate_soundscapes() process terminated.")
             return
-
 
         # load jams file, extract elements
         jam = jams.load(j_file)
         events = jam.search(namespace='event')[0]
 
-        # print events
         print "\n"
+
         for ndx, value in enumerate(events.data.value):
+
+            print "event value: ", value
 
             if value[0] == 'background':
 
@@ -519,6 +531,7 @@ class Scaper(object):
                 bg_duration = events.data.duration[ndx].total_seconds()
 
                 tmp_bg_filepath = 'audio/output/tmp/bg_tmp.wav'
+
                 # create pysox transformer for background
                 bg = sox.Transformer(bg_filepath, tmp_bg_filepath)
 
@@ -540,14 +553,23 @@ class Scaper(object):
                 curr_fg_duration = events.data.duration[ndx].total_seconds()
                 curr_fg_snr = value[3]
 
+                print "curr fg eventL: ", curr_fg_filepath, curr_fg_start_time, curr_fg_duration, curr_fg_snr
+
                 # FIX: PYSOX: have to store these intermediate files, at the moment
                 tmp_out_file = 'audio/output/tmp/fg_tmp_' + str(ndx) + '.wav'
 
                 # create pysox transformer for foreground
                 curr_fg = sox.Transformer(curr_fg_filepath, tmp_out_file)
 
-                # trim foreground from start_time to start_time + duration
-                curr_fg.trim(curr_fg_start_time, (curr_fg_start_time + curr_fg_duration))
+
+# WRONG
+                # trim foreground from start to end
+                # FIX: needs fades
+                # FIX: needs duration checks
+                curr_fg.trim(0, curr_fg_duration)
+
+                # pad with silence according to fg_start_times
+                curr_fg.pad(curr_fg_start_time, 0)
 
                 # normalize background audio to MAX_DB
                 curr_fg.norm(curr_fg_snr)
@@ -561,6 +583,7 @@ class Scaper(object):
 
         files_to_mix =  [file for file in os.listdir(tmp_audio_path) if not (file.startswith('.'))]
         for ndx,file in enumerate(files_to_mix):
+            print "file: ", file
             files_to_mix[ndx] = os.path.join(tmp_audio_path, files_to_mix[ndx])
 
         print files_to_mix
@@ -578,16 +601,14 @@ class Scaper(object):
 if __name__ == '__main__':
     # main()
 
-    # sc = Scaper(bpath='audio/bg', fpath='audio/fg')
-    # # sc = Scaper()
-    #
-    # sp = ScaperSpec(sc, labels=['crowd'], duration=8)
-    # print sp.bg_duration
-    # print sp.bg_label
-    #
-    #
-    # # labels, start times, durations, snrs, num events
-    # sp.add_events(['horn', 'voice'], [1, 2], [1, 1], [2, 5], 2)
-    #
-    #
-    # sp.generate_jams(sp.spec, 'jammyjamm.jams')
+    sc = Scaper(bpath='audio/bg', fpath='audio/fg')
+    # sc = Scaper()
+
+    sp = ScaperSpec(sc, labels=['crowd'], duration=8)
+
+    # labels, start times, durations, snrs, num events
+    sp.add_events(['horn', 'voice'], [0,4], [1, 1], [-2, -5], 2)
+    thejam = sp.generate_jams(sp.spec, 'jammyjamm.jams')
+
+
+    sc.generate_soundscapes('./jammyjamm.jams','./output_audio.wav')
