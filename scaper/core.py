@@ -615,6 +615,6 @@ if __name__ == '__main__':
     sp = ScaperSpec(sc, labels=['crowd'], duration=8)
 
     # labels, start times, durations, snrs, num events
-    sp.add_events(labels=['horn', 'siren'], fg_start_times=[3,2,1,4], fg_durations=[1,1,1,1], snrs=[0,0,-2,-5], num_events=4)
+    sp.add_events(labels=['horn', 'siren'], fg_start_times=[3,2], fg_durations=[1,1], snrs=[-2,-5], num_events=4)
     thejam = sp.generate_jams(sp.spec, 'jammyjamm.jams')
     sc.generate_soundscapes('./jammyjamm.jams','./output_audio.wav')
