@@ -88,12 +88,16 @@ class ScaperSpec(object):
         self.bg_label, self.bg_file = self.validate_label_paths(sc.bg_path, self.bg_label, 1)
 
         # choose a file for background
-        # FIX make random
+
         for file in self.bg_file[0]:
+            rand_ndx = int(round(random.random() * (len(self.bg_file[0]) - 1)))
+
             # if the file satisfies the start times and durations
             if self.bg_duration <= sox.file_info.duration(file):
                 self.bg_file = file
                 break
+
+
 
         bg_spec = {'bg_label'       : self.bg_label,
                    'bg_duration'    : self.bg_duration,
@@ -241,8 +245,8 @@ class ScaperSpec(object):
             warnings.warn('Warning, Labels should be provided in list format.')
             labels = [labels]
 
-        # validate foreground labels
-        self.labels, self.filepaths = self.validate_label_paths(self.sc.fg_path, labels, num_events)
+        # label reference needed for filepath choice
+        self.labels = labels
 
         # invalid number of events
         if num_events == None or num_events <= 0:
@@ -323,30 +327,28 @@ class ScaperSpec(object):
 
         chosen_files = []
 
-        # for each label TODO  needs to be randomized!!!
+        # choose the source file for each event
+        for n in range(0, self.num_events):
+
+            # if less labels provided then events
+            if (n >= len(self.labels)):
+                label = self.labels[int(round(random.random()*(len(self.labels)-1)))]
+                self.labels.append(label)
+
+        # validate foreground labels
+        self.labels, self.filepaths = self.validate_label_paths(self.sc.fg_path, self.labels, num_events)
 
         for ndx, this_label in enumerate(self.labels):
 
-            # for each file corresponding the label
-            for file in self.filepaths[ndx]:
-
-                # print "filepaths: ", self.filepaths[ndx]
-                # print "file: ", file
-                # print "file duration: ", sox.file_info.duration(file)
-                # print "fg_start_times: ", self.fg_start_times[ndx]
-                # print "fg_durations: ", self.fg_durations[ndx]
-                # print "\n"
+            # random index for files corresponding to label
+            rand_ndx = int(round(random.random()*(len(self.filepaths)-1)))
+            for file in self.filepaths[rand_ndx]:
 
                 # if the file satisfies the start times and durations
-                if self.fg_durations[ndx] <= sox.file_info.duration(file):
-                    chosen_files.append(file)
-                    break
+                    if self.fg_durations[ndx] <= sox.file_info.duration(file):
+                        chosen_files.append(file)
+                        break
 
-                # if (self.fg_durations[ndx] + self.fg_start_times[ndx]) > sox.file_info.duration(file):
-                #     warnings.warn("Warning, the file \"" + str(file) + "\" is shorter than the "
-                #                   "provided start time and duration. Using \"" + str(file) + "\" instead.")
-                #     chosen_files.append(file)
-                #     break
 
         # set the filepaths member to be the updated list of chosen files
         self.filepaths = chosen_files
@@ -355,8 +357,14 @@ class ScaperSpec(object):
         print "Add Events:"
 
         print "-----------------------------------"
-        for eachfile in chosen_files:
-            print eachfile
+
+        # for eachfile in chosen_files:
+        print 'fg_start_time', self.fg_start_times
+        print 'fg_duration', self.fg_durations
+        print 'source_files', self.filepaths
+        print 'snr', self.snrs
+        print 'num_events', self.num_events
+
         print "-----------------------------------"
 
         for ndx,each_label in enumerate(self.labels):
@@ -607,8 +615,6 @@ if __name__ == '__main__':
     sp = ScaperSpec(sc, labels=['crowd'], duration=8)
 
     # labels, start times, durations, snrs, num events
-    sp.add_events(['horn', 'voice'], [0,4], [1, 1], [-2, -5], 2)
+    sp.add_events(labels=['horn', 'siren'], fg_start_times=[3,2,1,4], fg_durations=[1,1,1,1], snrs=[0,0,-2,-5], num_events=4)
     thejam = sp.generate_jams(sp.spec, 'jammyjamm.jams')
-
-
     sc.generate_soundscapes('./jammyjamm.jams','./output_audio.wav')
