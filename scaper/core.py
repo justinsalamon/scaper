@@ -1,8 +1,6 @@
 
 
-import sox, random, glob, os, warnings, jams
-import pandas as pd
-import numpy as np
+import sox, random, os, warnings, jams
 
 SNR_MAX = 120
 MAX_DB = -3
@@ -19,10 +17,19 @@ def _warning(
 
 warnings.showwarning = _warning
 
-
 class ScaperSpec(object):
 
     def __init__(self, *args, **kwargs):
+
+        """
+
+        Parameters
+        ----------
+        labels     : background audio class label
+        duration   : background audio duration
+        scape      : scape object to be used with this spec
+
+        """
 
         # argument checks
         if len(args) == 0:
@@ -52,11 +59,14 @@ class ScaperSpec(object):
 
         print '~~~'
         print 'ScaperSpec Created:'
+        print 'bg_label: ', bg_label
+        print 'duration: ', bg_duration
 
         # this is the spec
         self.spec = []
         self.sc = sc
 
+        # acquire available labels
         available_labels = os.listdir(sc.bg_path)
         available_labels = [the_label for the_label in available_labels if not (the_label.startswith('.'))]
 
@@ -74,7 +84,7 @@ class ScaperSpec(object):
             if len(bg_label) == 1:
                 self.bg_label = bg_label
 
-            # list of labels provided
+            # list of labels provided, choose randomly
             else:
                 self.bg_label = [bg_label[(int(round(random.random() * (len(bg_label) - 1))))]]
 
@@ -85,19 +95,19 @@ class ScaperSpec(object):
         else:
             self.bg_duration = bg_duration
 
-        self.bg_label, self.bg_file = self.validate_label_paths(sc.bg_path, self.bg_label, 1)
+        # validate background label
+        self.bg_label, self.bg_file = self.validate_label_paths(sc.bg_path, self.bg_label)
 
         # choose a file for background
-
-        for file in self.bg_file[0]:
+        while(True):
+            # random index of available bg filesa
             rand_ndx = int(round(random.random() * (len(self.bg_file[0]) - 1)))
+            file = self.bg_file[0][rand_ndx]
 
             # if the file satisfies the start times and durations
             if self.bg_duration <= sox.file_info.duration(file):
                 self.bg_file = file
                 break
-
-
 
         bg_spec = {'bg_label'       : self.bg_label,
                    'bg_duration'    : self.bg_duration,
@@ -106,9 +116,8 @@ class ScaperSpec(object):
         # append to spec
         self.spec.append(bg_spec)
 
-    def validate_label_paths(self, path, labels, num):
+    def validate_label_paths(self, path, labels):
 
-        # validate provided labels
         """
 
         Parameters
@@ -139,31 +148,32 @@ class ScaperSpec(object):
             # label exists, check if it contains any audio files
             else:
                 tmp = os.path.join(path, labels[ndx])
+
+                # for each file in directory
                 for filename in os.listdir(tmp):
-                    if filename.endswith('.wav'):
-                        # an audio file is present, set labels and break
-                        validated_labels[ndx] = labels[ndx]
-                        break
-                else:
-                    # no audio files in the provided label directory, chose random label that exists
-                    warnings.warn('Warning, no audio files present in label directory ' + str(tmp) + ' . Choosing new label randomly')
-                    validated_labels[ndx] = available_labels[(int(round(random.random() * (len(available_labels) - 1))))]
+                    # if not .DS_store or other file
+                    if not filename.startswith('.'):
+                        # and if it is an audio file
+                        if filename.endswith('.wav'):
+                            # set labels and break
+                            validated_labels[ndx] = labels[ndx]
+                            break
+                        else:
+                            # no audio files in the provided label directory, chose random label that exists
+                            warnings.warn('Warning, no audio files present in label directory ' + str(tmp) + ' . Choosing new label randomly')
+                            validated_labels[ndx] = available_labels[(int(round(random.random() * (len(available_labels) - 1))))]
 
             # chose audio file paths for corresponding labels
-
             files = os.listdir(os.path.join(path, validated_labels[ndx]))
             filepaths = [file for file in files if not (file.startswith('.'))]
             this_path = os.path.join(path, validated_labels[ndx])
-
             for n, file in enumerate(filepaths):
                 filepaths[n] = os.path.join(this_path, filepaths[n])
-
             fpaths.append(filepaths)
 
         return validated_labels, fpaths
 
 
-    # def add_events(self, labels=None, fg_start_times=None, fg_durations=None, snrs=None, num_events=None):
     def add_events(self, *args, **kwargs):
 
         """
@@ -245,9 +255,6 @@ class ScaperSpec(object):
             warnings.warn('Warning, Labels should be provided in list format.')
             labels = [labels]
 
-        # label reference needed for filepath choice
-        self.labels = labels
-
         # invalid number of events
         if num_events == None or num_events <= 0:
             self.num_events = 1
@@ -268,7 +275,6 @@ class ScaperSpec(object):
         if (len(self.fg_durations) > self.num_events):
             self.fg_durations = self.fg_durations[0:self.num_events]
             warnings.warn('Warning, more event durations provided than events. Using the following durations: ' + str(self.fg_durations))
-
 
         # FIX invalid SNR value, use default... or random?
         if snrs == None or snrs < 0:
@@ -325,46 +331,49 @@ class ScaperSpec(object):
                 warnings.warn('Warning, event durations exceed background duration for provided start times. '
                               'Event duration trunctated to ' + str(self.fg_durations[ndx]) + ' seconds.')
 
-        chosen_files = []
 
         # choose the source file for each event
-        for n in range(0, self.num_events):
+        chosen_files = []
+        # label reference needed for source file choice
+        self.labels = labels
 
-            # if less labels provided then events
+        # for each event
+        for n in range(0, self.num_events):
+            # if more events than labels provided
             if (n >= len(self.labels)):
+                # choose a random label from the label list
                 label = self.labels[int(round(random.random()*(len(self.labels)-1)))]
+                # append this new label
                 self.labels.append(label)
 
         # validate foreground labels
-        self.labels, self.filepaths = self.validate_label_paths(self.sc.fg_path, self.labels, num_events)
+        self.labels, self.filepaths = self.validate_label_paths(self.sc.fg_path, self.labels)
 
+        # for each label
         for ndx, this_label in enumerate(self.labels):
 
-            # random index for files corresponding to label
-            rand_ndx = int(round(random.random()*(len(self.filepaths)-1)))
-            for file in self.filepaths[rand_ndx]:
+            for file in self.filepaths[ndx]:
+                # random index for files corresponding to label
+                rand_ndx = int(round(random.random() * (len(self.filepaths[ndx]) - 1)))
 
+                f = self.filepaths[ndx][rand_ndx]
                 # if the file satisfies the start times and durations
-                    if self.fg_durations[ndx] <= sox.file_info.duration(file):
-                        chosen_files.append(file)
-                        break
-
+                if self.fg_durations[ndx] <= sox.file_info.duration(f):
+                    chosen_files.append(f)
+                    break
 
         # set the filepaths member to be the updated list of chosen files
         self.filepaths = chosen_files
 
         print "\n"
         print "Add Events:"
-
         print "-----------------------------------"
-
-        # for eachfile in chosen_files:
+        print 'fg_labels', self.labels
         print 'fg_start_time', self.fg_start_times
         print 'fg_duration', self.fg_durations
         print 'source_files', self.filepaths
         print 'snr', self.snrs
         print 'num_events', self.num_events
-
         print "-----------------------------------"
 
         for ndx,each_label in enumerate(self.labels):
@@ -384,11 +393,12 @@ class ScaperSpec(object):
 
         Parameters
         ----------
-        spec
-        outfile
+        spec        :   ScaperSpec object defining the soundscape
+        outfile     :   location to save JAMS outfile
 
         Returns
         -------
+        scene_jam   :   JAMS annotation
 
         """
         jams.schema.add_namespace('namespaces/event.json')
@@ -438,8 +448,14 @@ class Scaper(object):
 
     def __init__(self, *args, **kwargs):
 
-        print '~~~'
-        print 'Scaper Created:'
+        """
+
+        Parameters
+        ----------
+        fpath     :     directory path for foreground audio
+        bpath     :     directory path for background audio
+
+        """
 
         # if args are key value pairs
         for key, val in kwargs.iteritems():
@@ -465,6 +481,10 @@ class Scaper(object):
                 fpath = args[0]
                 bpath = args[1]
 
+        print '~~~'
+        print 'Scaper Created:'
+        print 'fg path: ', fpath
+        print 'bg path: ', bpath
 
         # filepath checks
         if not (os.path.isdir(fpath)):
@@ -480,16 +500,14 @@ class Scaper(object):
             self.bg_path = bpath
 
 
-
     def generate_soundscapes(self, j_file=None, s_file=None):
 
-        # check jams file
         """
 
         Parameters
         ----------
-        j_file
-        s_file
+        j_file      :   JAMS file describing soundscape
+        s_file      :   Scaper output file
 
         Returns
         -------
@@ -525,19 +543,14 @@ class Scaper(object):
         # load jams file, extract elements
         jam = jams.load(j_file)
         events = jam.search(namespace='event')[0]
-
         print "\n"
 
         for ndx, value in enumerate(events.data.value):
-
-            print "event value: ", value
-
             if value[0] == 'background':
 
                 bg_filepath = value[2]
                 bg_start_time = events.data.time[ndx].total_seconds()
                 bg_duration = events.data.duration[ndx].total_seconds()
-
                 tmp_bg_filepath = 'audio/output/tmp/bg_tmp.wav'
 
                 # create pysox transformer for background
@@ -554,14 +567,12 @@ class Scaper(object):
 
             if value[0] == 'foreground':
 
-                print "\n"
+                # print "\n"
 
                 curr_fg_filepath = value[2]
                 curr_fg_start_time = events.data.time[ndx].total_seconds()
                 curr_fg_duration = events.data.duration[ndx].total_seconds()
                 curr_fg_snr = value[3]
-
-                print "curr fg eventL: ", curr_fg_filepath, curr_fg_start_time, curr_fg_duration, curr_fg_snr
 
                 # FIX: PYSOX: have to store these intermediate files, at the moment
                 tmp_out_file = 'audio/output/tmp/fg_tmp_' + str(ndx) + '.wav'
@@ -569,49 +580,39 @@ class Scaper(object):
                 # create pysox transformer for foreground
                 curr_fg = sox.Transformer(curr_fg_filepath, tmp_out_file)
 
-
-# WRONG
                 # trim foreground from start to end
-                # FIX: needs fades
                 # FIX: needs duration checks
                 curr_fg.trim(0, curr_fg_duration)
+
+                # apply fade in and out
+                curr_fg.fade(fade_in_len=0.1, fade_out_len=0.1)
 
                 # pad with silence according to fg_start_times
                 curr_fg.pad(curr_fg_start_time, 0)
 
                 # normalize background audio to MAX_DB
+                # FIX: this is relative to fullscale, correct?
                 curr_fg.norm(curr_fg_snr)
 
                 # save trimmed and normalized background
                 curr_fg.build()
 
         print "\n"
-
         tmp_audio_path = 'audio/output/tmp'
 
         files_to_mix =  [file for file in os.listdir(tmp_audio_path) if not (file.startswith('.'))]
         for ndx,file in enumerate(files_to_mix):
-            print "file: ", file
             files_to_mix[ndx] = os.path.join(tmp_audio_path, files_to_mix[ndx])
 
-        print files_to_mix
-
-        mix = sox.Combiner(files_to_mix, s_file, 'mix')
-
         # create the output file
+        mix = sox.Combiner(files_to_mix, s_file, 'mix')
         mix.build()
-
-# if __name__ == '__main__':
-#     import doctest
-#     doctest.testmod()
 
 
 if __name__ == '__main__':
     # main()
 
     sc = Scaper(bpath='audio/bg', fpath='audio/fg')
-    # sc = Scaper()
-
     sp = ScaperSpec(sc, labels=['crowd'], duration=8)
 
     # labels, start times, durations, snrs, num events
