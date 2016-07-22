@@ -18,6 +18,7 @@ class Scaper_Tests(unittest.TestCase):
         # scape, label, duration
         self.failUnless(core.ScaperSpec(sc))
         self.failUnless(core.ScaperSpec(sc, 'music', -2))
+        self.failUnless(core.ScaperSpec(sc, 'music'))
         self.failUnless(core.ScaperSpec(sc, ['music', 'crowd'], 8))
         self.failUnless(core.ScaperSpec(scape=sc, labels=['crowd'], duration=12 ))
 

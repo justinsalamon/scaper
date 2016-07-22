@@ -31,7 +31,7 @@ class ScaperSpec(object):
 
         """
 
-        # argument checks
+        # number of argument checks
         if len(args) == 0:
             bg_label = None
             bg_duration = None
@@ -100,7 +100,7 @@ class ScaperSpec(object):
 
         # choose a file for background
         while(True):
-            # random index of available bg filesa
+            # random index of available bg files
             rand_ndx = int(round(random.random() * (len(self.bg_file[0]) - 1)))
             file = self.bg_file[0][rand_ndx]
 
@@ -148,10 +148,9 @@ class ScaperSpec(object):
             # label exists, check if it contains any audio files
             else:
                 tmp = os.path.join(path, labels[ndx])
-
                 # for each file in directory
                 for filename in os.listdir(tmp):
-                    # if not .DS_store or other file
+                    # if not .DS_store
                     if not filename.startswith('.'):
                         # and if it is an audio file
                         if filename.endswith('.wav'):
@@ -188,7 +187,7 @@ class ScaperSpec(object):
 
         """
 
-        # argument checks
+        # number of argument checks
         if len(args) == 0:
             labels = None
             fg_start_times = None
@@ -283,8 +282,8 @@ class ScaperSpec(object):
         else:
             self.snrs = snrs
 
+        # extend SNR list if too short
         if type(self.snrs) is list:
-            # extend SNR list if too short
             if len(self.snrs) < num_events:
                 for ndx in range(len(self.snrs),num_events):
                     self.snrs.append(self.snrs[num_events%ndx-1])
@@ -303,7 +302,7 @@ class ScaperSpec(object):
             self.fg_start_times = self.fg_start_times[0:self.num_events]
             warnings.warn('Warning, more event start times provided than events. Using the following start times: ' + str(self.fg_start_times))
 
-        # no lists are passed
+        # multiple events, but no lists passed - extend
         if self.num_events > 1 and type(self.fg_durations) is not list:
             tmp = self.fg_durations
             self.fg_durations = [tmp] * self.num_events
@@ -336,8 +335,6 @@ class ScaperSpec(object):
         chosen_files = []
         # label reference needed for source file choice
         self.labels = labels
-
-        # for each event
         for n in range(0, self.num_events):
             # if more events than labels provided
             if (n >= len(self.labels)):
