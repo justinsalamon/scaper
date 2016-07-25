@@ -1,11 +1,8 @@
-
-
 import sox, random, os, warnings, jams
 
 SNR_MAX = 120
 MAX_DB = -3
 MIN_DURATION = 1
-
 
 # overload my warnings
 def _warning(
@@ -25,8 +22,8 @@ class ScaperSpec(object):
 
         Parameters
         ----------
-        labels     : background audio class label
-        duration   : background audio duration
+        bg_label     : background audio class label
+        bg_duration   : background audio duration
         scape      : scape object to be used with this spec
 
         """
@@ -50,9 +47,9 @@ class ScaperSpec(object):
 
         # if args are key value pairs
         for key, val in kwargs.iteritems():
-            if key == "labels":
+            if key == "bg_label":
                 bg_label = val
-            elif key == "duration":
+            elif key == "bg_duration":
                 bg_duration = val
             elif key == "scape":
                 sc = val
@@ -61,6 +58,17 @@ class ScaperSpec(object):
         print 'ScaperSpec Created:'
         print 'bg_label: ', bg_label
         print 'duration: ', bg_duration
+
+        # no scape passed
+        try:
+            sc
+        except NameError:
+            sc = None
+
+        if sc == None:
+            # generate default scaper
+            sc = Scaper()
+            warnings.warn('Warning, No Scaper object provided to ScaperSpec function. Using default Scaper object.')
 
         # this is the spec
         self.spec = []
@@ -73,6 +81,7 @@ class ScaperSpec(object):
         # no background label provided, chose randomly
         if bg_label == None:
             bg_label = available_labels[(int(round(random.random() * (len(available_labels)-1))))]
+            warnings.warn('Warning, No background label provided, choosing randomly.')
 
         # if list not provided
         if type(bg_label) is not list:
@@ -109,14 +118,15 @@ class ScaperSpec(object):
                 self.bg_file = file
                 break
 
-        bg_spec = {'bg_label'       : self.bg_label,
-                   'bg_duration'    : self.bg_duration,
-                   'bg_source_file' : self.bg_file}
+        bg_spec = {'bg_label' : self.bg_label,
+                   'bg_duration' : self.bg_duration,
+                   'bg_source_file': self.bg_file}
 
         # append to spec
         self.spec.append(bg_spec)
 
-    def validate_label_paths(self, path, labels):
+    @staticmethod
+    def validate_label_paths(path, labels):
 
         """
 
@@ -151,16 +161,14 @@ class ScaperSpec(object):
                 # for each file in directory
                 for filename in os.listdir(tmp):
                     # if not .DS_store
-                    if not filename.startswith('.'):
-                        # and if it is an audio file
-                        if filename.endswith('.wav'):
-                            # set labels and break
-                            validated_labels[ndx] = labels[ndx]
-                            break
-                        else:
-                            # no audio files in the provided label directory, chose random label that exists
-                            warnings.warn('Warning, no audio files present in label directory ' + str(tmp) + ' . Choosing new label randomly')
-                            validated_labels[ndx] = available_labels[(int(round(random.random() * (len(available_labels) - 1))))]
+                    if (not filename.startswith('.')) and filename.endswith('.wav'):
+                        # set labels and break
+                        validated_labels[ndx] = labels[ndx]
+                        break
+                    else:
+                        # no audio files in the provided label directory, chose random label that exists
+                        validated_labels[ndx] = available_labels[(int(round(random.random() * (len(available_labels) - 1))))]
+                        warnings.warn('Warning, no audio files present in label directory ' + str(tmp) + ' . Using label ' + str(validated_labels[ndx]) + ' instead.')
 
             # chose audio file paths for corresponding labels
             files = os.listdir(os.path.join(path, validated_labels[ndx]))
@@ -171,7 +179,6 @@ class ScaperSpec(object):
             fpaths.append(filepaths)
 
         return validated_labels, fpaths
-
 
     def add_events(self, *args, **kwargs):
 
@@ -243,44 +250,89 @@ class ScaperSpec(object):
             elif key == "num_events":
                 num_events = val
 
+        # //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        # LABELS
         # no labels provided, chose randomly
         if labels == None:
             available_labels = os.listdir(self.sc.fg_path)
             available_labels = [the_label for the_label in available_labels if not(the_label.startswith('.'))]
-            labels = available_labels[(int(round(random.random() * (len(available_labels)-1))))]
+            labels = [available_labels[(int(round(random.random() * (len(available_labels)-1))))]]
+            warnings.warn('Warning, labels not provided. Using randomly generated labels: ' + str(labels))
 
         # if list not provided
         if type(labels) is not list:
             warnings.warn('Warning, Labels should be provided in list format.')
             labels = [labels]
 
-        # invalid number of events
-        if num_events == None or num_events <= 0:
-            self.num_events = 1
+        self.labels = labels
+
+        # ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        # NUM EVENTS
+        # num_events not provided,
+        # FIXME choose randomly or default ?
+        if num_events == None:
             warnings.warn('Warning, number of events not provided. Setting number of events to default: 1')
-        # multiple events, have to make fg_start_times, fg_durations, snrs into a list
+            self.num_events = 1
+
+        # invalid number of events
+        # FIXME choose randomly or default ?
+        if num_events <= 0:
+            warnings.warn('Warning, invalid number of events provided. Setting number of events to default: 1')
+            self.num_events = 1
         else:
             self.num_events = num_events
 
+        #///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        # FG DURATIONS
         # invalid foreground element durations, use random
-        if fg_durations == None or fg_durations <= 0:
-            # random value between 1 and (bg_duration/2)+1
-            tmp = round(random.random() * (self.bg_duration / 2) + 1)
-            self.fg_durations = [tmp] * self.num_events
-            warnings.warn('Warning, event must have duration > 0. Setting duration to default: 2 seconds')
-        else:
+        if fg_durations == None:
+            tmp = round(random.random() * (self.bg_duration / 2) + 1)               # FIXME bg_duration/2 is arbitrary
+            fg_durations = [tmp] * self.num_events
+            warnings.warn('Warning, no event durations provided. Setting durations randomly: ' + str(fg_durations))
             self.fg_durations = fg_durations
+
+        # list provided
+        if type(fg_durations) is list:
+            for ndx, duration in enumerate(fg_durations):
+                if duration <= 0:
+                    tmp = round(random.random() * (self.bg_duration / 2) + 1)           # FIXME bg_duration/2 is arbitrary
+                    fg_durations[ndx] = tmp;
+                    # self.fg_durations = [tmp] * self.num_events
+                    warnings.warn('Warning, events must have duration > 0. Setting durations randomly: ' + str(fg_durations))
+            self.fg_durations = fg_durations
+
+        # list not provided
+        if self.num_events > 1 and type(fg_durations) is not list:
+            tmp = fg_durations
+            self.fg_durations = [tmp] * self.num_events
+
         # more durations provided than events
         if (len(self.fg_durations) > self.num_events):
             self.fg_durations = self.fg_durations[0:self.num_events]
             warnings.warn('Warning, more event durations provided than events. Using the following durations: ' + str(self.fg_durations))
 
+        # ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        # SNRS
         # FIX invalid SNR value, use default... or random?
-        if snrs == None or snrs < 0:
-            self.snrs = 10
-            warnings.warn('Warning, SNR value not provided or out of range. Setting SNR to default: 10 dB')
-        else:
-            self.snrs = snrs
+        if snrs == None:
+            tmp = -round(random.random() * (10)) + 1                        # FIXME default -10 to 0 is arbitary
+            snrs = [tmp] * self.num_events
+            self.snrs = snrs;
+            warnings.warn('Warning, no SNRs provided. Setting SNRS randomly: ' + str(self.snrs))
+
+        # list provided
+        if type(snrs) is list:
+            for ndx, snr_val in enumerate(snrs):
+                if snr_val > 0:
+                    tmp = -round(random.random() * (10)) + 1                    # FIXME default -10 to 0 is arbitary
+                    snrs[ndx] = tmp;
+                    warnings.warn('Warning, SNR value provided out of range (must be < 0). Setting SNR randomly: ' + str(snrs))
+                self.snrs = snrs
+
+        # list not provided
+        if self.num_events > 1 and type(snrs) is not list:
+            tmp = snrs
+            self.snrs = [tmp] * self.num_events
 
         # extend SNR list if too short
         if type(self.snrs) is list:
@@ -288,53 +340,61 @@ class ScaperSpec(object):
                 for ndx in range(len(self.snrs),num_events):
                     self.snrs.append(self.snrs[num_events%ndx-1])
 
-        # invalid start times - generate randomly
-        if fg_start_times == None or fg_start_times < 0:
-            warnings.warn('Warning, start times not provided, or less than 0. Setting start times randomly.')
-            self.fg_start_times = []
+        # ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        # FG START TIMES
+        self.fg_start_times = []
+        # no start times provided
+        if fg_start_times == None:
+            warnings.warn('Warning, start times not provided. Setting start times randomly.')
             for ndx in range(0, self.num_events):
                 self.fg_start_times.append(round(random.random() * (self.bg_duration - self.fg_durations[(ndx % self.num_events)- 1])))
-        # multiple events
-        else:
-            self.fg_start_times = fg_start_times
-            # more durations provided than events
+
+        # list provided
+        if type(fg_start_times) is list:
+            for ndx, start_time in enumerate(fg_start_times):
+                if start_time < 0:
+                    new_start_time = (round(random.random() * (self.bg_duration - self.fg_durations[(ndx % self.num_events) - 1])))
+                    warnings.warn('Warning, fg_start_time ' + str(start_time) + ' is invalid. Start times must be >= 0.')
+                    self.fg_start_times.append(new_start_time)
+                else:
+                    self.fg_start_times.append(start_time)
+
+        # list not provided
+        if self.num_events > 1 and type(fg_start_times) is not list:
+            print
+            tmp = fg_start_times
+            self.fg_start_times = [tmp] * self.num_events
+
+        # more durations provided than events
         if (len(self.fg_start_times) > self.num_events):
             self.fg_start_times = self.fg_start_times[0:self.num_events]
             warnings.warn('Warning, more event start times provided than events. Using the following start times: ' + str(self.fg_start_times))
 
-        # multiple events, but no lists passed - extend
-        if self.num_events > 1 and type(self.fg_durations) is not list:
-            tmp = self.fg_durations
-            self.fg_durations = [tmp] * self.num_events
-        if self.num_events > 1 and type(self.fg_start_times) is not list:
-            tmp = self.fg_start_times
-            self.fg_start_times = [tmp] * self.num_events
-        if self.num_events > 1 and type(self.snrs) is not list:
-            tmp = self.snrs
-            self.snrs = [tmp] * self.num_events
+
+
+
+
 
         # lists passed, but must ensure they are correct length (same as num_events)
         if type(self.fg_durations) is list and (len(self.fg_durations) != self.num_events):
             for ndx in range(len(self.fg_durations), num_events):
-                self.fg_durations.append(self.fg_durations[(ndx % self.num_events)- 1])  # FIX MOD
+                self.fg_durations.append(self.fg_durations[(ndx % self.num_events)-1])  # FIX MOD
 
         # lists passed, but must ensure they are correct length (same as num_events)
         if type(self.fg_start_times) is list and (len(self.fg_start_times) != self.num_events):
             for ndx in range(len(self.fg_start_times), num_events):
-                self.fg_start_times.append(self.fg_start_times[(ndx % self.num_events)- 1])  # FIX MOD
+                self.fg_start_times.append(self.fg_start_times[(ndx % self.num_events)-1])  # FIX MOD
 
         # event duration value checks
         for ndx, each_time in enumerate(self.fg_start_times):
+            # if fg_start_time + fg_duration is longer than bg_duration
             if (each_time + self.fg_durations[ndx] > self.bg_duration):
                 self.fg_durations[ndx] = (self.bg_duration - self.fg_start_times[ndx])
                 warnings.warn('Warning, event durations exceed background duration for provided start times. '
                               'Event duration trunctated to ' + str(self.fg_durations[ndx]) + ' seconds.')
 
-
         # choose the source file for each event
         chosen_files = []
-        # label reference needed for source file choice
-        self.labels = labels
         for n in range(0, self.num_events):
             # if more events than labels provided
             if (n >= len(self.labels)):
@@ -348,11 +408,9 @@ class ScaperSpec(object):
 
         # for each label
         for ndx, this_label in enumerate(self.labels):
-
             for file in self.filepaths[ndx]:
                 # random index for files corresponding to label
                 rand_ndx = int(round(random.random() * (len(self.filepaths[ndx]) - 1)))
-
                 f = self.filepaths[ndx][rand_ndx]
                 # if the file satisfies the start times and durations
                 if self.fg_durations[ndx] <= sox.file_info.duration(f):
@@ -374,12 +432,12 @@ class ScaperSpec(object):
         print "-----------------------------------"
 
         for ndx,each_label in enumerate(self.labels):
-            s = {'label'        : each_label,
+            s = {'label' : each_label,
                 'fg_start_time' : self.fg_start_times,
-                'fg_duration'   : self.fg_durations,
-                'source_files'  : self.filepaths,
-                'snr'           : self.snrs,
-                'num_events'    : self.num_events}
+                'fg_duration' : self.fg_durations,
+                'source_files' : self.filepaths,
+                'snr' : self.snrs,
+                'num_events' : self.num_events}
 
         # add these events to the spec object
         self.spec.append(s)
@@ -401,6 +459,8 @@ class ScaperSpec(object):
         jams.schema.add_namespace('namespaces/event.json')
         scene_jam = jams.JAMS()
         scene_ann = jams.Annotation(namespace='event')
+
+        # FIXME should sp.spec be passed or should spec = sp.spec be used here?
 
         # everything goes into the value field as a tuple
         for ndx, events in enumerate(spec):
@@ -449,53 +509,52 @@ class Scaper(object):
 
         Parameters
         ----------
-        fpath     :     directory path for foreground audio
+        fg_path     :     directory path for foreground audio
         bpath     :     directory path for background audio
 
         """
 
         # if args are key value pairs
         for key, val in kwargs.iteritems():
-            if key == "fpath":
-                fpath = val
-            elif key == "bpath":
-                bpath = val
+            if key == "fg_path":
+                fg_path = val
+            elif key == "bg_path":
+                bg_path = val
 
         # if no key value pairs for args
         try:
-            fpath
+            fg_path
         except NameError:
             # argument checks
             if len(args) == 0:
                 warnings.warn('Warning, no audio paths provided. Using default directories: audio/fg     audio/bg')
-                fpath = 'audio/fg'
-                bpath = 'audio/bg'
+                fg_path = 'audio/fg'
+                bg_path = 'audio/bg'
             elif len(args) == 1:
                 warnings.warn('Warning, no background path provided. Using default directory: audio/bg ')
-                fpath = args[0]
-                bpath = 'audio/bg'
+                fg_path = args[0]
+                bg_path = 'audio/bg'
             else:
-                fpath = args[0]
-                bpath = args[1]
+                fg_path = args[0]
+                bg_path = args[1]
 
         print '~~~'
         print 'Scaper Created:'
-        print 'fg path: ', fpath
-        print 'bg path: ', bpath
+        print 'fg path: ', fg_path
+        print 'bg path: ', bg_path
 
         # filepath checks
-        if not (os.path.isdir(fpath)):
+        if not (os.path.isdir(fg_path)):
             warnings.warn('Warning, foreground path not valid. Using default directory: audio/fg ')
             self.fg_path = 'audio/fg'
         else:
-            self.fg_path = fpath
+            self.fg_path = fg_path
 
-        if not (os.path.isdir(bpath)):
+        if not (os.path.isdir(bg_path)):
             warnings.warn('Warning, background path not valid. Using default directory: audio/bg ')
             self.bg_path = 'audio/bg'
         else:
-            self.bg_path = bpath
-
+            self.bg_path = bg_path
 
     def generate_soundscapes(self, j_file=None, s_file=None):
 
@@ -510,9 +569,8 @@ class Scaper(object):
         -------
 
         """
-
-        print os.path.dirname(s_file)
-
+        print j_file, os.W_OK
+        # print os.path.dirname(s_file)
         if j_file == None or not os.path.isfile(j_file):
             warnings.warn("Warning, no jams file, or invalid jams file provided. Generate_soundscapes() process terminated.")
             return
@@ -604,15 +662,3 @@ class Scaper(object):
         # create the output file
         mix = sox.Combiner(files_to_mix, s_file, 'mix')
         mix.build()
-
-
-if __name__ == '__main__':
-    # main()
-
-    sc = Scaper(bpath='audio/bg', fpath='audio/fg')
-    sp = ScaperSpec(sc, labels=['crowd'], duration=8)
-
-    # labels, start times, durations, snrs, num events
-    sp.add_events(labels=['horn', 'siren'], fg_start_times=[3,2], fg_durations=[1,1], snrs=[-2,-5], num_events=4)
-    thejam = sp.generate_jams(sp.spec, 'jammyjamm.jams')
-    sc.generate_soundscapes('./jammyjamm.jams','./output_audio.wav')
