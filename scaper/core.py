@@ -65,8 +65,8 @@ class ScaperSpec(object):
         except NameError:
             sc = None
 
-        # None scape passed
-        if sc == None:
+        # None scape passed or invalide type
+        if sc == None or not isinstance(sc, Scaper):
             # generate default scaper
             sc = Scaper()
             warnings.warn('Warning, No Scaper object provided to ScaperSpec function. Using default Scaper object.')
@@ -152,7 +152,6 @@ class ScaperSpec(object):
 
             # check if label directory does not exist
             if not (os.path.isdir(os.path.join(path, labels[ndx]))):
-                # print '%%', labels[ndx], '-', os.path.join(path, labels[ndx]), '-',(os.path.isdir(os.path.join(path, labels[ndx])))
 
                 warnings.warn('Warning, the supplied label does not exist in audio directory. Choosing label randomly')
                 validated_labels[ndx] = available_labels[(int(round(random.random() * (len(available_labels)-1))))]
@@ -249,26 +248,10 @@ class ScaperSpec(object):
             elif key == 'num_events':
                 num_events = val
 
-        # //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        # LABELS
-        # no labels provided, chose randomly
-        available_labels = os.listdir(self.sc.fg_path)
-        available_labels = [the_label for the_label in available_labels if not (the_label.startswith('.'))]
-
-        if labels == None:
-            labels = [available_labels[(int(round(random.random() * (len(available_labels)-1))))]]
-            warnings.warn('Warning, labels not provided. Using randomly generated labels: ' + str(labels))
-
-        # if list not provided
-        if type(labels) is not list:
-            warnings.warn('Warning, Labels should be provided in list format.')
-            labels = [labels]
-
-        self.labels = labels
-
         # ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
         # NUM EVENTS
         # num_events not provided,
+
         # FIXME choose randomly or default ?
         if num_events == None:
             warnings.warn('Warning, number of events not provided. Setting number of events to default: 1')
@@ -281,6 +264,28 @@ class ScaperSpec(object):
             self.num_events = 1
         else:
             self.num_events = num_events
+
+        # //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        # LABELS
+
+        available_labels = os.listdir(self.sc.fg_path)
+        available_labels = [the_label for the_label in available_labels if not (the_label.startswith('.'))]
+
+        # no labels provided, chose randomly
+        if labels == None:
+            labels = [available_labels[(int(round(random.random() * (len(available_labels) - 1))))]]
+            warnings.warn('Warning, labels not provided. Using randomly generated labels: ' + str(labels))
+            self.labels = labels
+
+        # list not provided, single element passed
+        elif type(labels) is not list:
+            tmp = labels
+            self.labels = [tmp] * self.num_events
+
+        # list provided
+        elif type(labels) is list:
+            self.labels = labels
+
 
         #///////////////////////////////////////////////////////////////////////////////////////////////////////////////
         # FG DURATIONS
@@ -297,7 +302,6 @@ class ScaperSpec(object):
                 if duration <= 0:
                     tmp = round(random.random() * (self.bg_duration / 2) + 1)           # FIXME bg_duration/2 is arbitrary
                     fg_durations[ndx] = tmp;
-                    # self.fg_durations = [tmp] * self.num_events
                     warnings.warn('Warning, events must have duration > 0. Setting durations randomly: ' + str(fg_durations))
             self.fg_durations = fg_durations
 
@@ -357,7 +361,10 @@ class ScaperSpec(object):
             self.fg_start_times = [tmp] * self.num_events
 
 
+        # ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        # check list length
         # lists passed, but must ensure they are correct length (same as num_events)
+
         if type(self.snrs) is list and (len(self.snrs) != self.num_events):
             # not enough snrs
             if len(self.snrs) < self.num_events:
@@ -381,6 +388,7 @@ class ScaperSpec(object):
                 self.fg_durations = self.fg_durations[0:self.num_events]
                 warnings.warn('Warning, more durations provided than events. Using the following durations: ' + str(self.fg_durations))
 
+
         # lists passed, but must ensure they are correct length (same as num_events)
         if type(self.fg_start_times) is list and (len(self.fg_start_times) != self.num_events):
             # not enough start times
@@ -394,24 +402,36 @@ class ScaperSpec(object):
                 warnings.warn('Warning, more start times provided than events. Using the following start times: ' + str(self.fg_start_times))
 
 
+        # lists passed, but must ensure they are correct length (same as num_events)
+        if type(self.labels) is list and (len(self.labels) != self.num_events):
+            # not enough labels
+            if len(self.labels) < self.num_events:
+                for ndx in range(len(self.labels), self.num_events):
+                    self.labels.append(self.labels[(ndx % self.num_events) - 1])  # FIXME MOD or rand ?
+                warnings.warn('Warning, not enough labels provided. Using the following labels: ' + str(self.labels))
+            # too many labels
+            elif len(self.labels) > self.num_events:
+                self.labels = self.labels[0:self.num_events]
+                warnings.warn('Warning, more labels provided than events. Using the following labels: ' + str(self.labels))
+
 
         # event duration value checks
         for ndx, each_time in enumerate(self.fg_start_times):
             # if fg_start_time + fg_duration is longer than bg_duration
             if (each_time + self.fg_durations[ndx] > self.bg_duration):
                 self.fg_durations[ndx] = (self.bg_duration - self.fg_start_times[ndx])
-                warnings.warn('Warning, event durations exceed background duration for provided start times. '
-                              'Event duration trunctated to ' + str(self.fg_durations[ndx]) + ' seconds.')
+                warnings.warn('Warning, event durations exceed background duration for provided start times. Event duration trunctated to ' + str(self.fg_durations[ndx]) + ' seconds.')
 
         # choose the source file for each event
         chosen_files = []
-        for n in range(0, self.num_events):
-            # if more events than labels provided
-            if (n >= len(self.labels)):
-                # choose a random label from the label list
-                label = self.labels[int(round(random.random()*(len(self.labels)-1)))]
-                # append this new label
-                self.labels.append(label)
+        # for n in range(0, self.num_events):
+        #     # if more events than labels provided
+        #     if (n >= len(self.labels)):
+        #         print "ever?"
+        #         # choose a random label from the label list
+        #         label = self.labels[int(round(random.random()*(len(self.labels)-1)))]
+        #         # append this new label
+        #         self.labels.append(label)
 
         # validate foreground labels
         self.labels, self.filepaths = self.validate_label_paths(self.sc.fg_path, self.labels)
@@ -419,9 +439,11 @@ class ScaperSpec(object):
         # for each label, choose a file
         for ndx, this_label in enumerate(self.labels):
             for file in self.filepaths[ndx]:
+
                 # random index for files corresponding to label
                 rand_ndx = int(round(random.random() * (len(self.filepaths[ndx]) - 1)))
                 f = self.filepaths[ndx][rand_ndx]
+
                 # if the file satisfies the start times and durations
                 if self.fg_durations[ndx] <= sox.file_info.duration(f):
                     chosen_files.append(f)
@@ -440,7 +462,7 @@ class ScaperSpec(object):
         print 'snr', self.snrs
         print 'num_events', self.num_events
 
-        for ndx,each_label in enumerate(self.labels):
+        for ndx, each_label in enumerate(self.labels):
             s = {'label' : each_label,
                 'fg_start_time' : self.fg_start_times,
                 'fg_duration' : self.fg_durations,

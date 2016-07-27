@@ -2,7 +2,7 @@ import pytest
 import core
 import os
 
-def test_Scaper():
+def test_Scaper():                   # 100% covered
 
     # no arg
     sc = core.Scaper()
@@ -26,17 +26,17 @@ def test_Scaper():
     assert sc.fg_path == 'audio/fg'
 
 
-def test_ScaperSpec():
+def test_ScaperSpec():              # 100% covered
 
     sc = core.Scaper()
 
     # no arg
-    sp = core.ScaperSpec()
+    sp = core.ScaperSpec(sc=None)
     assert sp.sc != None
     assert sp.bg_label != None
     assert sp.bg_duration != None
     # one arg
-    sp = core.ScaperSpec(sc)
+    sp = core.ScaperSpec(8)
     assert sp.bg_label != None
     # two arg, no list
     sp = core.ScaperSpec(sc, 'music')
@@ -44,21 +44,13 @@ def test_ScaperSpec():
     # three arg
     sp = core.ScaperSpec(sc, ['music'], 1)
     assert sp.bg_label != None
-    # key value args
-    sp = core.ScaperSpec(sc, bg_label=['music'], bg_duration = 2)
-    assert sp.bg_label == ['music']
-    assert sp.bg_duration == 2
-    # key value args
-    sp = core.ScaperSpec(sc, bg_label=['music'], bg_duration = 3)
-    assert sp.bg_label == ['music']
-    assert sp.bg_duration == 3
-    # list of bg labels
-    sp = core.ScaperSpec(sc, bg_label=['music','car','crowd'], bg_duration=9)
+    # key value args, list of bg labels
+    sp = core.ScaperSpec(scape=sc, bg_label=['music','car','crowd'], bg_duration=9)
     assert sp.bg_label == ['music'] or ['crowd'] or ['car']
     assert sp.bg_duration == 9
 
     # wrong label, invalid duration
-    sp = core.ScaperSpec(sc, bg_label='wrong', bg_duration='d')
+    sp = core.ScaperSpec(sc, bg_label='wrong', bg_duration=-3)
     assert sp.bg_label != 'wrong'
     assert sp.bg_duration >= 0
 
@@ -110,55 +102,25 @@ def test_add_events():
     assert sp.fg_durations == [2]
     assert sp.snrs == [-4]
 
-    # snr
-    sp = core.ScaperSpec(sc)
-    sp.add_events(snrs=None)
-    assert sp.snrs != None
-    sp = core.ScaperSpec(sc)
-    sp.add_events(snrs=[-1])
-    assert sp.snrs == [-1]
+    #collapse these vvv
+    # snrs
     sp = core.ScaperSpec(sc)
     sp.add_events(snrs=-1)
     assert sp.snrs == [-1]
-    sp = core.ScaperSpec(sc)
-    sp.add_events(snrs=[1, 2, 3], num_events=2)
-    assert sp.snrs != [1, 2, 3]
-    sp = core.ScaperSpec(sc)
-    sp.add_events(snrs=[1, 2, 3], num_events=4)
-    assert sp.snrs != [1, 2, 3]
 
     # fg_start_times
     sp = core.ScaperSpec(sc)
-    sp.add_events(fg_start_times=None)
-    assert sp.fg_start_times != None
-    sp = core.ScaperSpec(sc)
-    sp.add_events(fg_start_times=[1])
-    assert sp.fg_start_times == [1]
-    sp = core.ScaperSpec(sc)
     sp.add_events(fg_start_times=1)
     assert sp.fg_start_times == [1]
-    sp = core.ScaperSpec(sc)
-    sp.add_events(fg_start_times=[1, 2, 3], num_events=2)
-    assert sp.fg_start_times != [1, 2, 3]
     sp = core.ScaperSpec(sc)
     sp.add_events(fg_start_times=[1, 2, 3], num_events=4)
     assert sp.fg_start_times != [1, 2, 3]
 
     # fg_durations
-    sp = core.ScaperSpec(sc)
-    sp.add_events(fg_durations=None)
-    assert sp.fg_durations != None
-    sp = core.ScaperSpec(sc)
-    sp.add_events(fg_durations=[1])
-    assert sp.fg_durations == [1]
-    sp = core.ScaperSpec(sc)
     sp.add_events(fg_durations=1)
     assert sp.fg_durations == [1]
     sp = core.ScaperSpec(sc)
     sp.add_events(fg_durations=[1, 2, 3], num_events=2)
-    assert sp.fg_durations != [1, 2, 3]
-    sp = core.ScaperSpec(sc)
-    sp.add_events(fg_durations=[1, 2, 3], num_events=4)
     assert sp.fg_durations != [1, 2, 3]
 
     # invalid labels, invalid start times, invalid durations, invalid snrs more start times then events
@@ -173,13 +135,28 @@ def test_add_events():
 
     # duration checks
     sp = core.ScaperSpec(sc, bg_label=['music'], bg_duration=10)
-    sp.add_events(labels=['music'], fg_start_times=[5, 6, 7, 8], fg_durations=[6], snrs=[-1, -3], num_events=4)
-    assert sp.fg_durations == [5, 4, 3, 2]
+    sp.add_events(labels=['music'], fg_start_times=[5, 6, 7, 8], fg_durations=[6], snrs=[-1, -3], num_events=5)
+    assert len(sp.fg_durations) == 5
 
     # invalid number of events
     sp = core.ScaperSpec(sc, bg_label=['siren'], bg_duration=10)
     sp.add_events(labels=['horn'], fg_start_times=[5,6,7,8], fg_durations=[6], snrs=[-1,-3], num_events=-1)
     assert len(sp.fg_durations) == 1
+
+    # list extension checks
+    sp = core.ScaperSpec(sc)
+    sp.add_events(labels=['foo', 'bar'], fg_start_times=[2, 2, 0], fg_durations=[1, 2, 3], snrs=[1, 4, 5], num_events=5)
+    assert sp.num_events != None
+
+    # more params than events
+    sp = core.ScaperSpec(sc)
+    sp.add_events(labels='siren', fg_start_times=[1, 2], fg_durations=[1, 2, 3], snrs=[1, 4, 5], num_events=1)
+    assert sp.num_events != None
+
+    # less events than params
+    sp = core.ScaperSpec(sc)
+    sp.add_events(labels=['siren','siren'], fg_start_times=[1, 2], fg_durations=[1, 2, 3], snrs=[1, 4, 5], num_events=1)
+    assert sp.num_events != None
 
 def test_generate_jams():
 
