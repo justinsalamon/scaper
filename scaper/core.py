@@ -473,6 +473,13 @@ class ScaperSpec(object):
         # add these events to the spec object
         self.spec.append(s)
 
+        # self.labels = ["horn"]
+        # self.fg_durations = [1]
+        # self.fg_start_times = [1]
+        # self.num_events= 1
+        # self.snrs = [1]
+
+
     def generate_jams(self, spec, outfile):
 
         """
@@ -634,7 +641,9 @@ class Scaper(object):
             warnings.warn('Warning, no jams file, or invalid jams file provided. Generate_soundscapes() process terminated.')
             return
 
-        # check output scaper file
+
+        print "--", s_file
+        # check if output audio file already exists
         if os.path.exists(s_file):
             warnings.warn('Warning, output file %s already exists. Continuing will overwrite.' % j_file )
 
