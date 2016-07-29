@@ -1,4 +1,8 @@
 language: python
+
+notifications:
+    email: false
+
 python:
   - "2.7"
   - "3.4"
@@ -17,7 +21,7 @@ before_install:
     - conda config --set always_yes yes --set changeps1 no
     - conda update -q conda
     - conda info -a
-    - deps='pip atlas numpy scipy sphinx nose six future pep8 matplotlib decorator'
+    - deps='pip atlas numpy scipy sphinx nose six future pep8'
     - conda create -q -n test-environment "python=$TRAVIS_PYTHON_VERSION" $deps 
     - source activate test-environment
     - pip install python-coveralls
