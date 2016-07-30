@@ -1,3 +1,4 @@
 *.pyc
 .idea/*
 .cache/*
+scaper.egg-info/*
