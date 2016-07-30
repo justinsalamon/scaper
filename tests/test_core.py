@@ -239,8 +239,9 @@ def test_generate_soundscapes():
     assert the_jam
 
     # output audio file already exists
-    sc.generate_soundscapes(j_file='test/test_jams2.jams',
-                            s_file='test/dummy_output_audio.wav')
+    # sc.generate_soundscapes(j_file='test/test_jams2.jams',
+    #                         s_file='test/dummy_output_audio.wav')
+
     # assert not the_jam
     assert the_jam
 
