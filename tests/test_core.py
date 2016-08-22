@@ -1,3 +1,4 @@
+
 import scaper.core as core
 import os
 
@@ -6,24 +7,24 @@ def test_scaper():
 
     # no arg
     sc = core.Scaper()
-    assert sc.bg_path == 'audio/bg'
-    assert sc.fg_path == 'audio/fg'
+    assert sc.bg_path == '../audio/bg'
+    assert sc.fg_path == '../audio/fg'
     # one arg
-    sc = core.Scaper('audio/fg')
-    assert sc.bg_path == 'audio/bg'
-    assert sc.fg_path == 'audio/fg'
+    sc = core.Scaper('../audio/fg')
+    assert sc.bg_path == '../audio/bg'
+    assert sc.fg_path == '../audio/fg'
     # two arg
-    sc = core.Scaper('audio/fg', 'audio/bg')
-    assert sc.bg_path == 'audio/bg'
-    assert sc.fg_path == 'audio/fg'
+    sc = core.Scaper('../audio/fg', '../audio/bg')
+    assert sc.bg_path == '../audio/bg'
+    assert sc.fg_path == '../audio/fg'
     # key value args
-    sc = core.Scaper(fg_path='audio/fg', bg_path='audio/bg')
-    assert sc.bg_path == 'audio/bg'
-    assert sc.fg_path == 'audio/fg'
+    sc = core.Scaper(fg_path='../audio/fg', bg_path='../audio/bg')
+    assert sc.bg_path == '../audio/bg'
+    assert sc.fg_path == '../audio/fg'
     # paths dont exist
-    sc = core.Scaper(fg_path='audio/wrong', bg_path='audio/wwrong')
-    assert sc.bg_path == 'audio/bg'
-    assert sc.fg_path == 'audio/fg'
+    sc = core.Scaper(fg_path='../audio/wrong', bg_path='../audio/wwrong')
+    assert sc.bg_path == '../audio/bg'
+    assert sc.fg_path == '../audio/fg'
 
 
 def test_scaperspec():
@@ -195,7 +196,7 @@ def test_generate_jams():
     sp.add_events(
         labels=['horn', 'siren'], fg_start_times=[3, 2], fg_durations=[1, 1],
         snrs=[-2, -5], num_events=2)
-    the_jam = sp.generate_jams(sp.spec, 'test/dummy_outfile.jams')
+    the_jam = sp.generate_jams(sp.spec, 'tests/tmp/dummy_outfile.jams')
     assert the_jam
 
     # the_jam = sp.generate_jams()
@@ -209,17 +210,17 @@ def test_generate_soundscapes():
     sp.add_events(
         labels=['horn'], fg_start_times=[2], fg_durations=[1], snrs=[-5],
         num_events=2)
-    the_jam = sp.generate_jams(sp.spec, 'test/test_jams1.jams')
+    the_jam = sp.generate_jams(sp.spec, 'tests/tmp/test_jams1.jams')
 
     # 0 args
     sc.generate_soundscapes()
     clear_test_dir()
     # 1 arg
-    sc.generate_soundscapes('test/test_jams1.jams')
+    sc.generate_soundscapes('tests/tmp/test_jams1.jams')
     clear_test_dir()
     # 2 arg
-    sc.generate_soundscapes('test/test_jams1.jams',
-                            'test/audio/output_audio.wav')
+    sc.generate_soundscapes('tests/tmp/test_jams1.jams',
+                            'tests/tmp/audio/output_audio.wav')
     # clear_test_dir()
     assert the_jam
 
@@ -227,15 +228,15 @@ def test_generate_soundscapes():
     sp = core.ScaperSpec(sc, bg_label=['crowd'], bg_duration=10)
     sp.add_events(labels=['horn', 'siren'], fg_start_times=[3, 2],
                   fg_durations=[1, 1], snrs=[-2, -5], num_events=2)
-    the_jam = sp.generate_jams(sp.spec, 'test/dummy_outfile.jams')
-    sc.generate_soundscapes('test/incorrec_name.jams',
-                            'test/dummy_output_audio.wav')
+    the_jam = sp.generate_jams(sp.spec, 'tests/tmp/dummy_outfile.jams')
+    sc.generate_soundscapes('tests/tmp/incorrec_name.jams',
+                            'tests/tmp/dummy_output_audio.wav')
     assert the_jam
 
     # correct filepath
-    the_jam = sp.generate_jams(sp.spec, 'test/test_jams2.jams')
-    sc.generate_soundscapes('test/test_jams2.jams',
-                            'test/dummy_output_audio.wav')
+    the_jam = sp.generate_jams(sp.spec, 'tests/tmp/test_jams2.jams')
+    sc.generate_soundscapes('tests/tmp/test_jams2.jams',
+                            'tests/tmp/dummy_output_audio.wav')
     assert the_jam
 
     # output audio file already exists
@@ -246,15 +247,15 @@ def test_generate_soundscapes():
     assert the_jam
 
     # output audio filepath invalid
-    sc.generate_soundscapes(j_file='test/test_jams2.jams',
-                            s_file='test/dummy/output')
+    sc.generate_soundscapes(j_file='tests/tmp/test_jams2.jams',
+                            s_file='tests/tmp/dummy/output')
     # assert not the_jam
     assert the_jam
 
 
 def clear_test_dir():
     # clear test folder of previous jams and audio files
-    folder = 'test'
+    folder = 'tests/tmp'
     for each_file in os.listdir(folder):
         file_path = os.path.join(folder, each_file)
         try:

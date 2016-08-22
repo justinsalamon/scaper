@@ -569,13 +569,14 @@ class Scaper(object):
         except NameError:
             # argument checks
             if len(args) == 0:
-                warnings.warn('Warning, no audio paths provided. Using default directories: audio/fg     audio/bg')
-                fg_path = 'audio/fg'
-                bg_path = 'audio/bg'
+                warnings.warn('Warning, no audio paths provided. Using default directories: ../audio/fg     ../audio/bg')
+                # FIXME should prompt user instead
+                fg_path = '../audio/fg'
+                bg_path = '../audio/bg'
             elif len(args) == 1:
-                warnings.warn('Warning, no background path provided. Using default directory: audio/bg ')
+                warnings.warn('Warning, no background path provided. Using default directory: ../audio/bg ')
                 fg_path = args[0]
-                bg_path = 'audio/bg'
+                bg_path = '../audio/bg'
             else:
                 fg_path = args[0]
                 bg_path = args[1]
@@ -587,14 +588,14 @@ class Scaper(object):
 
         # filepath checks
         if not (os.path.isdir(fg_path)):
-            warnings.warn('Warning, foreground path not valid. Using default directory: audio/fg ')
-            self.fg_path = 'audio/fg'
+            warnings.warn('Warning, foreground path not valid. Using default directory: ../audio/fg ')
+            self.fg_path = '../audio/fg'
         else:
             self.fg_path = fg_path
 
         if not (os.path.isdir(bg_path)):
-            warnings.warn('Warning, background path not valid. Using default directory: audio/bg ')
-            self.bg_path = 'audio/bg'
+            warnings.warn('Warning, background path not valid. Using default directory: ../audio/bg ')
+            self.bg_path = '../audio/bg'
         else:
             self.bg_path = bg_path
 
@@ -625,13 +626,13 @@ class Scaper(object):
         except NameError:
             # argument checks
             if len(args) == 0:
-                warnings.warn('Warning, no audio paths provided. Using default directories: audio/fg     audio/bg')
+                warnings.warn('Warning, no audio paths provided. Using default directories: ../audio/fg     ../audio/bg')
                 j_file = 'jams.jams'
-                s_file = 'audio/output'
+                s_file = '../audio/output'
             elif len(args) == 1:
-                warnings.warn('Warning, no background path provided. Using default directory: audio/bg ')
+                warnings.warn('Warning, no background path provided. Using default directory: ../audio/bg ')
                 j_file = args[0]
-                s_file = 'audio/output'
+                s_file = '../audio/output'
             else:
                 j_file = args[0]
                 s_file = args[1]
@@ -673,7 +674,7 @@ class Scaper(object):
                 bg_filepath = value[2]
                 bg_start_time = events.data.time[ndx].total_seconds()
                 bg_duration = events.data.duration[ndx].total_seconds()
-                tmp_bg_filepath = 'audio/output/tmp/bg_tmp.wav'
+                tmp_bg_filepath = '../audio/output/tmp/bg_tmp.wav'
 
                 # create pysox transformer for background
                 bg = sox.Transformer(bg_filepath, tmp_bg_filepath)
@@ -696,7 +697,7 @@ class Scaper(object):
                 curr_fg_snr = value[3]
 
                 # FIX: PYSOX: have to store these intermediate files, at the moment
-                tmp_out_file = 'audio/output/tmp/fg_tmp_' + str(ndx) + '.wav'
+                tmp_out_file = '../audio/output/tmp/fg_tmp_' + str(ndx) + '.wav'
 
                 # create pysox transformer for foreground
                 curr_fg = sox.Transformer(curr_fg_filepath, tmp_out_file)
@@ -718,7 +719,7 @@ class Scaper(object):
                 # save trimmed and normalized background
                 curr_fg.build()
 
-        tmp_audio_path = 'audio/output/tmp'
+        tmp_audio_path = '../audio/output/tmp'
 
         files_to_mix =  [file for file in os.listdir(tmp_audio_path) if not (file.startswith('.'))]
         for ndx,file in enumerate(files_to_mix):

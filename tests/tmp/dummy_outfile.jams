@@ -1,0 +1,66 @@
+{
+  "sandbox": {}, 
+  "annotations": [
+    {
+      "namespace": "event", 
+      "sandbox": {}, 
+      "time": 0, 
+      "duration": null, 
+      "annotation_metadata": {
+        "annotation_tools": "", 
+        "curator": {
+          "name": "", 
+          "email": ""
+        }, 
+        "annotator": {}, 
+        "version": "", 
+        "corpus": "", 
+        "annotation_rules": "", 
+        "validation": "", 
+        "data_source": ""
+      }, 
+      "data": [
+        {
+          "duration": 10.0, 
+          "confidence": 1.0, 
+          "value": [
+            "background", 
+            "crowd", 
+            "../audio/bg/crowd/ladies-bowl-speech.wav"
+          ], 
+          "time": 0.0
+        }, 
+        {
+          "duration": 1.0, 
+          "confidence": 1.0, 
+          "value": [
+            "foreground", 
+            "siren", 
+            "../audio/fg/horn/17-CAR-Rolls-Royce-Horn-2.wav", 
+            -2
+          ], 
+          "time": 3.0
+        }, 
+        {
+          "duration": 1.0, 
+          "confidence": 1.0, 
+          "value": [
+            "foreground", 
+            "siren", 
+            "../audio/fg/siren/69-Siren-2.wav", 
+            -5
+          ], 
+          "time": 2.0
+        }
+      ]
+    }
+  ], 
+  "file_metadata": {
+    "jams_version": "0.2.1", 
+    "title": "", 
+    "identifiers": {}, 
+    "release": "", 
+    "duration": 10, 
+    "artist": ""
+  }
+}
