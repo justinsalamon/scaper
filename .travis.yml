@@ -26,10 +26,8 @@ before_install:
     - source activate test-environment
     - pip install python-coveralls
     - pip install numpydoc
-	
     - brew update
     - brew install sox
-
     - pip install sox
 
 # command to install dependencies
