@@ -557,7 +557,7 @@ class ScaperSpec(object):
 
         print('-----------------------------------')
         print('Jams Created:')
-        print outfile
+        print(outfile)
 
         return scene_jam
 
@@ -683,7 +683,7 @@ class Scaper(object):
                 warnings.warn('Warning, invalid response. Please select \'y\' or \'no\' :')
 
         elif os.access(os.path.dirname(s_file), os.W_OK):
-            print 'Output file %s selected.' % s_file
+            print('Output file %s selected.' % s_file)
         else:
             warnings.warn('Warning, provided scaper output file is invalid. Generate_soundscapes() process terminated.')
             return
