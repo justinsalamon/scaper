@@ -58,9 +58,9 @@ class ScaperSpec(object):
                 sc = val
 
         # print '-----------------------------------'
-        print 'ScaperSpec Created:'
-        print 'bg_label: ', bg_label
-        print 'duration: ', bg_duration
+        print('ScaperSpec Created:')
+        print('bg_label: ', bg_label)
+        print('duration: ', bg_duration)
 
         # None scape passed or invalid type
         if sc is None or not isinstance(sc, Scaper):
