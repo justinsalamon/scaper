@@ -57,7 +57,7 @@ class ScaperSpec(object):
             elif key == 'scape':
                 sc = val
 
-        print '-----------------------------------'
+        # print '-----------------------------------'
         print 'ScaperSpec Created:'
         print 'bg_label: ', bg_label
         print 'duration: ', bg_duration
