@@ -26,12 +26,11 @@ before_install:
     - source activate test-environment
     - pip install python-coveralls
     - pip install numpydoc
+    - pip install sox
 
 # command to install dependencies
 install: 
   - pip install -e ./
-  - pip install git+https://github.com/rabitt/pysox.git
-
 
 # command to run tests
 script: py.test
