@@ -57,7 +57,7 @@ class ScaperSpec(object):
             elif key == 'scape':
                 sc = val
 
-        # print '-----------------------------------'
+        print('-----------------------------------')
         print('ScaperSpec Created:')
         print('bg_label: ', bg_label)
         print('duration: ', bg_duration)
@@ -466,18 +466,18 @@ class ScaperSpec(object):
         # set the filepaths member to be the updated list of chosen files
         self.filepaths = chosen_files
 
-        print "chosen files: \n"
-        print chosen_files
+        print("chosen files: \n")
+        print(chosen_files)
 
-        print '\n'
-        print 'Add Events:'
-        print '-----------------------------------'
-        print 'fg_labels', self.labels
-        print 'fg_start_time', self.fg_start_times
-        print 'fg_duration', self.fg_durations
-        print 'source_files', self.filepaths
-        print 'snr', self.snrs
-        print 'num_events', self.num_events
+        print('\n')
+        print('Add Events:')
+        print('-----------------------------------')
+        print('fg_labels', self.labels)
+        print('fg_start_time', self.fg_start_times)
+        print('fg_duration', self.fg_durations)
+        print('source_files', self.filepaths)
+        print('snr', self.snrs)
+        print('num_events', self.num_events)
 
         s = None
 
@@ -555,8 +555,8 @@ class ScaperSpec(object):
         scene_jam.annotations.append(scene_ann)
         scene_jam.save(outfile)
 
-        print '-----------------------------------'
-        print 'Jams Created:'
+        print('-----------------------------------')
+        print('Jams Created:')
         print outfile
 
         return scene_jam
@@ -604,10 +604,10 @@ class Scaper(object):
                 fg_path = args[0]
                 bg_path = args[1]
 
-        print '-----------------------------------'
-        print 'Scaper Created:'
-        print 'fg path: ', fg_path
-        print 'bg path: ', bg_path
+        print('-----------------------------------')
+        print('Scaper Created:')
+        print('fg path: ', fg_path)
+        print('bg path: ', bg_path)
 
         # file path checks
         if not (os.path.isdir(fg_path)):
@@ -667,7 +667,7 @@ class Scaper(object):
                           ' process terminated.')
             return
 
-        print "--", s_file
+        print("--", s_file)
         # check if output audio file already exists
         if os.path.exists(s_file):
             warnings.warn('Warning, output file %s already exists. Continuing will overwrite.' % j_file)
@@ -754,7 +754,7 @@ class Scaper(object):
         mix = sox.Combiner()
         mix.build(files_to_mix, s_file, 'mix')
 
-        print '-----------------------------------'
-        print 'Soundscape Created:'
-        print 'Audio files: ', s_file
-        print 'From Jams: ', j_file
+        print('-----------------------------------')
+        print('Soundscape Created:')
+        print('Audio files: ', s_file)
+        print('From Jams: ', j_file)
