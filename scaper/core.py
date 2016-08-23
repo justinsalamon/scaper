@@ -22,7 +22,7 @@ class ScaperSpec(object):
 
         Parameters
         ----------
-        bg_label     : background audio class label
+        @param bg_label     : background audio class label
         bg_duration   : background audio duration
         scape      : scape object to be used with this spec
 
@@ -254,7 +254,7 @@ class ScaperSpec(object):
             elif key == 'num_events':
                 num_events = val
 
-        # ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        # /////////////////////////////////////////////////////////////////////////////////////////////////////////////
         # NUM EVENTS
         # num_events not provided,
 
@@ -647,7 +647,7 @@ class Scaper(object):
         # if no key value pairs for args
         # FIXME not the way to do this
         try:
-            j_file 
+            j_file
         except NameError:
             # argument checks
             if len(args) == 0:
