@@ -87,8 +87,12 @@ class ScaperSpec(object):
 
         # no background label provided, chose randomly
         if bg_label is None:
-            bg_label = available_labels[(int(round(random.random() * (len(available_labels)-1))))]
-            warnings.warn('Warning, No background label provided, choosing randomly.')
+            if len(available_labels) > 0:
+                bg_label = available_labels[(int(round(random.random() * (len(available_labels)-1))))]
+                warnings.warn('Warning, No background label provided, choosing randomly.')
+            else:
+                # FIXME
+                bg_label = 'car'
             self.bg_label = bg_label
 
         # list not provided
