@@ -1,3 +1,5 @@
+sudo: required
+
 language: python
 
 notifications:
@@ -12,6 +14,9 @@ addons:
   apt:
     packages:
     - sox
+    
+virtualenv:
+  system_site_packages: true
 
 # setup test environment
 before_install:
@@ -31,7 +36,9 @@ before_install:
     - source activate test-environment
     - pip install python-coveralls
     - pip install numpydoc
+    - sudo apt-get install sox 
     - pip install sox
+
 
 # command to install dependencies
 install: 
