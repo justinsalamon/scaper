@@ -3,6 +3,11 @@ language: python
 notifications:
     email: false
 
+addons:
+  apt:
+    packages:
+    - sox
+    
 python:
   - "2.7"
   - "3.4"
@@ -26,8 +31,7 @@ before_install:
     - source activate test-environment
     - pip install python-coveralls
     - pip install numpydoc
-    - sudo apt-get update
-    - sudo apt-get install sox libsox-fmt-all
+    - apt-get install sox
     - pip install sox
 
 # command to install dependencies
