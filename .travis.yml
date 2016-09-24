@@ -17,7 +17,6 @@ before_install:
       fi
     - bash miniconda.sh -b -p $HOME/miniconda
     - export PATH="$HOME/miniconda/bin:$PATH"
-    - export PATH=$(echo $PATH | tr ':' "\n" | sed '/\/opt\/python/d' | tr "\n" ":" | sed "s|::|:|g")
     - hash -r
     - conda config --set always_yes yes --set changeps1 no
     - conda update -q conda
@@ -27,7 +26,10 @@ before_install:
     - source activate test-environment
     - pip install python-coveralls
     - pip install numpydoc
-    - sudo pip install sox
+    - sudo apt-get update
+    - sudo apt-get install libasound2-plugins libasound2-python libsox-fmt-all
+    - sudo apt-get install sox
+    - pip install sox
 
 # command to install dependencies
 install: 
