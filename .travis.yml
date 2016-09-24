@@ -38,6 +38,9 @@ before_install:
     - pip install numpydoc
     - pip install sox
     - pip install -U pytest
+    - mkdir ../audio
+    - mkdir ../audio/fg
+    - mkdir ../audio/bg
 
 # command to install dependencies
 install: 
