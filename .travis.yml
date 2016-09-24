@@ -26,7 +26,7 @@ before_install:
     - source activate test-environment
     - pip install python-coveralls
     - pip install numpydoc
-    - pip install soz
+    - pip install sox
 
 # command to install dependencies
 install: 
