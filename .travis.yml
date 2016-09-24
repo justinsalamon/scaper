@@ -3,15 +3,15 @@ language: python
 notifications:
     email: false
 
-addons:
-  apt:
-    packages:
-    - sox
-    
 python:
   - "2.7"
   - "3.4"
   - "3.5"
+
+addons:
+  apt:
+    packages:
+    - sox
 
 # setup test environment
 before_install:
@@ -44,3 +44,5 @@ script: py.test
 # run coveralls
 after_success:
     - coveralls
+    - pip uninstall -y sox
+
