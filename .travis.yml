@@ -36,7 +36,6 @@ before_install:
     - source activate test-environment
     - pip install python-coveralls
     - pip install numpydoc
-    - sudo apt-get install sox 
     - pip install sox
 
 
