@@ -1,5 +1,3 @@
-sudo: false
-
 language: python
 
 notifications:
@@ -33,7 +31,7 @@ before_install:
     - source activate test-environment
     - pip install python-coveralls
     - pip install numpydoc
-    - apt-get install sox
+    - sudo apt-get install sox
     - pip install sox
 
 # command to install dependencies
