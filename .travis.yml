@@ -31,12 +31,11 @@ before_install:
     - source activate test-environment
     - pip install python-coveralls
     - pip install numpydoc
-    - apt-get install sox
     - pip install sox
 
 # command to install dependencies
 install: 
-  - pip install -e ./
+  - pip install -e .
 
 # command to run tests
 script: py.test
@@ -44,5 +43,4 @@ script: py.test
 # run coveralls
 after_success:
     - coveralls
-    - pip uninstall -y sox
 
