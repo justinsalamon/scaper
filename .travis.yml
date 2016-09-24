@@ -27,8 +27,7 @@ before_install:
     - pip install python-coveralls
     - pip install numpydoc
     - sudo apt-get update
-    - sudo apt-get install libasound2-plugins libasound2-python libsox-fmt-all
-    - sudo apt-get install sox
+    - sudo apt-get install sox libsox-fmt-all
     - pip install sox
 
 # command to install dependencies
