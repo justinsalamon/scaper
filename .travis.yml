@@ -27,6 +27,9 @@ before_install:
     - pip install python-coveralls
     - pip install numpydoc
     - pip install sox
+    - git clone https://github.com/rabitt/pysox.git
+    - cd pysox
+    - python setup.py install
 
 # command to install dependencies
 install: 
