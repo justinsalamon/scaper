@@ -37,7 +37,7 @@ before_install:
     - pip install python-coveralls
     - pip install numpydoc
     - pip install sox
-
+    - pip install -U pytest
 
 # command to install dependencies
 install: 
