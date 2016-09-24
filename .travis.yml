@@ -37,12 +37,12 @@ before_install:
     - pip install python-coveralls
     - pip install numpydoc
     - pip install sox
-    - pip install -U pytest
 
 # command to install dependencies
 install: 
   - pip install -e ./
-
+  - python setup.py install
+  
 # command to run tests
 script: py.test
 
