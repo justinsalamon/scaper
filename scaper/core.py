@@ -18,6 +18,31 @@ MIN_DURATION = 1
 # warnings.showwarning = _warning
 
 
+def random_file(folder_path):
+    '''
+    Return path to a randomly chosen file contained within the provided folder.
+    Note: any subfolders contained in the provided folder path will be ignored.
+
+    Parameters
+    ----------
+    folder_path : str
+        Path to folder containing files.
+
+    Returns
+    -------
+    randfilepath : str
+        Path to randomly chosen file contained in the provided folder.
+    '''
+    # Make sure folder_path is valid
+    if not os.path.isdir(folder_path):
+        raise ValueError("Path provided does not point to a valid folder.")
+
+    files = glob.glob(os.path.join(folder_path, "*"))
+    files = [f for f in files if os.path.isfile(f)]
+    idx = random.randint(0, len(files))
+    return files[idx]
+
+
 class ScaperSpec(object):
 
     def __init__(self, *args, **kwargs):
@@ -641,21 +666,36 @@ class ScaperSpec(object):
 
 class Scaper(object):
 
-    def __init__(self, fg_path=None, bg_path=None):
+    def __init__(self, duration, fg_path=None, bg_path=None):
 
         '''
+        Initialization, need to provide desired duration, and paths to
+        foreground and background folders.
+
         Parameters
         ----------
-        :param fg_path: str
-            Path to folder containing foreground sounds
-        :param bg_path: str
-            Path to folder containing background sounds
+        duration : float
+            Duration of soundscape, in seconds.
+        fg_path : str
+            Path to foreground folder.
+        bg_path : str
+            Path to background folder.
         '''
 
         # print('-----------------------------------')
         # print('Scaper Created:')
         # print('fg path: ', fg_path)
         # print('bg path: ', bg_path)
+
+        # Duration must be positive
+        # TODO : check for type?
+        if duration > 0:
+            self.duration = duration
+        else:
+            raise ValueError('Duration must be positive')
+
+        # Start with empty specification
+        self.spec = []
 
         # Only set folder paths is they point to valid folders
         if fg_path is not None and os.path.isdir(fg_path):
@@ -673,6 +713,91 @@ class Scaper(object):
             warnings.warn(
                 'bg_path "{:s}" unset or does not point to a valid '
                 'folder'.format(str(bg_path)))
+
+    def add_background(self, label, file_path, source_time):
+        '''
+        Add background
+
+        Parameters
+        ----------
+        bg_file : str
+            Background label or path to background file
+
+        Returns
+        -------
+
+        '''
+        # If provided with path to specific file, use that file.
+        if os.path.isfile(file_path):
+            self.bg_file = file_path
+        # Otherwise choose randomly from files matching the label
+        else:
+            if label in self.bg_labels:
+                label_folder = os.path.join(self.bg_path, label)
+                self.bg_file  = random_file(label_folder)
+            else:
+                raise ValueError(
+                    "Background label does not match any of the available "
+                    "background labels.")
+
+        # Set the start time for the background source file
+        # Note: this might be changed automatically if the combination of
+        # start time and duration cannot be met.
+        self.bg_source_time = source_time
+
+    def add_event(self, label, source_file, source_time, source_duration,
+                  event_time, snr):
+        '''
+        Add a sound event to the specification.
+        Parameters
+        ----------
+        label
+        source_file
+        source_time
+        source_duration
+        event_time
+        snr
+
+        Returns
+        -------
+
+        '''
+        # TODO : need to add checks
+        event = {"label": label,
+                 "source_file": source_file,
+                 "source_time": source_time,
+                 "source_duration": source_duration,
+                 "event_time": event_time,
+                 "snr": snr}
+        self.spec.append(event)
+
+    def _instantiate(self):
+        '''
+        Instantiate a specific soundscape in JAMS format based on the current
+        specification.
+        '''
+        jam = jams.JAMS()
+        ann = jams.Annotation(namespace='sound_event')
+        # TODO continue...
+
+    def generate(self, audio_path, jams_path):
+        '''
+        Generate a soundscape based on the current specification and save to
+        disk as both an audio file and a JAMS file describing the soundscape.
+
+        Parameters
+        ----------
+        audio_path : str
+            Path for saving soundscape audio
+        jams_path : str
+            Path for saving soundscape jams
+        '''
+        # Create specific instance of a soundscape based on the spec
+        soundscape_jams = self._instantiate()
+        # TODO: synthesize the soundscape instance
+        soundscape_audio = 0
+
+        # TODO: save to disk
 
     @staticmethod
     def generate_soundscapes(*args, **kwargs):
