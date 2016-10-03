@@ -2,3 +2,4 @@
 .idea/*
 .cache/*
 scaper.egg-info/*
+tests/local/*
