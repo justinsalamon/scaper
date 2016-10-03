@@ -9,14 +9,13 @@ SNR_MAX = 120
 MAX_DB = -31
 MIN_DURATION = 1
 
-
-# overload my warnings
-def _warning(
-    message,
-    category=UserWarning,
-    filename='',
-    lineno=-1): print(message)
-warnings.showwarning = _warning
+# # overload my warnings
+# def _warning(
+#     message,
+#     category=UserWarning,
+#     filename='',
+#     lineno=-1): print(message)
+# warnings.showwarning = _warning
 
 
 class ScaperSpec(object):
@@ -658,33 +657,22 @@ class Scaper(object):
         # print('fg path: ', fg_path)
         # print('bg path: ', bg_path)
 
-        # file path checks
-        # if not (os.path.isdir(fg_path)):
-        #     warnings.warn('Warning, foreground path not valid. Using default '
-        #                   'directory: ../audio/fg ')
-        #     self.fg_path = '../audio/fg'
-        # else:
-        #     self.fg_path = fg_path
-        #
-        # if not (os.path.isdir(bg_path)):
-        #     warnings.warn('Warning, background path not valid. Using default '
-        #                   'directory: ../audio/bg ')
-        #     self.bg_path = '../audio/bg'
-        # else:
-        #     self.bg_path = bg_path
-
-        # Validate folder paths
-        if fg_path is not None and not os.path.isdir(fg_path):
+        # Only set folder paths is they point to valid folders
+        if fg_path is not None and os.path.isdir(fg_path):
+            self.fg_path = fg_path
+        else:
+            self.fg_path = None
             warnings.warn(
-                'fg_path "{:s}" does not point to a valid '
-                'folder'.format(fg_path))
-        if bg_path is not None and not os.path.isdir(bg_path):
-            warnings.warn(
-                'bg_path "{:s}" does not point to a valid '
-                'folder'.format(bg_path))
+                'fg_path "{:s}" unset or does not point to a valid '
+                'folder'.format(str(fg_path)))
 
-        self.fg_path = fg_path
-        self.bg_path = bg_path
+        if bg_path is not None and os.path.isdir(bg_path):
+            self.bg_path = bg_path
+        else:
+            self.bg_path = None
+            warnings.warn(
+                'bg_path "{:s}" unset or does not point to a valid '
+                'folder'.format(str(bg_path)))
 
     @staticmethod
     def generate_soundscapes(*args, **kwargs):
