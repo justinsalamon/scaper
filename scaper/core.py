@@ -697,7 +697,7 @@ class Scaper(object):
         # Start with empty specification
         self.spec = []
 
-        # Only set folder paths is they point to valid folders
+        # Only set folder paths if they point to valid folders
         if fg_path is not None and os.path.isdir(fg_path):
             self.fg_path = fg_path
         else:
@@ -714,14 +714,24 @@ class Scaper(object):
                 'bg_path "{:s}" unset or does not point to a valid '
                 'folder'.format(str(bg_path)))
 
-    def add_background(self, label, file_path, source_time):
+    def add_background(self, label, file_path=None, source_time=0):
         '''
-        Add background
+        Add background. The duration is determined by the value provided when
+        the Scaper object was initialized. If the source_time is too big to
+        extract a clip of the specified duration, it will be automatically
+        adjusted. If the background source file is too short (even after
+        adjusting the source_time), then it will be concatenated as many times
+        as needed to produce the background of the desired duration.
 
         Parameters
         ----------
-        bg_file : str
-            Background label or path to background file
+        label : str
+            Background label
+        file_path : str
+            Path to specific background file (optional), if not set then a file
+            will be randomly chosen based on the label.
+        source_time : float
+            Start time for the background source file (0 by default).
 
         Returns
         -------
@@ -734,7 +744,7 @@ class Scaper(object):
         else:
             if label in self.bg_labels:
                 label_folder = os.path.join(self.bg_path, label)
-                self.bg_file  = random_file(label_folder)
+                self.bg_file = random_file(label_folder)
             else:
                 raise ValueError(
                     "Background label does not match any of the available "
@@ -749,14 +759,26 @@ class Scaper(object):
                   event_time, snr):
         '''
         Add a sound event to the specification.
+
         Parameters
         ----------
-        label
-        source_file
-        source_time
-        source_duration
-        event_time
-        snr
+        label : str
+            Label of the sound event. Must be one of the labels in the Scaper's
+            fg_labels list.
+        source_file : str
+            Path to specific source file (optional), if not specified then a
+            file will be chosen at random based on the label.
+        source_time : str
+            Time when the event starts in the source file. If the time is too
+            big to be able to carve out the necessary duration, the time
+            will be automatically adjusted.
+        source_duration : float
+            Duration of the sound event (both in the source file and
+            the soundscape). If source file is too short do what? # TODO
+        event_time : float
+            Time when event starts in the soundscape. If too large to fit the
+            event it will be automatically adjusted.
+        snr : float
 
         Returns
         -------
@@ -774,11 +796,17 @@ class Scaper(object):
     def _instantiate(self):
         '''
         Instantiate a specific soundscape in JAMS format based on the current
-        specification.
+        specification. Any non-deterministic event values will be set randomly
+        based on the allowed values.
         '''
         jam = jams.JAMS()
         ann = jams.Annotation(namespace='sound_event')
-        # TODO continue...
+
+        # Add background
+        # TODO
+
+        # Add foreground sounds
+        # TODO
 
     def generate(self, audio_path, jams_path):
         '''
