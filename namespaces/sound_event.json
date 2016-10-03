@@ -1,0 +1,29 @@
+{"sound_event":
+    {
+        "value": {
+          "type": "object",
+          "properties": {
+            "label": {
+              "type": "string"
+            },
+            "source_file": {
+              "type": "string"
+            },
+            "source_time": {
+              "type": "float"
+            },
+            "source_duration": {
+              "type": "float"
+            },
+            "event_time": {
+              "type": "float"
+            },
+            "event_snr": {
+              "type": "float"
+            }
+          }
+        },
+        "dense": false,
+        "description": "Sound event following the scaper format."
+    }
+}
