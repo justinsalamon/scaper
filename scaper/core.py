@@ -642,67 +642,49 @@ class ScaperSpec(object):
 
 class Scaper(object):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, fg_path=None, bg_path=None):
 
-        """
-
+        '''
         Parameters
         ----------
-        fg_path     :     directory path for foreground audio
-        bpath     :     directory path for background audio
+        :param fg_path: str
+            Path to folder containing foreground sounds
+        :param bg_path: str
+            Path to folder containing background sounds
+        '''
 
-        """
-
-        fg_path = ''
-        bg_path = ''
-
-        # if args are key value pairs
-        for key, val in kwargs.iteritems():
-            if key == 'fg_path':
-                fg_path = val
-            elif key == 'bg_path':
-                bg_path = val
-
-        # if no key value pairs for args
-        # FIXME: Not the way to do this
-        try:
-            fg_path
-        except NameError:
-            # argument checks
-            if len(args) == 0:
-                warnings.warn('Warning, no audio paths provided. Using default'
-                              ' directories: ../audio/fg  ../audio/bg')
-                # FIXME should prompt user instead
-                fg_path = '../audio/fg'
-                bg_path = '../audio/bg'
-            elif len(args) == 1:
-                warnings.warn('Warning, no background path provided. Using '
-                              'default directory: ../audio/bg ')
-                fg_path = args[0]
-                bg_path = '../audio/bg'
-            else:
-                fg_path = args[0]
-                bg_path = args[1]
-
-        print('-----------------------------------')
-        print('Scaper Created:')
-        print('fg path: ', fg_path)
-        print('bg path: ', bg_path)
+        # print('-----------------------------------')
+        # print('Scaper Created:')
+        # print('fg path: ', fg_path)
+        # print('bg path: ', bg_path)
 
         # file path checks
-        if not (os.path.isdir(fg_path)):
-            warnings.warn('Warning, foreground path not valid. Using default '
-                          'directory: ../audio/fg ')
-            self.fg_path = '../audio/fg'
-        else:
-            self.fg_path = fg_path
+        # if not (os.path.isdir(fg_path)):
+        #     warnings.warn('Warning, foreground path not valid. Using default '
+        #                   'directory: ../audio/fg ')
+        #     self.fg_path = '../audio/fg'
+        # else:
+        #     self.fg_path = fg_path
+        #
+        # if not (os.path.isdir(bg_path)):
+        #     warnings.warn('Warning, background path not valid. Using default '
+        #                   'directory: ../audio/bg ')
+        #     self.bg_path = '../audio/bg'
+        # else:
+        #     self.bg_path = bg_path
 
-        if not (os.path.isdir(bg_path)):
-            warnings.warn('Warning, background path not valid. Using default '
-                          'directory: ../audio/bg ')
-            self.bg_path = '../audio/bg'
-        else:
-            self.bg_path = bg_path
+        # Validate folder paths
+        if fg_path is not None and not os.path.isdir(fg_path):
+            warnings.warn(
+                'fg_path "{:s}" does not point to a valid '
+                'folder'.format(fg_path))
+        if bg_path is not None and not os.path.isdir(bg_path):
+            warnings.warn(
+                'bg_path "{:s}" does not point to a valid '
+                'folder'.format(bg_path))
+
+        self.fg_path = fg_path
+        self.bg_path = bg_path
 
     @staticmethod
     def generate_soundscapes(*args, **kwargs):
