@@ -14,43 +14,48 @@ def test_scaper(recwarn):
     Test creation of Scaper object.
     '''
 
-    # no args
-    sc = pytest.warns(UserWarning, scaper.Scaper)
-    for x in recwarn:
-        print(x.message)
+    # bad duration
+    sc = pytest.raises(ValueError, scaper.Scaper, -5)
+
+    # only duration
+    sc = pytest.warns(UserWarning, scaper.Scaper, 10.0)
+    # for x in recwarn:
+    #     print(x.message)
     assert len(recwarn) == 2
     assert sc.fg_path is None
     assert sc.bg_path is None
 
-    # one arg
-    sc = pytest.warns(UserWarning, scaper.Scaper, fg_path=FG_PATH)
+    # duration and fg_path
+    sc = pytest.warns(UserWarning, scaper.Scaper, 10.0, fg_path=FG_PATH)
     assert len(recwarn) == 3
     assert sc.fg_path == FG_PATH
     assert sc.bg_path is None
 
-    # two arg
-    sc = scaper.Scaper(FG_PATH, BG_PATH)
+    # all args
+    sc = scaper.Scaper(10.0, FG_PATH, BG_PATH)
     assert sc.fg_path == FG_PATH
     assert sc.bg_path == BG_PATH
     assert len(recwarn) == 3
 
     # key value args
-    sc = scaper.Scaper(fg_path=FG_PATH,
+    sc = scaper.Scaper(10.0,
+                       fg_path=FG_PATH,
                        bg_path=BG_PATH)
     assert sc.fg_path == FG_PATH
     assert sc.bg_path == BG_PATH
     assert len(recwarn) == 3
 
-    # Paths to nonexistent folders should raise warnings.
-    # Folders should remain set to None.
-    # sc = scaper.Scaper(fg_path='data/audio/wrong', bg_path='data/audio/wwrong')
-
-    sc = pytest.warns(UserWarning, scaper.Scaper,
+    # bad fg and bg paths
+    sc = pytest.warns(UserWarning, scaper.Scaper, 10.0,
                       fg_path='tests/data/audio/wrong',
                       bg_path='tests/data/audio/wwrong')
     assert sc.fg_path is None
     assert sc.bg_path is None
     assert len(recwarn) == 5
+
+    # TODO ensure fg_labels populated
+
+    # TODO ensure bg_labels populated
 
 
 def test_scaperspec():
