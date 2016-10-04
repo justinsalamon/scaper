@@ -4,10 +4,13 @@ import os
 import warnings
 import jams
 import glob
+from collections import namedtuple
+import numbers
 
 SNR_MAX = 120
 MAX_DB = -31
 MIN_DURATION = 1
+SUPPORTED_DIST = ["uniform", "normal"]
 
 # # overload my warnings
 # def _warning(
@@ -16,6 +19,153 @@ MIN_DURATION = 1
 #     filename='',
 #     lineno=-1): print(message)
 # warnings.showwarning = _warning
+
+# Define single event spec as namedtuple
+EventSpec = namedtuple(
+    'EventSpec',
+    ['label', 'source_file', 'source_time', 'event_time', 'event_duration',
+     'snr'], verbose=False)
+
+
+def _validate_distribution(dist_tuple):
+    '''
+    Check whether a tuple specifying a parameter distribution has a valid
+    format, if not raise an error.
+
+    Parameters
+    ----------
+    dist_tuple : tuple
+        Tuple specifying a distribution to sample from
+
+    Raises
+    ------
+    ValueError
+        If the tuple does not have a valid format.
+    '''
+    if len(dist_tuple) < 2:
+        raise ValueError('Distribution tuple must be at least of length 2.')
+
+    if dist_tuple[0] not in SUPPORTED_DIST:
+        raise ValueError(
+            "Unsupported distribution type: {:s}".format(dist_tuple[0]))
+
+    if dist_tuple[0] == "uniform":
+        if ((not isinstance(dist_tuple[1], numbers.Number)) or
+                (not isinstance(dist_tuple[2], numbers.Number)) or
+                (dist_tuple[1] >= dist_tuple[2])):
+            raise ValueError('Uniform must specify min and max values with '
+                             'max > min.')
+    elif dist_tuple[1] == "normal":
+        if ((not isinstance(dist_tuple[1], numbers.Number)) or
+                (isinstance(dist_tuple[2], numbers.Number)) or
+                (dist_tuple[2] <= 0)):
+            raise ValueError('Normal must specify mean and positive variance.')
+
+
+def _validate_event(label, source_file, source_time, event_time,
+                    event_duration, snr, allowed_labels):
+    '''
+    Check that event parameter values are valid. See ```add_event()```
+    for detailed description of the expected format of each parameter.
+
+    Parameters
+    ----------
+    label : tuple
+    source_file : tuple
+    source_time : tuple
+    event_time : tuple
+    event_duration : tuple
+    snr : tuple
+    allowed_labels : list
+        List of allowed labels for the event.
+
+    Raises
+    ------
+    ValueError
+        If any of the input parameters has an invalid format or value.
+    '''
+    # ALL PARAMS
+    args = locals()
+    for key in args:
+        if type(args[key]) is not tuple or len(args[key]) < 1:
+            raise ValueError(
+                "Parameter {:s} must be non-empty tuple.".format(key))
+
+    # SOURCE FILE
+    # If source file is specified
+    if source_file[0] == "set":
+        # 1. it must specify a filepath
+        if not len(source_file) == 2:
+            raise ValueError(
+                'Source file must be provided when using "set".')
+        # 2. the filepath must point to an existing file
+        if not os.path.isfile(source_file[1]):
+            raise RuntimeError(
+                "Source file not found: {:s}".format(source_file[1]))
+        # 3. the label must match the files parent folder name
+        parent_name = os.path.basename(os.path.dirname(source_file[1]))
+        if len(label) != 2 or label[0] != "set" or label[1] != parent_name:
+            raise ValueError(
+                "Label does not match source file parent folder name.")
+    # Otherwise it must be set to "random"
+    else:
+        if source_file[0] != "random":
+            raise ValueError(
+                'Source file must be specified using "set" or "random".')
+
+    # LABEL
+    if label[0] == "set":
+        if len(label) != 2 or not label[1] in allowed_labels:
+            raise ValueError(
+                'Label value must be specified when using "set" and must '
+                'match one of the available background labels: '
+                '{:s}'.format(str(allowed_labels)))
+    else:
+        if label[0] != "random":
+            raise ValueError(
+                'Label must be specified using "set" or "random".')
+
+    # SOURCE TIME
+    if source_time[0] == "set":
+        if ((len(source_time) != 2) or
+                (not isinstance(source_time[1], numbers.Number)) or
+                (source_time[1] < 0)):
+            raise ValueError(
+                'Source time must be specified when using "set" and must '
+                'be non-negative.')
+    else:
+        _validate_distribution(source_time)
+
+    # EVEN TIME
+    if event_time[0] == "set":
+        if ((len(event_time) != 2) or
+                (not isinstance(event_time[1], numbers.Number)) or
+                (event_time[1] < 0)):
+            raise ValueError(
+                'Event time must be specified when using "set" and must '
+                'be non-negative zero.')
+    else:
+        _validate_distribution(event_time)
+
+    # EVENT DURATION
+    if event_duration[0] == "set":
+        if ((len(event_duration) != 2) or
+                (not isinstance(event_duration[1], numbers.Number)) or
+                (event_duration[1] <= 0)):
+            raise ValueError(
+                'Event duration must be specified when using "set" and '
+                'must be greater than zero.')
+    else:
+        _validate_distribution(event_duration)
+
+    # SNR
+    if snr[0] == "set":
+        if ((len(snr) != 2) or
+                (not isinstance(snr[1], numbers.Number))):
+            raise ValueError(
+                'SNR must be specified when using "set".')
+    else:
+        _validate_distribution(snr)
 
 
 def random_file(folder_path):
@@ -667,7 +817,6 @@ class ScaperSpec(object):
 class Scaper(object):
 
     def __init__(self, duration, fg_path=None, bg_path=None):
-
         '''
         Initialization, need to provide desired duration, and paths to
         foreground and background folders.
@@ -682,11 +831,6 @@ class Scaper(object):
             Path to background folder.
         '''
 
-        # print('-----------------------------------')
-        # print('Scaper Created:')
-        # print('fg path: ', fg_path)
-        # print('bg path: ', bg_path)
-
         # Duration must be positive
         # TODO : check for type?
         if duration > 0:
@@ -694,8 +838,9 @@ class Scaper(object):
         else:
             raise ValueError('Duration must be positive')
 
-        # Start with empty specification
-        self.spec = []
+        # Start with empty specifications
+        self.fg_spec = []
+        self.bg_spec = []
 
         # Only set folder paths if they point to valid folders
         if fg_path is not None and os.path.isdir(fg_path):
@@ -714,84 +859,183 @@ class Scaper(object):
                 'bg_path "{:s}" unset or does not point to a valid '
                 'folder'.format(str(bg_path)))
 
-    def add_background(self, label, file_path=None, source_time=0):
+        # Populate label lists from folder paths
+        self.fg_labels = []
+        self.bg_labels = []
+
+        if self.fg_path is not None:
+            folder_names = os.listdir(self.fg_path)
+            for fname in folder_names:
+                if (os.path.isdir(os.path.join(self.fg_path, fname)) and
+                        fname[0] != '.'):
+                    self.fg_labels.append(fname)
+
+        if self.bg_path is not None:
+            folder_names = os.listdir(self.bg_path)
+            for fname in folder_names:
+                if (os.path.isdir(os.path.join(self.bg_path, fname)) and
+                        fname[0] != '.'):
+                    self.bg_labels.append(fname)
+
+    def add_background(self, label, source_file, source_time):
         '''
-        Add background. The duration is determined by the value provided when
-        the Scaper object was initialized. If the source_time is too big to
-        extract a clip of the specified duration, it will be automatically
-        adjusted. If the background source file is too short (even after
-        adjusting the source_time), then it will be concatenated as many times
-        as needed to produce the background of the desired duration.
+        Add a background recording. The duration will be equal to the duration
+        of the soundscape specified when initializing the Scaper object
+        ```self.duration```. If the source file is shorter than this duration
+        then it will be concatenated to itself as many times as necessary to
+        produce the specified duration.
 
         Parameters
         ----------
-        label : str
-            Background label
-        file_path : str
-            Path to specific background file (optional), if not set then a file
-            will be randomly chosen based on the label.
-        source_time : float
-            Start time for the background source file (0 by default).
+        label : tuple
+            Specifies the label of the background sound. To set a specific
+            value, the first item must be "set" and the second item the label
+            value (string). The value must match one of the labels in the
+            Scaper's background label list ```bg_labels```.
+            If ```source_file``` is specified using "set", then the value of
+            ```label``` must also be specified using "set" and its value must
+            match the source file's parent folder's name.
+            To randomly set a value, see the Random Options documentation
+            below.
+        source_file: tuple
+            Specifies the audio file to use as the source. To set a specific
+            value the first item must be "set" and the second item the path to
+            the audio file (string).
+            If ```source_file``` is specified using "set", then the value of
+            ```label``` must match the source file's parent folder's name.
+            To randomly set a value, see the Random Options documentation
+            below.
+        source_time : tuple
+            Specifies the desired start time in the source file. To set a
+            specific value, the first item must be "set" and the second the
+            desired value in seconds (float). The value must be equal to or
+            smaller than the source file's duration - ```self.duration```
+            (i.e. the soundscape's duration specified during initialization).
+            To randomly set a value, see the Random Options documentation
+            below.
 
-        Returns
-        -------
-
+        Random Options
+        --------------
+        ```source_time``` can either be set to a specific
+        value using "set" as the first item in the tuple, or it can be
+        randomly chosen from a distribution. To achieve this, instead of "set"
+        the first item must be one of the supported distribution names,
+        followed by the distribution's parameters (which are distribution-
+        specific).
+        The supported distributions (and their parameters) are:
+        - ("uniform", min_value, max_value)
+        - ("normal", mean, variance)
+        The ```label``` and ```source_file``` parameters only support the
+        following distribution (in addition to "set"):
+        - ("random")
         '''
-        # If provided with path to specific file, use that file.
-        if os.path.isfile(file_path):
-            self.bg_file = file_path
-        # Otherwise choose randomly from files matching the label
-        else:
-            if label in self.bg_labels:
-                label_folder = os.path.join(self.bg_path, label)
-                self.bg_file = random_file(label_folder)
-            else:
-                raise ValueError(
-                    "Background label does not match any of the available "
-                    "background labels.")
 
-        # Set the start time for the background source file
-        # Note: this might be changed automatically if the combination of
-        # start time and duration cannot be met.
-        self.bg_source_time = source_time
+        # These values are fixed for the background sound
+        event_time = ("set", 0)
+        event_duration = ("set", self.duration)
+        snr = ("set", 0)
 
-    def add_event(self, label, source_file, source_time, source_duration,
-                  event_time, snr):
+        # Validate parameter format and values
+        _validate_event(label, source_file, source_time, event_time,
+                        event_duration, snr, self.bg_labels)
+
+        # Create background sound event
+        bg_event = EventSpec(label=label,
+                             source_file=source_file,
+                             source_time=source_time,
+                             event_time=event_time,
+                             event_duration=event_duration,
+                             snr=snr)
+
+        # Add event to background spec
+        self.bg_spec.append(bg_event)
+
+    def add_event(self, label, source_file, source_time, event_time,
+                  event_duration, snr):
         '''
-        Add a sound event to the specification.
+        Add a foreground sound event to the foreground specification.
 
         Parameters
         ----------
-        label : str
-            Label of the sound event. Must be one of the labels in the Scaper's
-            fg_labels list.
-        source_file : str
-            Path to specific source file (optional), if not specified then a
-            file will be chosen at random based on the label.
-        source_time : str
-            Time when the event starts in the source file. If the time is too
-            big to be able to carve out the necessary duration, the time
-            will be automatically adjusted.
-        source_duration : float
-            Duration of the sound event (both in the source file and
-            the soundscape). If source file is too short do what? # TODO
-        event_time : float
-            Time when event starts in the soundscape. If too large to fit the
-            event it will be automatically adjusted.
+        label : tuple
+            Specifies the label of the sound event. To set a specific value,
+            the first item must be "set" and the second item the label value
+            (string). The value must match one of the labels in the Scaper's
+            foreground label list ```fg_labels```.
+            If ```source_file``` is specified using "set", then the value of
+            ```label``` must match the source file's parent folder's name.
+            To randomly set a value, see the Random Options documentation
+            below.
+        source_file : tuple
+            Specifies the audio file to use as the source. To set a specific
+            value the first item must be "set" and the second item the path to
+            the audio file (string).
+            If ```source_file``` is specified using "set", then the value of
+            ```label``` must also be specified using "set" and its value must
+            match the source file's parent folder's name.
+            To randomly set a value, see the Random Options documentation
+            below.
+        source_time : tuple
+            Specifies the desired start time in the source file. To set a
+            specific value, the first item must be "set" and the second the
+            desired value in seconds (float). The value must be equal to or
+            smaller than the  source file's duration - ```event_duration```.
+            To randomly set a value, see the Random Options documentation
+            below.
+        event_time : tuple
+            Specifies the desired start time of the event in the soundscape.
+            To set a specific value, the first item must be "set" and the
+            second the desired value in seconds (float). The value must be
+            equal to or smaller than the soundscapes's duration -
+            ```event_duration```.
+            To randomly set a value, see the Random Options documentation
+            below.
+        event_duration : tuple
+            Specifies the desired duration of the event. To set a
+            specific value, the first item must be "set" and the second the
+            desired value in seconds (float). The value must be equal to or
+            smaller than the source file's duration.
+            To randomly set a value, see the Random Options documentation
+            below.
         snr : float
+            Specifies the desired signal to noise ratio (snr) between the event
+            and the background.
+            To set a specific value, the first item must be "set" and the
+            second the desired value in dB (float).
+            To randomly set a value, see the Random Options documentation
+            below.
 
-        Returns
-        -------
-
+        Random Options
+        --------------
+        All of the aforementioned parameters can either be set to a specific
+        value using "set" as the first item in the tuple, or they can be
+        randomly chosen from a distribution. To achieve this, instead of "set"
+        the first item must be one of the supported distribution names,
+        followed by the distribution's parameters (which are distribution-
+        specific).
+        The supported distributions (and their parameters) are:
+        - ("uniform", min_value, max_value)
+        - ("normal", mean, variance)
+        All of the parameters can take any of the aforementioned distributions
+        with the exception of ```label``` and ```source_file``` that only
+        support the following distribution (in addition to "set"):
+        - ("random")
         '''
-        # TODO : need to add checks
-        event = {"label": label,
-                 "source_file": source_file,
-                 "source_time": source_time,
-                 "source_duration": source_duration,
-                 "event_time": event_time,
-                 "snr": snr}
-        self.spec.append(event)
+
+        # SAFETY CHECKS
+        _validate_event(label, source_file, source_time, event_time,
+                        event_duration, snr, self.fg_labels)
+
+        # Create event
+        event = EventSpec(label=label,
+                          source_file=source_file,
+                          source_time=source_time,
+                          event_time=event_time,
+                          event_duration=event_duration,
+                          snr=snr)
+
+        # Add event to foreground specification
+        self.fg_spec.append(event)
 
     def _instantiate(self):
         '''
