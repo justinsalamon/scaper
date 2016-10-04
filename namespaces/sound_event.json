@@ -12,13 +12,13 @@
             "source_time": {
               "type": "float"
             },
-            "source_duration": {
-              "type": "float"
-            },
             "event_time": {
               "type": "float"
             },
-            "event_snr": {
+            "event_duration": {
+              "type": "float"
+            },
+            "snr": {
               "type": "float"
             }
           }
