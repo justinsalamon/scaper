@@ -4,9 +4,14 @@ import scaper
 import os
 import pytest
 
-# Paths to fixture files for testing
+# FIXTURES
+# Paths to files for testing
 FG_PATH = 'tests/data/audio/foreground'
 BG_PATH = 'tests/data/audio/background'
+
+# fg and bg labels for testing
+FB_LABELS = ['car_horn', 'human_voice', 'siren']
+BG_LABELS = ['park', 'restaurant', 'street']
 
 
 def test_scaper(recwarn):
@@ -53,9 +58,10 @@ def test_scaper(recwarn):
     assert sc.bg_path is None
     assert len(recwarn) == 5
 
-    # TODO ensure fg_labels populated
-
-    # TODO ensure bg_labels populated
+    # ensure fg_labels and bg_labels populated properly
+    sc = scaper.Scaper(10.0, FG_PATH, BG_PATH)
+    assert sc.fg_labels == FB_LABELS
+    assert sc.bg_labels == BG_LABELS
 
 
 def test_scaperspec():
