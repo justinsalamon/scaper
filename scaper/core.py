@@ -27,6 +27,45 @@ EventSpec = namedtuple(
      'snr'], verbose=False)
 
 
+def _get_value_from_dist(*args):
+    '''
+
+    Parameters
+    ----------
+    args
+
+    Returns
+    -------
+
+    '''
+    # first arg must always be a distribution tuple
+    if len(args) < 1 or not isinstance(args[0], tuple):
+        raise ValueError("No distribution tuple provided.")
+
+    # if user specified a value
+    if args[0][0] == "set":
+        if len(args[0]) != 2:
+            raise ValueError('"set" tuple should include exactly 2 items.')
+        else:
+            return args[0][1]
+    # choose randomly out of a list of options
+    elif args[0][0] == "random":
+        # second arg must be list of options
+        if len(args) < 2 or not isinstance((args[1], list)):
+            raise ValueError("No list provided for random selection.")
+        else:
+            # nb: random.randint range *includes* upper bound.
+            idx = random.randint(0, len(args[1]) - 1)
+            return args[1][idx]
+    else:
+        # for all other distributions we run validation
+        _validate_distribution(args[0])
+        if args[0][0] == "uniform":
+            return random.uniform(args[0][1], args[0][2])
+        elif args[0][0] == "normal":
+            return random.normalvariate(args[0][1], args[0][2])
+
+
 def _validate_distribution(dist_tuple):
     '''
     Check whether a tuple specifying a parameter distribution has a valid
@@ -59,7 +98,7 @@ def _validate_distribution(dist_tuple):
         if ((not isinstance(dist_tuple[1], numbers.Number)) or
                 (isinstance(dist_tuple[2], numbers.Number)) or
                 (dist_tuple[2] <= 0)):
-            raise ValueError('Normal must specify mean and positive variance.')
+            raise ValueError('Normal must specify mean and positive stddev.')
 
 
 def _validate_event(label, source_file, source_time, event_time,
@@ -924,7 +963,7 @@ class Scaper(object):
         specific).
         The supported distributions (and their parameters) are:
         - ("uniform", min_value, max_value)
-        - ("normal", mean, variance)
+        - ("normal", mean, stddev)
         The ```label``` and ```source_file``` parameters only support the
         following distribution (in addition to "set"):
         - ("random")
@@ -1015,7 +1054,7 @@ class Scaper(object):
         specific).
         The supported distributions (and their parameters) are:
         - ("uniform", min_value, max_value)
-        - ("normal", mean, variance)
+        - ("normal", mean, stddev)
         All of the parameters can take any of the aforementioned distributions
         with the exception of ```label``` and ```source_file``` that only
         support the following distribution (in addition to "set"):
@@ -1046,11 +1085,137 @@ class Scaper(object):
         jam = jams.JAMS()
         ann = jams.Annotation(namespace='sound_event')
 
-        # Add background
-        # TODO
+        # INSTANTIATE BACKGROUND AND FOREGROUND EVENTS AND ADD TO ANNOTATION
+        # NOTE: logic for instantiating bg and fg events is NOT the same.
 
-        # Add foreground sounds
-        # TODO
+        # Add background sounds
+        for event in self.bg_spec:
+
+            # determine label
+            label = _get_value_from_dist(event['label'], self.bg_labels)
+
+            # determine source file
+            source_files = glob.glob(os.path.join(self.bg_path, label, '*'))
+            source_files = [sf for sf in source_files if os.path.isfile(sf)]
+            source_file = _get_value_from_dist(event['source_file'],
+                                               source_files)
+
+            # event duration is fixed to self.duration
+            event_duration = _get_value_from_dist(event['event_duration'])
+            source_duration = sox.file_info.duration(source_file)
+            if (event_duration > source_duration):
+                warnings.warn(
+                    "{:s} background duration ({:.2f}) is greater that source "
+                    "duration ({:.2f}), source will be concatenated to itself "
+                    "to meet required background duration".format(
+                        label, event_duration, source_duration))
+
+            # determine source time
+            source_time = _get_value_from_dist(event['source_time'])
+            if source_time + event_duration > source_duration:
+                old_source_time = source_time
+                source_time = max(0, source_duration - event_duration)
+                warnings.warn(
+                    '{:s} source time ({:.2f}) is too great given background '
+                    'duration ({:.2f}) and source duration ({:.2f}), changed '
+                    'to {:.2f}.'.format(
+                        label, old_source_time, event_duration,
+                        source_duration, source_time))
+
+            # event time is fixed to 0
+            event_time = _get_value_from_dist(event['event_time'])
+
+            # snr is fixed to 0
+            snr = _get_value_from_dist(event['snr'])
+
+            # pack up values for JAMS
+            value = EventSpec(label=label,
+                              source_file=source_file,
+                              source_time=source_time,
+                              event_time=event_time,
+                              event_duration=event_duration,
+                              snr=snr)
+
+            ann.append(time=event_time,
+                       duration=event_duration,
+                       value=value,
+                       confidence=1.0)
+
+        # Add foreground events
+        for event in self.fg_spec:
+
+            # determine label
+            label = _get_value_from_dist(event['label'], self.fg_labels)
+
+            # determine source file
+            source_files = glob.glob(os.path.join(self.fg_path, label, '*'))
+            source_files = [sf for sf in source_files if os.path.isfile(sf)]
+            source_file = _get_value_from_dist(event['source_file'],
+                                               source_files)
+
+            # determine event duration
+            event_duration = _get_value_from_dist(event['event_duration'])
+            source_duration = sox.file_info.duration(source_file)
+            if (event_duration > source_duration or
+                    event_duration > self.duration):
+                old_duration = event_duration  # for warning
+                event_duration = min(source_duration, self.duration)
+                warnings.warn(
+                    "{:s} event duration ({:.2f}) is greater that source "
+                    "duration ({:.2f}) or soundscape duration ({:.2f}), "
+                    "changed to {:.2f}".format(
+                        label, old_duration, source_duration, self.duration,
+                        event_duration))
+
+            # determine source time
+            source_time = _get_value_from_dist(event['source_time'])
+            if source_time + event_duration > source_duration:
+                old_source_time = source_time
+                source_time = source_duration - event_duration
+                warnings.warn(
+                    '{:s} source time ({:.2f}) is too great given event '
+                    'duration ({:.2f}) and source duration ({:.2f}), changed '
+                    'to {:.2f}.'.format(
+                        label, old_source_time, event_duration,
+                        source_duration, source_time))
+
+            # determine event time
+            event_time = _get_value_from_dist(event['event_time'])
+            if event_time + event_duration > self.duration:
+                old_event_time = event_time
+                event_time = self.duration - event_duration
+                warnings.warn(
+                    '{:s} event time ({:.2f}) is too great given event '
+                    'duration ({:.2f}) and soundscape duration ({:.2f}), '
+                    'changed to {:.2f}.'.format(
+                        label, old_event_time, event_duration,
+                        self.duration, event_time))
+
+            # determine snr
+            snr = _get_value_from_dist(event['snr'])
+
+            # pack up values for JAMS
+            value = EventSpec(label=label,
+                              source_file=source_file,
+                              source_time=source_time,
+                              event_time=event_time,
+                              event_duration=event_duration,
+                              snr=snr)
+
+            ann.append(time=event_time,
+                       duration=event_duration,
+                       value=value,
+                       confidence=1.0)
+
+        # ADD SPECIFICATIONS TO ANNOTATION SANDBOX
+        ann.sandbox.scaper = jams.Sandbox(fg_spec=self.fg_spec,
+                                          bg_spec=self.bg_spec)
+
+        # Add annotation to jams
+        jam.annotations.append(ann)
+
+        # Return
+        return jam
 
     def generate(self, audio_path, jams_path):
         '''
