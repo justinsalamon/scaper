@@ -6,10 +6,11 @@ import jams
 import glob
 from collections import namedtuple
 import numbers
+import logging
+import tempfile
 
-SNR_MAX = 120
-MAX_DB = -31
-MIN_DURATION = 1
+REF_DB = -12
+N_CHANNELS = 1
 SUPPORTED_DIST = ["uniform", "normal"]
 
 # # overload my warnings
@@ -24,7 +25,7 @@ SUPPORTED_DIST = ["uniform", "normal"]
 EventSpec = namedtuple(
     'EventSpec',
     ['label', 'source_file', 'source_time', 'event_time', 'event_duration',
-     'snr'], verbose=False)
+     'snr', 'role'], verbose=False)
 
 
 def _get_value_from_dist(*args):
@@ -988,7 +989,8 @@ class Scaper(object):
                              source_time=source_time,
                              event_time=event_time,
                              event_duration=event_duration,
-                             snr=snr)
+                             snr=snr,
+                             role='background')
 
         # Add event to background spec
         self.bg_spec.append(bg_event)
@@ -1075,7 +1077,8 @@ class Scaper(object):
                           source_time=source_time,
                           event_time=event_time,
                           event_duration=event_duration,
-                          snr=snr)
+                          snr=snr,
+                          role='foreground')
 
         # Add event to foreground specification
         self.fg_spec.append(event)
@@ -1132,13 +1135,18 @@ class Scaper(object):
             # snr is fixed to 0
             snr = _get_value_from_dist(event.snr)
 
+            # get role (which can only take "foreground" or "background") and
+            # is set internally, not by the user.
+            role = event.role
+
             # pack up values for JAMS
             value = EventSpec(label=label,
                               source_file=source_file,
                               source_time=source_time,
                               event_time=event_time,
                               event_duration=event_duration,
-                              snr=snr)
+                              snr=snr,
+                              role=role)
             value = value._asdict()
 
             ann.append(time=event_time,
@@ -1199,13 +1207,18 @@ class Scaper(object):
             # determine snr
             snr = _get_value_from_dist(event.snr)
 
+            # get role (which can only take "foreground" or "background") and
+            # is set internally, not by the user.
+            role = event.role
+
             # pack up values for JAMS
             value = EventSpec(label=label,
                               source_file=source_file,
                               source_time=source_time,
                               event_time=event_time,
                               event_duration=event_duration,
-                              snr=snr)
+                              snr=snr,
+                              role=role)
             value = value._asdict()
 
             ann.append(time=event_time,
@@ -1217,13 +1230,19 @@ class Scaper(object):
         ann.sandbox.scaper = jams.Sandbox(fg_spec=self.fg_spec,
                                           bg_spec=self.bg_spec)
 
+        # Set annotation duration
+        ann.duration = self.duration
+
         # Add annotation to jams
         jam.annotations.append(ann)
+
+        # Set jam metadata
+        jam.file_metadata.duration = self.duration
 
         # Return
         return jam
 
-    def generate(self, audio_path, jams_path):
+    def generate(self, audio_path, jams_path, disable_sox_warnings=True):
         '''
         Generate a soundscape based on the current specification and save to
         disk as both an audio file and a JAMS file describing the soundscape.
@@ -1236,11 +1255,95 @@ class Scaper(object):
             Path for saving soundscape jams
         '''
         # Create specific instance of a soundscape based on the spec
-        soundscape_jams = self._instantiate()
-        # TODO: synthesize the soundscape instance
-        soundscape_audio = 0
+        jam = self._instantiate()
+        ann = jam.annotations.search(namespace='sound_event')[0]
 
-        # TODO: save to disk
+        # disable sox warnings
+        if disable_sox_warnings:
+            logger = logging.getLogger()
+            logger.setLevel('CRITICAL')  # only critical messages please
+
+        # array for storing all tmp files (one for every event)
+        tmpfiles = []
+
+        try:
+            for event in ann.data.iterrows():
+
+                # first item is index, second is event dictionary
+                e = event[1]
+
+                if e.value['role'] == 'background':
+                    # Concatenate background if necessary. Right now we always
+                    # concatenate the background at least once, since the pysox
+                    # combiner raises an error if you try to call build using
+                    # an input_file_list with less than 2 elements. In the
+                    # future if the combiner is updated to accept a list of
+                    # length 1, then the max(..., 2) statement can be removed
+                    # from the calculation of ntiles.
+                    source_duration = (
+                        sox.file_info.duration(e.value['source_file']))
+                    ntiles = int(max(self.duration // source_duration + 1, 2))
+
+                    # Create combiner
+                    cmb = sox.Combiner()
+                    # First ensure files has predefined number of channels
+                    cmb.channels(N_CHANNELS)
+                    # Then trim
+                    cmb.trim(e.value['source_time'],
+                             e.value['source_time'] +
+                             e.value['event_duration'])
+                    # After trimming, normalize background to reference DB.
+                    cmb.norm(db_level=REF_DB)
+                    # Finally save result to a tmp file
+                    tmpfiles.append(
+                        tempfile.NamedTemporaryFile(
+                            suffix='.wav', delete=True))
+                    cmb.build(
+                        [e.value['source_file']] * ntiles, tmpfiles[-1].name,
+                        'concatenate')
+
+                elif e.value['role'] == 'foreground':
+                    # Create transformer
+                    tfm = sox.Transformer()
+                    # First ensure files has predefined number of channels
+                    tfm.channels(N_CHANNELS)
+                    # Trim
+                    tfm.trim(e.value['source_time'],
+                             e.value['source_time'] +
+                             e.value['event_duration'])
+                    # Apply very short fade in and out
+                    # (avoid unnatural sound onsets/offsets)
+                    tfm.fade(fade_in_len=0.01, fade_out_len=0.01)
+                    # Normalize to specified SNR with respect to REF_DB
+                    tfm.norm(REF_DB + e.value['snr'])
+                    # Pad with silence before/after event to match the
+                    # soundscape duration
+                    prepad = e.value['event_time']
+                    postpad = self.duration - (e.value['event_time'] +
+                                               e.value['event_duration'])
+                    tfm.pad(prepad, postpad)
+                    # Finally save result to a tmp file
+                    tmpfiles.append(
+                        tempfile.NamedTemporaryFile(
+                            suffix='.wav', delete=True))
+                    tfm.build(e.value['source_file'], tmpfiles[-1].name)
+
+                else:
+                    raise ValueError(
+                        'Unsupported event role: {:s}'.format(e.value['role']))
+
+            # Finally combine all the files
+            cmb = sox.Combiner()
+            # TODO: do we want to normalize the final output?
+            cmb.build([t.name for t in tmpfiles], audio_path, 'mix')
+
+        finally:
+            # Close all open temp files
+            for t in tmpfiles:
+                t.close()
+
+        # Finally save JAMS to disk too
+        # jam.save(jams_path)
 
     @staticmethod
     def generate_soundscapes(*args, **kwargs):
