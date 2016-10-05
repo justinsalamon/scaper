@@ -51,7 +51,7 @@ def _get_value_from_dist(*args):
     # choose randomly out of a list of options
     elif args[0][0] == "random":
         # second arg must be list of options
-        if len(args) < 2 or not isinstance((args[1], list)):
+        if len(args) < 2 or not isinstance(args[1], list):
             raise ValueError("No list provided for random selection.")
         else:
             # nb: random.randint range *includes* upper bound.
@@ -1096,16 +1096,16 @@ class Scaper(object):
         for event in self.bg_spec:
 
             # determine label
-            label = _get_value_from_dist(event['label'], self.bg_labels)
+            label = _get_value_from_dist(event.label, self.bg_labels)
 
             # determine source file
             source_files = glob.glob(os.path.join(self.bg_path, label, '*'))
             source_files = [sf for sf in source_files if os.path.isfile(sf)]
-            source_file = _get_value_from_dist(event['source_file'],
+            source_file = _get_value_from_dist(event.source_file,
                                                source_files)
 
             # event duration is fixed to self.duration
-            event_duration = _get_value_from_dist(event['event_duration'])
+            event_duration = _get_value_from_dist(event.event_duration)
             source_duration = sox.file_info.duration(source_file)
             if (event_duration > source_duration):
                 warnings.warn(
@@ -1115,7 +1115,7 @@ class Scaper(object):
                         label, event_duration, source_duration))
 
             # determine source time
-            source_time = _get_value_from_dist(event['source_time'])
+            source_time = _get_value_from_dist(event.source_time)
             if source_time + event_duration > source_duration:
                 old_source_time = source_time
                 source_time = max(0, source_duration - event_duration)
@@ -1127,10 +1127,10 @@ class Scaper(object):
                         source_duration, source_time))
 
             # event time is fixed to 0
-            event_time = _get_value_from_dist(event['event_time'])
+            event_time = _get_value_from_dist(event.event_time)
 
             # snr is fixed to 0
-            snr = _get_value_from_dist(event['snr'])
+            snr = _get_value_from_dist(event.snr)
 
             # pack up values for JAMS
             value = EventSpec(label=label,
@@ -1149,16 +1149,16 @@ class Scaper(object):
         for event in self.fg_spec:
 
             # determine label
-            label = _get_value_from_dist(event['label'], self.fg_labels)
+            label = _get_value_from_dist(event.label, self.fg_labels)
 
             # determine source file
             source_files = glob.glob(os.path.join(self.fg_path, label, '*'))
             source_files = [sf for sf in source_files if os.path.isfile(sf)]
-            source_file = _get_value_from_dist(event['source_file'],
+            source_file = _get_value_from_dist(event.source_file,
                                                source_files)
 
             # determine event duration
-            event_duration = _get_value_from_dist(event['event_duration'])
+            event_duration = _get_value_from_dist(event.event_duration)
             source_duration = sox.file_info.duration(source_file)
             if (event_duration > source_duration or
                     event_duration > self.duration):
@@ -1172,7 +1172,7 @@ class Scaper(object):
                         event_duration))
 
             # determine source time
-            source_time = _get_value_from_dist(event['source_time'])
+            source_time = _get_value_from_dist(event.source_time)
             if source_time + event_duration > source_duration:
                 old_source_time = source_time
                 source_time = source_duration - event_duration
@@ -1184,7 +1184,7 @@ class Scaper(object):
                         source_duration, source_time))
 
             # determine event time
-            event_time = _get_value_from_dist(event['event_time'])
+            event_time = _get_value_from_dist(event.event_time)
             if event_time + event_duration > self.duration:
                 old_event_time = event_time
                 event_time = self.duration - event_duration
@@ -1196,7 +1196,7 @@ class Scaper(object):
                         self.duration, event_time))
 
             # determine snr
-            snr = _get_value_from_dist(event['snr'])
+            snr = _get_value_from_dist(event.snr)
 
             # pack up values for JAMS
             value = EventSpec(label=label,
