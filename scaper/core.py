@@ -123,12 +123,16 @@ def _validate_event(label, source_file, source_time, event_time,
     ValueError
         If any of the input parameters has an invalid format or value.
     '''
-    # ALL PARAMS
+    # ALL PARAMS except for the allowed_labels
     args = locals()
     for key in args:
-        if type(args[key]) is not tuple or len(args[key]) < 1:
-            raise ValueError(
-                "Parameter {:s} must be non-empty tuple.".format(key))
+        if key == 'allowed_labels':
+            if not isinstance(args[key], list):
+                raise ValueError('allowed_labels must be of type list.')
+        else:
+            if not isinstance(args[key], tuple) or len(args[key]) < 1:
+                raise ValueError(
+                    "Parameter {:s} must be non-empty tuple.".format(key))
 
     # SOURCE FILE
     # If source file is specified
