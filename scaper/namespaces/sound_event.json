@@ -10,16 +10,16 @@
               "type": "string"
             },
             "source_time": {
-              "type": "float"
+              "type": "number"
             },
             "event_time": {
-              "type": "float"
+              "type": "number"
             },
             "event_duration": {
-              "type": "float"
+              "type": "number"
             },
             "snr": {
-              "type": "float"
+              "type": "number"
             }
           }
         },
