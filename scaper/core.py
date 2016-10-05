@@ -1139,6 +1139,7 @@ class Scaper(object):
                               event_time=event_time,
                               event_duration=event_duration,
                               snr=snr)
+            value = value._asdict()
 
             ann.append(time=event_time,
                        duration=event_duration,
@@ -1205,6 +1206,7 @@ class Scaper(object):
                               event_time=event_time,
                               event_duration=event_duration,
                               snr=snr)
+            value = value._asdict()
 
             ann.append(time=event_time,
                        duration=event_duration,
