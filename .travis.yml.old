@@ -1,0 +1,55 @@
+sudo: required
+
+language: python
+
+notifications:
+    email: false
+
+python:
+  - "2.7"
+  - "3.4"
+  - "3.5"
+
+addons:
+  apt:
+    packages:
+    - sox
+    
+virtualenv:
+  system_site_packages: true
+
+# setup test environment
+before_install:
+    - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+          wget http://repo.continuum.io/miniconda/Miniconda-3.8.3-Linux-x86_64.sh -O miniconda.sh;
+      else
+          wget http://repo.continuum.io/miniconda/Miniconda3-3.8.3-Linux-x86_64.sh -O miniconda.sh;
+      fi
+    - bash miniconda.sh -b -p $HOME/miniconda
+    - export PATH="$HOME/miniconda/bin:$PATH"
+    - hash -r
+    - conda config --set always_yes yes --set changeps1 no
+    - conda update -q conda
+    - conda info -a
+    - deps='pip atlas numpy scipy sphinx nose six future pep8'
+    - conda create -q -n test-environment "python=$TRAVIS_PYTHON_VERSION" $deps 
+    - source activate test-environment
+    - pip install python-coveralls
+    - pip install numpydoc
+    - pip install sox
+    - pip install -U pytest
+    - mkdir ../audio
+    - mkdir ../audio/fg
+    - mkdir ../audio/bg
+
+# command to install dependencies
+install: 
+  - pip install -e ./
+    
+# command to run tests
+script: py.test
+
+# run coveralls
+after_success:
+    - coveralls
+
