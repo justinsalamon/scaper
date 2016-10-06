@@ -1,0 +1,30 @@
+sudo: false
+
+language: python
+
+python:
+  - "2.7"
+  - "3.4"
+  - "3.5"
+
+addons:
+  apt:
+    packages:
+    - sox
+
+# command to install dependencies
+install:
+  - pip install python-coveralls pytest-faulthandler pytest-cov
+  - pip install -e .
+
+# command to run tests
+#script: nosetests --with-coverage --cover-erase --cover-package=sox -v -w tests/
+script:
+    - py.test
+
+after_success:
+    - coveralls
+    - pip uninstall -y scaper
+
+after_failure:
+    - pip uninstall -y scaper

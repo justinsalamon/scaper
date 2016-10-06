@@ -1,13 +1,24 @@
+sudo: required
+
 language: python
 
 notifications:
     email: false
 
 python:
-    - "2.7"
-    - "3.4"
-    - "3.5"
+  - "2.7"
+  - "3.4"
+  - "3.5"
 
+addons:
+  apt:
+    packages:
+    - sox
+    
+virtualenv:
+  system_site_packages: true
+
+# setup test environment
 before_install:
     - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
           wget http://repo.continuum.io/miniconda/Miniconda-3.8.3-Linux-x86_64.sh -O miniconda.sh;
@@ -20,26 +31,25 @@ before_install:
     - conda config --set always_yes yes --set changeps1 no
     - conda update -q conda
     - conda info -a
-#    - deps='pip atlas numpy scipy sphinx nose six future pep8 matplotlib decorator'
-    - deps='pip numpy scipy'
-    - conda create -q -n test-environment "python=$TRAVIS_PYTHON_VERSION" $deps
+    - deps='pip atlas numpy scipy sphinx nose six future pep8'
+    - conda create -q -n test-environment "python=$TRAVIS_PYTHON_VERSION" $deps 
     - source activate test-environment
     - pip install python-coveralls
-    - pip install pytest-faulthandler
-    - pip install pytest-cov
-#    - pip install numpydoc
+    - pip install numpydoc
+    - pip install sox
+    - pip install -U pytest
+    - mkdir ../audio
+    - mkdir ../audio/fg
+    - mkdir ../audio/bg
 
-install:
-    - pip install -e .
+# command to install dependencies
+install: 
+  - pip install -e ./
+    
+# command to run tests
+script: py.test
 
-#before_script:
-#    - pep8 mir_eval evaluators tests
-
-script:
-#    - nosetests -v --with-coverage --cover-package=mir_eval
-#    - python setup.py build_sphinx
-#    - python setup.py egg_info -b.dev sdist --formats gztar
-     - py.test
-
+# run coveralls
 after_success:
     - coveralls
+
