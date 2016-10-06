@@ -39,7 +39,7 @@ before_install:
 - conda install python=$TRAVIS_PYTHON_VERSION $CONDA_DEPS
 
 install:
-    - pip install python-coveralls pytest-faulthandler
+    - pip install python-coveralls pytest-faulthandler pytest-cov
     - python setup.py build_ext -i
     - pip install -e .[docs,tests]
 
