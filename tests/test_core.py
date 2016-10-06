@@ -60,8 +60,8 @@ def test_scaper(recwarn):
 
     # ensure fg_labels and bg_labels populated properly
     sc = scaper.Scaper(10.0, FG_PATH, BG_PATH)
-    assert sc.fg_labels == FB_LABELS
-    assert sc.bg_labels == BG_LABELS
+    assert sorted(sc.fg_labels) == sorted(FB_LABELS)
+    assert sorted(sc.bg_labels) == sorted(BG_LABELS)
 
 
 def test_scaperspec():
