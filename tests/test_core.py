@@ -1,8 +1,8 @@
 
-# import scaper.core as core
 import scaper
-import os
+from scaper.exceptions import ScaperError
 import pytest
+
 
 # FIXTURES
 # Paths to files for testing
@@ -20,7 +20,7 @@ def test_scaper(recwarn):
     '''
 
     # bad duration
-    sc = pytest.raises(ValueError, scaper.Scaper, -5)
+    sc = pytest.raises(ScaperError, scaper.Scaper, -5)
 
     # only duration
     sc = pytest.warns(UserWarning, scaper.Scaper, 10.0)
