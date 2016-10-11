@@ -42,7 +42,6 @@ before_install:
 
 install:
     - pip install python-coveralls pytest-faulthandler pytest-cov
-    - python setup.py
     - pip install -e .
 
 script:
