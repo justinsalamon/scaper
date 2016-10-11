@@ -44,9 +44,9 @@ def _get_value_from_dist(*args):
         raise ValueError("No distribution tuple provided.")
 
     # if user specified a value
-    if args[0][0] == "set":
+    if args[0][0] == "const":
         if len(args[0]) != 2:
-            raise ValueError('"set" tuple should include exactly 2 items.')
+            raise ValueError('"const" tuple should include exactly 2 items.')
         else:
             return args[0][1]
     # choose randomly out of a list of options
@@ -137,77 +137,77 @@ def _validate_event(label, source_file, source_time, event_time,
 
     # SOURCE FILE
     # If source file is specified
-    if source_file[0] == "set":
+    if source_file[0] == "const":
         # 1. it must specify a filepath
         if not len(source_file) == 2:
             raise ValueError(
-                'Source file must be provided when using "set".')
+                'Source file must be provided when using "const".')
         # 2. the filepath must point to an existing file
         if not os.path.isfile(source_file[1]):
             raise RuntimeError(
                 "Source file not found: {:s}".format(source_file[1]))
         # 3. the label must match the files parent folder name
         parent_name = os.path.basename(os.path.dirname(source_file[1]))
-        if len(label) != 2 or label[0] != "set" or label[1] != parent_name:
+        if len(label) != 2 or label[0] != "const" or label[1] != parent_name:
             raise ValueError(
                 "Label does not match source file parent folder name.")
     # Otherwise it must be set to "random"
     else:
         if source_file[0] != "random":
             raise ValueError(
-                'Source file must be specified using "set" or "random".')
+                'Source file must be specified using "const" or "random".')
 
     # LABEL
-    if label[0] == "set":
+    if label[0] == "const":
         if len(label) != 2 or not label[1] in allowed_labels:
             raise ValueError(
-                'Label value must be specified when using "set" and must '
+                'Label value must be specified when using "const" and must '
                 'match one of the available background labels: '
                 '{:s}'.format(str(allowed_labels)))
     else:
         if label[0] != "random":
             raise ValueError(
-                'Label must be specified using "set" or "random".')
+                'Label must be specified using "const" or "random".')
 
     # SOURCE TIME
-    if source_time[0] == "set":
+    if source_time[0] == "const":
         if ((len(source_time) != 2) or
                 (not isinstance(source_time[1], numbers.Number)) or
                 (source_time[1] < 0)):
             raise ValueError(
-                'Source time must be specified when using "set" and must '
+                'Source time must be specified when using "const" and must '
                 'be non-negative.')
     else:
         _validate_distribution(source_time)
 
     # EVEN TIME
-    if event_time[0] == "set":
+    if event_time[0] == "const":
         if ((len(event_time) != 2) or
                 (not isinstance(event_time[1], numbers.Number)) or
                 (event_time[1] < 0)):
             raise ValueError(
-                'Event time must be specified when using "set" and must '
+                'Event time must be specified when using "const" and must '
                 'be non-negative zero.')
     else:
         _validate_distribution(event_time)
 
     # EVENT DURATION
-    if event_duration[0] == "set":
+    if event_duration[0] == "const":
         if ((len(event_duration) != 2) or
                 (not isinstance(event_duration[1], numbers.Number)) or
                 (event_duration[1] <= 0)):
             raise ValueError(
-                'Event duration must be specified when using "set" and '
+                'Event duration must be specified when using "const" and '
                 'must be greater than zero.')
     else:
         _validate_distribution(event_duration)
 
     # SNR
-    if snr[0] == "set":
+    if snr[0] == "const":
         if ((len(snr) != 2) or
                 (not isinstance(snr[1], numbers.Number))):
             raise ValueError(
-                'SNR must be specified when using "set".')
+                'SNR must be specified when using "const".')
     else:
         _validate_distribution(snr)
 
@@ -287,25 +287,25 @@ class Scaper(object):
         ----------
         label : tuple
             Specifies the label of the background sound. To set a specific
-            value, the first item must be "set" and the second item the label
+            value, the first item must be "const" and the second item the label
             value (string). The value must match one of the labels in the
             Scaper's background label list ```bg_labels```.
-            If ```source_file``` is specified using "set", then the value of
-            ```label``` must also be specified using "set" and its value must
+            If ```source_file``` is specified using "const", then the value of
+            ```label``` must also be specified using "const" and its value must
             match the source file's parent folder's name.
             To randomly set a value, see the Random Options documentation
             below.
         source_file: tuple
             Specifies the audio file to use as the source. To set a specific
-            value the first item must be "set" and the second item the path to
+            value the first item must be "const" and the second item the path to
             the audio file (string).
-            If ```source_file``` is specified using "set", then the value of
+            If ```source_file``` is specified using "const", then the value of
             ```label``` must match the source file's parent folder's name.
             To randomly set a value, see the Random Options documentation
             below.
         source_time : tuple
             Specifies the desired start time in the source file. To set a
-            specific value, the first item must be "set" and the second the
+            specific value, the first item must be "const" and the second the
             desired value in seconds (float). The value must be equal to or
             smaller than the source file's duration - ```self.duration```
             (i.e. the soundscape's duration specified during initialization).
@@ -315,8 +315,8 @@ class Scaper(object):
         Random Options
         --------------
         ```source_time``` can either be set to a specific
-        value using "set" as the first item in the tuple, or it can be
-        randomly chosen from a distribution. To achieve this, instead of "set"
+        value using "const" as the first item in the tuple, or it can be
+        randomly chosen from a distribution. To achieve this, instead of "const"
         the first item must be one of the supported distribution names,
         followed by the distribution's parameters (which are distribution-
         specific).
@@ -324,14 +324,14 @@ class Scaper(object):
         - ("uniform", min_value, max_value)
         - ("normal", mean, stddev)
         The ```label``` and ```source_file``` parameters only support the
-        following distribution (in addition to "set"):
+        following distribution (in addition to "const"):
         - ("random")
         '''
 
         # These values are fixed for the background sound
-        event_time = ("set", 0)
-        event_duration = ("set", self.duration)
-        snr = ("set", 0)
+        event_time = ("const", 0)
+        event_duration = ("const", self.duration)
+        snr = ("const", 0)
 
         # Validate parameter format and values
         _validate_event(label, source_file, source_time, event_time,
@@ -358,32 +358,32 @@ class Scaper(object):
         ----------
         label : tuple
             Specifies the label of the sound event. To set a specific value,
-            the first item must be "set" and the second item the label value
+            the first item must be "const" and the second item the label value
             (string). The value must match one of the labels in the Scaper's
             foreground label list ```fg_labels```.
-            If ```source_file``` is specified using "set", then the value of
+            If ```source_file``` is specified using "const", then the value of
             ```label``` must match the source file's parent folder's name.
             To randomly set a value, see the Random Options documentation
             below.
         source_file : tuple
             Specifies the audio file to use as the source. To set a specific
-            value the first item must be "set" and the second item the path to
+            value the first item must be "const" and the second item the path to
             the audio file (string).
-            If ```source_file``` is specified using "set", then the value of
-            ```label``` must also be specified using "set" and its value must
+            If ```source_file``` is specified using "const", then the value of
+            ```label``` must also be specified using "const" and its value must
             match the source file's parent folder's name.
             To randomly set a value, see the Random Options documentation
             below.
         source_time : tuple
             Specifies the desired start time in the source file. To set a
-            specific value, the first item must be "set" and the second the
+            specific value, the first item must be "const" and the second the
             desired value in seconds (float). The value must be equal to or
             smaller than the  source file's duration - ```event_duration```.
             To randomly set a value, see the Random Options documentation
             below.
         event_time : tuple
             Specifies the desired start time of the event in the soundscape.
-            To set a specific value, the first item must be "set" and the
+            To set a specific value, the first item must be "const" and the
             second the desired value in seconds (float). The value must be
             equal to or smaller than the soundscapes's duration -
             ```event_duration```.
@@ -391,7 +391,7 @@ class Scaper(object):
             below.
         event_duration : tuple
             Specifies the desired duration of the event. To set a
-            specific value, the first item must be "set" and the second the
+            specific value, the first item must be "const" and the second the
             desired value in seconds (float). The value must be equal to or
             smaller than the source file's duration.
             To randomly set a value, see the Random Options documentation
@@ -399,7 +399,7 @@ class Scaper(object):
         snr : float
             Specifies the desired signal to noise ratio (snr) between the event
             and the background.
-            To set a specific value, the first item must be "set" and the
+            To set a specific value, the first item must be "const" and the
             second the desired value in dB (float).
             To randomly set a value, see the Random Options documentation
             below.
@@ -407,8 +407,8 @@ class Scaper(object):
         Random Options
         --------------
         All of the aforementioned parameters can either be set to a specific
-        value using "set" as the first item in the tuple, or they can be
-        randomly chosen from a distribution. To achieve this, instead of "set"
+        value using "const" as the first item in the tuple, or they can be
+        randomly chosen from a distribution. To achieve this, instead of "const"
         the first item must be one of the supported distribution names,
         followed by the distribution's parameters (which are distribution-
         specific).
@@ -417,7 +417,7 @@ class Scaper(object):
         - ("normal", mean, stddev)
         All of the parameters can take any of the aforementioned distributions
         with the exception of ```label``` and ```source_file``` that only
-        support the following distribution (in addition to "set"):
+        support the following distribution (in addition to "const"):
         - ("random")
         '''
 
