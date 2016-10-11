@@ -24,7 +24,8 @@ cache:
 env:
   global:
     # Directory where tests are run from
-    - CONDA_DEPS="pip nose numpy scipy cython"
+#    - CONDA_DEPS="pip nose numpy scipy cython"
+    - CONDA_DEPS="pip"
 
 before_install:
 - export MINICONDA=$HOME/miniconda
