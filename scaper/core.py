@@ -8,6 +8,7 @@ from collections import namedtuple
 import numbers
 import logging
 import tempfile
+from .exceptions import ScaperError
 
 REF_DB = -12
 N_CHANNELS = 1
@@ -41,19 +42,19 @@ def _get_value_from_dist(*args):
     '''
     # first arg must always be a distribution tuple
     if len(args) < 1 or not isinstance(args[0], tuple):
-        raise ValueError("No distribution tuple provided.")
+        raise ScaperError("No distribution tuple provided.")
 
     # if user specified a value
     if args[0][0] == "const":
         if len(args[0]) != 2:
-            raise ValueError('"const" tuple should include exactly 2 items.')
+            raise ScaperError('"const" tuple should include exactly 2 items.')
         else:
             return args[0][1]
     # choose randomly out of a list of options
     elif args[0][0] == "random":
         # second arg must be list of options
         if len(args) < 2 or not isinstance(args[1], list):
-            raise ValueError("No list provided for random selection.")
+            raise ScaperError("No list provided for random selection.")
         else:
             # nb: random.randint range *includes* upper bound.
             idx = random.randint(0, len(args[1]) - 1)
@@ -79,27 +80,27 @@ def _validate_distribution(dist_tuple):
 
     Raises
     ------
-    ValueError
+    ScaperError
         If the tuple does not have a valid format.
     '''
     if len(dist_tuple) < 2:
-        raise ValueError('Distribution tuple must be at least of length 2.')
+        raise ScaperError('Distribution tuple must be at least of length 2.')
 
     if dist_tuple[0] not in SUPPORTED_DIST:
-        raise ValueError(
+        raise ScaperError(
             "Unsupported distribution type: {:s}".format(dist_tuple[0]))
 
     if dist_tuple[0] == "uniform":
         if ((not isinstance(dist_tuple[1], numbers.Number)) or
                 (not isinstance(dist_tuple[2], numbers.Number)) or
                 (dist_tuple[1] >= dist_tuple[2])):
-            raise ValueError('Uniform must specify min and max values with '
+            raise ScaperError('Uniform must specify min and max values with '
                              'max > min.')
     elif dist_tuple[1] == "normal":
         if ((not isinstance(dist_tuple[1], numbers.Number)) or
                 (isinstance(dist_tuple[2], numbers.Number)) or
                 (dist_tuple[2] <= 0)):
-            raise ValueError('Normal must specify mean and positive stddev.')
+            raise ScaperError('Normal must specify mean and positive stddev.')
 
 
 def _validate_event(label, source_file, source_time, event_time,
@@ -121,7 +122,7 @@ def _validate_event(label, source_file, source_time, event_time,
 
     Raises
     ------
-    ValueError
+    ScaperError
         If any of the input parameters has an invalid format or value.
     '''
     # ALL PARAMS except for the allowed_labels
@@ -129,10 +130,10 @@ def _validate_event(label, source_file, source_time, event_time,
     for key in args:
         if key == 'allowed_labels':
             if not isinstance(args[key], list):
-                raise ValueError('allowed_labels must be of type list.')
+                raise ScaperError('allowed_labels must be of type list.')
         else:
             if not isinstance(args[key], tuple) or len(args[key]) < 1:
-                raise ValueError(
+                raise ScaperError(
                     "Parameter {:s} must be non-empty tuple.".format(key))
 
     # SOURCE FILE
@@ -140,33 +141,33 @@ def _validate_event(label, source_file, source_time, event_time,
     if source_file[0] == "const":
         # 1. it must specify a filepath
         if not len(source_file) == 2:
-            raise ValueError(
+            raise ScaperError(
                 'Source file must be provided when using "const".')
         # 2. the filepath must point to an existing file
         if not os.path.isfile(source_file[1]):
-            raise RuntimeError(
+            raise ScaperError(
                 "Source file not found: {:s}".format(source_file[1]))
         # 3. the label must match the files parent folder name
         parent_name = os.path.basename(os.path.dirname(source_file[1]))
         if len(label) != 2 or label[0] != "const" or label[1] != parent_name:
-            raise ValueError(
+            raise ScaperError(
                 "Label does not match source file parent folder name.")
     # Otherwise it must be set to "random"
     else:
         if source_file[0] != "random":
-            raise ValueError(
+            raise ScaperError(
                 'Source file must be specified using "const" or "random".')
 
     # LABEL
     if label[0] == "const":
         if len(label) != 2 or not label[1] in allowed_labels:
-            raise ValueError(
+            raise ScaperError(
                 'Label value must be specified when using "const" and must '
                 'match one of the available background labels: '
                 '{:s}'.format(str(allowed_labels)))
     else:
         if label[0] != "random":
-            raise ValueError(
+            raise ScaperError(
                 'Label must be specified using "const" or "random".')
 
     # SOURCE TIME
@@ -174,7 +175,7 @@ def _validate_event(label, source_file, source_time, event_time,
         if ((len(source_time) != 2) or
                 (not isinstance(source_time[1], numbers.Number)) or
                 (source_time[1] < 0)):
-            raise ValueError(
+            raise ScaperError(
                 'Source time must be specified when using "const" and must '
                 'be non-negative.')
     else:
@@ -185,7 +186,7 @@ def _validate_event(label, source_file, source_time, event_time,
         if ((len(event_time) != 2) or
                 (not isinstance(event_time[1], numbers.Number)) or
                 (event_time[1] < 0)):
-            raise ValueError(
+            raise ScaperError(
                 'Event time must be specified when using "const" and must '
                 'be non-negative zero.')
     else:
@@ -196,7 +197,7 @@ def _validate_event(label, source_file, source_time, event_time,
         if ((len(event_duration) != 2) or
                 (not isinstance(event_duration[1], numbers.Number)) or
                 (event_duration[1] <= 0)):
-            raise ValueError(
+            raise ScaperError(
                 'Event duration must be specified when using "const" and '
                 'must be greater than zero.')
     else:
@@ -206,7 +207,7 @@ def _validate_event(label, source_file, source_time, event_time,
     if snr[0] == "const":
         if ((len(snr) != 2) or
                 (not isinstance(snr[1], numbers.Number))):
-            raise ValueError(
+            raise ScaperError(
                 'SNR must be specified when using "const".')
     else:
         _validate_distribution(snr)
@@ -234,7 +235,7 @@ class Scaper(object):
         if duration > 0:
             self.duration = duration
         else:
-            raise ValueError('Duration must be positive')
+            raise ScaperError('Duration must be positive')
 
         # Start with empty specifications
         self.fg_spec = []
@@ -683,7 +684,7 @@ class Scaper(object):
                     tfm.build(e.value['source_file'], tmpfiles[-1].name)
 
                 else:
-                    raise ValueError(
+                    raise ScaperError(
                         'Unsupported event role: {:s}'.format(e.value['role']))
 
             # Finally combine all the files
