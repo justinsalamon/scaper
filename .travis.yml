@@ -25,8 +25,8 @@ env:
   global:
     # Directory where tests are run from
 #    - CONDA_DEPS="pip nose numpy scipy cython"
-#    - CONDA_DEPS="pip"
-     - CONDA_DEPS=""
+    - CONDA_DEPS="pip numpy scipy"
+#     - CONDA_DEPS=""
 
 before_install:
 - export MINICONDA=$HOME/miniconda
@@ -42,8 +42,8 @@ before_install:
 
 install:
     - pip install python-coveralls pytest-faulthandler pytest-cov
-    - python setup.py build_ext -i
-    - pip install -e .[docs,tests]
+    - python setup.py
+    - pip install -e .
 
 script:
     - py.test
