@@ -5,10 +5,10 @@ import warnings
 import jams
 import glob
 from collections import namedtuple
-import numbers
 import logging
 import tempfile
 from .exceptions import ScaperError
+import numpy as np
 
 REF_DB = -12
 N_CHANNELS = 1
@@ -91,14 +91,14 @@ def _validate_distribution(dist_tuple):
             "Unsupported distribution type: {:s}".format(dist_tuple[0]))
 
     if dist_tuple[0] == "uniform":
-        if ((not isinstance(dist_tuple[1], numbers.Number)) or
-                (not isinstance(dist_tuple[2], numbers.Number)) or
+        if ((not np.isrealobj(dist_tuple[1])) or
+                (not np.isrealobj(dist_tuple[2])) or
                 (dist_tuple[1] >= dist_tuple[2])):
             raise ScaperError('Uniform must specify min and max values with '
-                             'max > min.')
+                              'max > min.')
     elif dist_tuple[1] == "normal":
-        if ((not isinstance(dist_tuple[1], numbers.Number)) or
-                (isinstance(dist_tuple[2], numbers.Number)) or
+        if ((not np.isrealobj(dist_tuple[1])) or
+                (not np.isrealobj(dist_tuple[2])) or
                 (dist_tuple[2] <= 0)):
             raise ScaperError('Normal must specify mean and positive stddev.')
 
@@ -173,7 +173,7 @@ def _validate_event(label, source_file, source_time, event_time,
     # SOURCE TIME
     if source_time[0] == "const":
         if ((len(source_time) != 2) or
-                (not isinstance(source_time[1], numbers.Number)) or
+                (not np.isrealobj(source_time[1])) or
                 (source_time[1] < 0)):
             raise ScaperError(
                 'Source time must be specified when using "const" and must '
@@ -181,10 +181,10 @@ def _validate_event(label, source_file, source_time, event_time,
     else:
         _validate_distribution(source_time)
 
-    # EVEN TIME
+    # EVENT TIME
     if event_time[0] == "const":
         if ((len(event_time) != 2) or
-                (not isinstance(event_time[1], numbers.Number)) or
+                (not np.isrealobj(event_time[1])) or
                 (event_time[1] < 0)):
             raise ScaperError(
                 'Event time must be specified when using "const" and must '
@@ -195,7 +195,7 @@ def _validate_event(label, source_file, source_time, event_time,
     # EVENT DURATION
     if event_duration[0] == "const":
         if ((len(event_duration) != 2) or
-                (not isinstance(event_duration[1], numbers.Number)) or
+                (not np.isrealobj(event_duration[1])) or
                 (event_duration[1] <= 0)):
             raise ScaperError(
                 'Event duration must be specified when using "const" and '
@@ -206,7 +206,7 @@ def _validate_event(label, source_file, source_time, event_time,
     # SNR
     if snr[0] == "const":
         if ((len(snr) != 2) or
-                (not isinstance(snr[1], numbers.Number))):
+                (not np.isrealobj(snr[1]))):
             raise ScaperError(
                 'SNR must be specified when using "const".')
     else:
