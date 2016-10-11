@@ -103,6 +103,155 @@ def _validate_distribution(dist_tuple):
             raise ScaperError('Normal must specify mean and positive stddev.')
 
 
+def _validate_label(label, allowed_labels):
+    '''
+    Validate that a label tuple is in the right format and that if a label
+    value is provided using "const" that it is one of the allowed labels.
+
+    Parameters
+    ----------
+    label : tuple
+        Label tuple (see ```Scaper.add_event``` for required format).
+    allowed_labels : list
+        List of allowed labels.
+
+    Raises
+    ------
+    ScaperError
+        If the validation fails.
+
+    '''
+    if label[0] == "const":
+        if len(label) != 2 or not label[1] in allowed_labels:
+            raise ScaperError(
+                'Label value must be specified when using "const" and must '
+                'match one of the available background labels: '
+                '{:s}'.format(str(allowed_labels)))
+    else:
+        if label[0] != "random":
+            raise ScaperError(
+                'Label must be specified using "const" or "random".')
+
+
+def _validate_source_file(source_file, label):
+    '''
+    Validate that a source_file tuple is in the right format and that if a
+    source_file is provided using "const" that its parent folder matches the
+    provided label.
+
+    Parameters
+    ----------
+    source_file : tuple
+        Source file tuple (see ```Scaper.add_event``` for required format).
+    label : str
+        Label tuple (see ```Scaper.add_event``` for required format).
+
+    Raises
+    ------
+    ScaperError
+        If the validation fails.
+
+    '''
+    # If source file is specified
+    if source_file[0] == "const":
+        # 1. it must specify a filepath
+        if not len(source_file) == 2:
+            raise ScaperError(
+                'Source file must be provided when using "const".')
+        # 2. the filepath must point to an existing file
+        if not os.path.isfile(source_file[1]):
+            raise ScaperError(
+                "Source file not found: {:s}".format(source_file[1]))
+        # 3. the label must match the files parent folder name
+        parent_name = os.path.basename(os.path.dirname(source_file[1]))
+        if len(label) != 2 or label[0] != "const" or label[1] != parent_name:
+            raise ScaperError(
+                "Label does not match source file parent folder name.")
+    # Otherwise it must be set to "random"
+    else:
+        if source_file[0] != "random":
+            raise ScaperError(
+                'Source file must be specified using "const" or "random".')
+
+
+def _validate_time(time_tuple):
+    '''
+    Validate that a time tuple has the right format and that the
+    specified distribution cannot result in a negative time.
+
+    Parameters
+    ----------
+    time_tuple : tuple
+        Time tuple (see ```Scaper.add_event``` for required format).
+
+    Raises
+    ------
+    ScaperError
+        If the validation fails.
+
+    '''
+    if time_tuple[0] == "const":
+        if ((len(time_tuple) != 2) or
+                (not np.isrealobj(time_tuple[1])) or
+                (time_tuple[1] < 0)):
+            raise ScaperError(
+                'Time must be specified when using "const" and must '
+                'be non-negative.')
+    else:
+        _validate_distribution(time_tuple)
+
+
+def _validate_duration(duration):
+    '''
+    Validate that a duration tuple has the right format and that the
+    specified distribution cannot result in a negative or zero value.
+
+    Parameters
+    ----------
+    duration : tuple
+        Duration tuple (see ```Scaper.add_event``` for required format).
+
+    Raises
+    ------
+    ScaperError
+        If the validation fails.
+
+        '''
+    if duration[0] == "const":
+        if ((len(duration) != 2) or
+                (not np.isrealobj(duration[1])) or
+                (duration[1] <= 0)):
+            raise ScaperError(
+                'Event duration must be specified when using "const" and '
+                'must be greater than zero.')
+    else:
+        _validate_distribution(duration)
+
+
+def _validate_snr(snr):
+    '''
+    Validate that an snr tuple has the right format.
+
+    Parameters
+    ----------
+    snr : tuple
+        SNR tuple (see ```Scaper.add_event``` for required format).
+
+    Raises
+    ------
+    ScaperError
+        If the validation fails.
+
+    '''
+    if snr[0] == "const":
+        if ((len(snr) != 2) or
+                (not np.isrealobj(snr[1]))):
+            raise ScaperError(
+                'SNR must be specified when using "const".')
+    else:
+        _validate_distribution(snr)
+
+
 def _validate_event(label, source_file, source_time, event_time,
                     event_duration, snr, allowed_labels):
     '''
@@ -137,80 +286,22 @@ def _validate_event(label, source_file, source_time, event_time,
                     "Parameter {:s} must be non-empty tuple.".format(key))
 
     # SOURCE FILE
-    # If source file is specified
-    if source_file[0] == "const":
-        # 1. it must specify a filepath
-        if not len(source_file) == 2:
-            raise ScaperError(
-                'Source file must be provided when using "const".')
-        # 2. the filepath must point to an existing file
-        if not os.path.isfile(source_file[1]):
-            raise ScaperError(
-                "Source file not found: {:s}".format(source_file[1]))
-        # 3. the label must match the files parent folder name
-        parent_name = os.path.basename(os.path.dirname(source_file[1]))
-        if len(label) != 2 or label[0] != "const" or label[1] != parent_name:
-            raise ScaperError(
-                "Label does not match source file parent folder name.")
-    # Otherwise it must be set to "random"
-    else:
-        if source_file[0] != "random":
-            raise ScaperError(
-                'Source file must be specified using "const" or "random".')
+    _validate_source_file(source_file, label)
 
     # LABEL
-    if label[0] == "const":
-        if len(label) != 2 or not label[1] in allowed_labels:
-            raise ScaperError(
-                'Label value must be specified when using "const" and must '
-                'match one of the available background labels: '
-                '{:s}'.format(str(allowed_labels)))
-    else:
-        if label[0] != "random":
-            raise ScaperError(
-                'Label must be specified using "const" or "random".')
+    _validate_label(label)
 
     # SOURCE TIME
-    if source_time[0] == "const":
-        if ((len(source_time) != 2) or
-                (not np.isrealobj(source_time[1])) or
-                (source_time[1] < 0)):
-            raise ScaperError(
-                'Source time must be specified when using "const" and must '
-                'be non-negative.')
-    else:
-        _validate_distribution(source_time)
+    _validate_time(source_time)
 
     # EVENT TIME
-    if event_time[0] == "const":
-        if ((len(event_time) != 2) or
-                (not np.isrealobj(event_time[1])) or
-                (event_time[1] < 0)):
-            raise ScaperError(
-                'Event time must be specified when using "const" and must '
-                'be non-negative zero.')
-    else:
-        _validate_distribution(event_time)
+    _validate_time(event_time)
 
     # EVENT DURATION
-    if event_duration[0] == "const":
-        if ((len(event_duration) != 2) or
-                (not np.isrealobj(event_duration[1])) or
-                (event_duration[1] <= 0)):
-            raise ScaperError(
-                'Event duration must be specified when using "const" and '
-                'must be greater than zero.')
-    else:
-        _validate_distribution(event_duration)
+    _validate_duration(event_duration)
 
     # SNR
-    if snr[0] == "const":
-        if ((len(snr) != 2) or
-                (not np.isrealobj(snr[1]))):
-            raise ScaperError(
-                'SNR must be specified when using "const".')
-    else:
-        _validate_distribution(snr)
+    _validate_snr(snr)
 
 
 class Scaper(object):
