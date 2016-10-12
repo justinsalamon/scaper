@@ -321,12 +321,11 @@ class Scaper(object):
             Path to background folder.
         '''
 
-        # Duration must be positive
-        # TODO : check for type?
-        if duration > 0:
+        # Duration must be a positive real number
+        if np.isrealobj(duration) and duration > 0:
             self.duration = duration
         else:
-            raise ScaperError('Duration must be positive')
+            raise ScaperError('Duration must be a positive real value')
 
         # Start with empty specifications
         self.fg_spec = []
