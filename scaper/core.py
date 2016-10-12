@@ -255,7 +255,7 @@ def _validate_snr(snr):
 def _validate_event(label, source_file, source_time, event_time,
                     event_duration, snr, allowed_labels):
     '''
-    Check that event parameter values are valid. See ```add_event()```
+    Check that event parameter values are valid. See ```Scaper.add_event```
     for detailed description of the expected format of each parameter.
 
     Parameters
@@ -306,7 +306,7 @@ def _validate_event(label, source_file, source_time, event_time,
 
 class Scaper(object):
 
-    def __init__(self, duration, fg_path=None, bg_path=None):
+    def __init__(self, duration, fg_path, bg_path):
         '''
         Initialization, need to provide desired duration, and paths to
         foreground and background folders.
@@ -332,40 +332,36 @@ class Scaper(object):
         self.fg_spec = []
         self.bg_spec = []
 
-        # Only set folder paths if they point to valid folders
-        if fg_path is not None and os.path.isdir(fg_path):
+        # folder paths must point to valid folders
+        if os.path.isdir(fg_path):
             self.fg_path = fg_path
         else:
-            self.fg_path = None
-            warnings.warn(
-                'fg_path "{:s}" unset or does not point to a valid '
-                'folder'.format(str(fg_path)))
+            raise ScaperError(
+                'fg_path "{:s}" does not point to a valid folder'.format(
+                    str(fg_path)))
 
-        if bg_path is not None and os.path.isdir(bg_path):
+        if os.path.isdir(bg_path):
             self.bg_path = bg_path
         else:
-            self.bg_path = None
-            warnings.warn(
-                'bg_path "{:s}" unset or does not point to a valid '
-                'folder'.format(str(bg_path)))
+            raise ScaperError(
+                'bg_path "{:s}" does not point to a valid folder'.format(
+                    str(bg_path)))
 
         # Populate label lists from folder paths
         self.fg_labels = []
         self.bg_labels = []
 
-        if self.fg_path is not None:
-            folder_names = os.listdir(self.fg_path)
-            for fname in folder_names:
-                if (os.path.isdir(os.path.join(self.fg_path, fname)) and
-                        fname[0] != '.'):
-                    self.fg_labels.append(fname)
+        folder_names = os.listdir(self.fg_path)
+        for fname in folder_names:
+            if (os.path.isdir(os.path.join(self.fg_path, fname)) and
+                    fname[0] != '.'):
+                self.fg_labels.append(fname)
 
-        if self.bg_path is not None:
-            folder_names = os.listdir(self.bg_path)
-            for fname in folder_names:
-                if (os.path.isdir(os.path.join(self.bg_path, fname)) and
-                        fname[0] != '.'):
-                    self.bg_labels.append(fname)
+        folder_names = os.listdir(self.bg_path)
+        for fname in folder_names:
+            if (os.path.isdir(os.path.join(self.bg_path, fname)) and
+                    fname[0] != '.'):
+                self.bg_labels.append(fname)
 
     def add_background(self, label, source_file, source_time):
         '''
