@@ -29,6 +29,35 @@ EventSpec = namedtuple(
      'snr', 'role'], verbose=False)
 
 
+def _get_sorted_files(folder_path):
+    '''
+    Return a list of absolute paths to all valid files contained within the
+    folder specified by ```folder_path```.
+
+    Parameters
+    ----------
+    folder_path : str
+        Path to the folder to scan for files.
+
+    Returns
+    -------
+    files : list
+        List of absolute paths to all valid files contained within
+        ```folder_path```.
+
+    '''
+    # Ensure path points to valid folder
+    _validate_folder_path(folder_path)
+
+    # Get folder contents and filter for valid files
+    # Note, we sort the list to ensure consistent behavior across operating
+    # systems.
+    files = sorted(glob.glob(os.path.join(folder_path, "*")))
+    files = [f for f in files if os.path.isfile(f)]
+
+    return files
+
+
 def _validate_folder_path(folder_path):
     '''
     Validate that a provided path points to a valid folder.
@@ -574,8 +603,7 @@ class Scaper(object):
             label = _get_value_from_dist(event.label, self.bg_labels)
 
             # determine source file
-            source_files = glob.glob(os.path.join(self.bg_path, label, '*'))
-            source_files = [sf for sf in source_files if os.path.isfile(sf)]
+            source_files = _get_sorted_files(os.path.join(self.bg_path, label))
             source_file = _get_value_from_dist(event.source_file,
                                                source_files)
 
@@ -633,8 +661,7 @@ class Scaper(object):
             label = _get_value_from_dist(event.label, self.fg_labels)
 
             # determine source file
-            source_files = glob.glob(os.path.join(self.fg_path, label, '*'))
-            source_files = [sf for sf in source_files if os.path.isfile(sf)]
+            source_files = _get_sorted_files(os.path.join(self.fg_path, label))
             source_file = _get_value_from_dist(event.source_file,
                                                source_files)
 
