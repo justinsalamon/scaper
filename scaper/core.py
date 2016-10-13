@@ -9,6 +9,7 @@ import logging
 import tempfile
 from .exceptions import ScaperError
 import numpy as np
+from contextlib import contextmanager
 
 REF_DB = -12
 N_CHANNELS = 1
@@ -27,6 +28,44 @@ EventSpec = namedtuple(
     'EventSpec',
     ['label', 'source_file', 'source_time', 'event_time', 'event_duration',
      'snr', 'role'], verbose=False)
+
+
+@contextmanager
+def _close_temp_files(tmpfiles):
+    '''
+    Utility function for creating a context and closing all temporary files
+    once the context is exited. For correct functionality, all temporary file
+    handles created inside the context must be appended to the ```tmpfiles```
+    list.
+
+    Parameters
+    ----------
+    tmpfiles : list
+        List of temporary file handles
+
+    '''
+    yield
+    for t in tmpfiles:
+        t.close()
+
+
+@contextmanager
+def _set_temp_logging_level(level):
+    '''
+    Utility function for temporarily changing the logging level using contexts.
+
+    Parameters
+    ----------
+    level : str or int
+        The desired temporary logging level. For allowed values see:
+        https://docs.python.org/2/library/logging.html#logging-levels
+
+    '''
+    logger = logging.getLogger()
+    current_level = logger.level
+    logger.setLevel(level)
+    yield
+    logger.setLevel(current_level)
 
 
 def _get_sorted_files(folder_path):
@@ -366,7 +405,7 @@ def _validate_event(label, source_file, source_time, event_time,
     _validate_source_file(source_file, label)
 
     # LABEL
-    _validate_label(label)
+    _validate_label(label, allowed_labels)
 
     # SOURCE TIME
     _validate_time(source_time)
@@ -396,13 +435,18 @@ class Scaper(object):
             Path to foreground folder.
         bg_path : str
             Path to background folder.
-        '''
 
+        '''
         # Duration must be a positive real number
         if np.isrealobj(duration) and duration > 0:
             self.duration = duration
         else:
             raise ScaperError('Duration must be a positive real value')
+
+        # Initialize parameters
+        self.fade_in_len = 0.01  # 10 ms
+        self.fade_out_len = 0.01  # 10 ms
+
         # Start with empty specifications
         self.fg_spec = []
         self.bg_spec = []
@@ -757,92 +801,89 @@ class Scaper(object):
 
         # disable sox warnings
         if disable_sox_warnings:
-            logger = logging.getLogger()
-            logger.setLevel('CRITICAL')  # only critical messages please
+            temp_logging_level = 'CRITICAL'  # only critical messages please
+        else:
+            temp_logging_level = logging.getLogger().level
 
-        # array for storing all tmp files (one for every event)
-        tmpfiles = []
+        with _set_temp_logging_level(temp_logging_level):
 
-        try:
-            for event in ann.data.iterrows():
+            # Array for storing all tmp files (one for every event)
+            tmpfiles = []
+            with _close_temp_files(tmpfiles):
 
-                # first item is index, second is event dictionary
-                e = event[1]
+                for event in ann.data.iterrows():
 
-                if e.value['role'] == 'background':
-                    # Concatenate background if necessary. Right now we always
-                    # concatenate the background at least once, since the pysox
-                    # combiner raises an error if you try to call build using
-                    # an input_file_list with less than 2 elements. In the
-                    # future if the combiner is updated to accept a list of
-                    # length 1, then the max(..., 2) statement can be removed
-                    # from the calculation of ntiles.
-                    source_duration = (
-                        sox.file_info.duration(e.value['source_file']))
-                    ntiles = int(max(self.duration // source_duration + 1, 2))
+                    # first item is index, second is event dictionary
+                    e = event[1]
 
-                    # Create combiner
-                    cmb = sox.Combiner()
-                    # First ensure files has predefined number of channels
-                    cmb.channels(N_CHANNELS)
-                    # Then trim
-                    cmb.trim(e.value['source_time'],
-                             e.value['source_time'] +
-                             e.value['event_duration'])
-                    # After trimming, normalize background to reference DB.
-                    cmb.norm(db_level=REF_DB)
-                    # Finally save result to a tmp file
-                    tmpfiles.append(
-                        tempfile.NamedTemporaryFile(
-                            suffix='.wav', delete=True))
-                    cmb.build(
-                        [e.value['source_file']] * ntiles, tmpfiles[-1].name,
-                        'concatenate')
+                    if e.value['role'] == 'background':
+                        # Concatenate background if necessary. Right now we
+                        # always concatenate the background at least once,
+                        # since the pysox combiner raises an error if you try
+                        # to call build using an input_file_list with less than
+                        # 2 elements. In the future if the combiner is updated
+                        # to accept a list of length 1, then the max(..., 2)
+                        # statement can be removed from the calculation of
+                        # ntiles.
+                        source_duration = (
+                            sox.file_info.duration(e.value['source_file']))
+                        ntiles = int(
+                            max(self.duration // source_duration + 1, 2))
 
-                elif e.value['role'] == 'foreground':
-                    # Create transformer
-                    tfm = sox.Transformer()
-                    # First ensure files has predefined number of channels
-                    tfm.channels(N_CHANNELS)
-                    # Trim
-                    tfm.trim(e.value['source_time'],
-                             e.value['source_time'] +
-                             e.value['event_duration'])
-                    # Apply very short fade in and out
-                    # (avoid unnatural sound onsets/offsets)
-                    tfm.fade(fade_in_len=0.01, fade_out_len=0.01)
-                    # Normalize to specified SNR with respect to REF_DB
-                    tfm.norm(REF_DB + e.value['snr'])
-                    # Pad with silence before/after event to match the
-                    # soundscape duration
-                    prepad = e.value['event_time']
-                    postpad = self.duration - (e.value['event_time'] +
-                                               e.value['event_duration'])
-                    tfm.pad(prepad, postpad)
-                    # Finally save result to a tmp file
-                    tmpfiles.append(
-                        tempfile.NamedTemporaryFile(
-                            suffix='.wav', delete=True))
-                    tfm.build(e.value['source_file'], tmpfiles[-1].name)
+                        # Create combiner
+                        cmb = sox.Combiner()
+                        # First ensure files has predefined number of channels
+                        cmb.channels(N_CHANNELS)
+                        # Then trim
+                        cmb.trim(e.value['source_time'],
+                                 e.value['source_time'] +
+                                 e.value['event_duration'])
+                        # After trimming, normalize background to reference DB.
+                        cmb.norm(db_level=REF_DB)
+                        # Finally save result to a tmp file
+                        tmpfiles.append(
+                            tempfile.NamedTemporaryFile(
+                                suffix='.wav', delete=True))
+                        cmb.build(
+                            [e.value['source_file']] * ntiles,
+                            tmpfiles[-1].name, 'concatenate')
 
-                else:
-                    raise ScaperError(
-                        'Unsupported event role: {:s}'.format(e.value['role']))
+                    elif e.value['role'] == 'foreground':
+                        # Create transformer
+                        tfm = sox.Transformer()
+                        # First ensure files has predefined number of channels
+                        tfm.channels(N_CHANNELS)
+                        # Trim
+                        tfm.trim(e.value['source_time'],
+                                 e.value['source_time'] +
+                                 e.value['event_duration'])
+                        # Apply very short fade in and out
+                        # (avoid unnatural sound onsets/offsets)
+                        tfm.fade(fade_in_len=self.fade_in_len,
+                                 fade_out_len=self.fade_out_len)
+                        # Normalize to specified SNR with respect to REF_DB
+                        tfm.norm(REF_DB + e.value['snr'])
+                        # Pad with silence before/after event to match the
+                        # soundscape duration
+                        prepad = e.value['event_time']
+                        postpad = self.duration - (e.value['event_time'] +
+                                                   e.value['event_duration'])
+                        tfm.pad(prepad, postpad)
+                        # Finally save result to a tmp file
+                        tmpfiles.append(
+                            tempfile.NamedTemporaryFile(
+                                suffix='.wav', delete=True))
+                        tfm.build(e.value['source_file'], tmpfiles[-1].name)
 
-            # Finally combine all the files
-            cmb = sox.Combiner()
-            # TODO: do we want to normalize the final output?
-            cmb.build([t.name for t in tmpfiles], audio_path, 'mix')
+                    else:
+                        raise ScaperError(
+                            'Unsupported event role: {:s}'.format(
+                                e.value['role']))
 
-        finally:
-            # Close all open temp files
-            for t in tmpfiles:
-                t.close()
-
-        if disable_sox_warnings:
-            # set back to warning
-            logger = logging.getLogger()
-            logger.setLevel('WARNING')
+                # Finally combine all the files
+                cmb = sox.Combiner()
+                # TODO: do we want to normalize the final output?
+                cmb.build([t.name for t in tmpfiles], audio_path, 'mix')
 
         # Finally save JAMS to disk too
         jam.save(jams_path)
