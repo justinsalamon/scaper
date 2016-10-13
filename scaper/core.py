@@ -66,11 +66,6 @@ def _populate_label_list(folder_path, label_list):
     label_list : list
         List to which label (subfolder) names will be added.
 
-    Raises
-    ------
-    ScaperError
-        If ```folder_path``` does not point to a valid folder.
-
     '''
     # Make sure folder path is valid
     _validate_folder_path(folder_path)
@@ -400,7 +395,7 @@ class Scaper(object):
         '''
         Add a background recording. The duration will be equal to the duration
         of the soundscape specified when initializing the Scaper object
-        ```self.duration```. If the source file is shorter than this duration
+        ```Scaper.duration```. If the source file is shorter than this duration
         then it will be concatenated to itself as many times as necessary to
         produce the specified duration.
 
@@ -410,45 +405,45 @@ class Scaper(object):
             Specifies the label of the background sound. To set a specific
             value, the first item must be "const" and the second item the label
             value (string). The value must match one of the labels in the
-            Scaper's background label list ```bg_labels```.
+            Scaper's background label list ```Scaper.bg_labels```.
             If ```source_file``` is specified using "const", then the value of
             ```label``` must also be specified using "const" and its value must
             match the source file's parent folder's name.
-            To randomly set a value, see the Random Options documentation
-            below.
+            To randomly set a value, see the Notes below.
         source_file: tuple
             Specifies the audio file to use as the source. To set a specific
-            value the first item must be "const" and the second item the path to
-            the audio file (string).
+            value the first item must be "const" and the second item the path
+            to the audio file (string).
             If ```source_file``` is specified using "const", then the value of
             ```label``` must match the source file's parent folder's name.
-            To randomly set a value, see the Random Options documentation
-            below.
+            To randomly set a source file, see the Notes below.
         source_time : tuple
             Specifies the desired start time in the source file. To set a
             specific value, the first item must be "const" and the second the
             desired value in seconds (float). The value must be equal to or
             smaller than the source file's duration - ```self.duration```
             (i.e. the soundscape's duration specified during initialization).
-            To randomly set a value, see the Random Options documentation
-            below.
+            To randomly set a value, see the Notes below.
 
-        Random Options
-        --------------
-        ```source_time``` can either be set to a specific
-        value using "const" as the first item in the tuple, or it can be
-        randomly chosen from a distribution. To achieve this, instead of "const"
-        the first item must be one of the supported distribution names,
-        followed by the distribution's parameters (which are distribution-
-        specific).
-        The supported distributions (and their parameters) are:
-        - ("uniform", min_value, max_value)
-        - ("normal", mean, stddev)
-        The ```label``` and ```source_file``` parameters only support the
-        following distribution (in addition to "const"):
-        - ("random")
+        Notes
+        -----
+        Each parameter of this function can either be set to a constant value
+        using the tuple ```("const", value)```, or it can be randomly
+        selected from a certain distribution. In addition to the "const"
+        tuple:
+            * ```label``` can be selected randomly from all valid background
+              labels (```Scaper.bg_labels```) by passing ```("random")```.
+            * ```source_file``` can be selected randomly from all valid
+              background source files (i.e. the files in the folder whose name
+              matches the label) by passing ```("random")```.
+            * ```source_time``` can be randomly chosen from a distribution by
+              passing one of the supported distribution names followed by the
+              distribution's parameters (which are distribution-specific).
+              The supported distributions (and their parameters) are:
+                * ("uniform", min_value, max_value)
+                * ("normal", mean, stddev)
+
         '''
-
         # These values are fixed for the background sound
         event_time = ("const", 0)
         event_duration = ("const", self.duration)
@@ -481,65 +476,67 @@ class Scaper(object):
             Specifies the label of the sound event. To set a specific value,
             the first item must be "const" and the second item the label value
             (string). The value must match one of the labels in the Scaper's
-            foreground label list ```fg_labels```.
+            foreground label list ```Scaper.fg_labels```.
             If ```source_file``` is specified using "const", then the value of
             ```label``` must match the source file's parent folder's name.
-            To randomly set a value, see the Random Options documentation
-            below.
+            To randomly set a value, see the Notes below.
         source_file : tuple
             Specifies the audio file to use as the source. To set a specific
-            value the first item must be "const" and the second item the path to
-            the audio file (string).
+            value the first item must be "const" and the second item the path
+            to the audio file (string).
             If ```source_file``` is specified using "const", then the value of
             ```label``` must also be specified using "const" and its value must
             match the source file's parent folder's name.
-            To randomly set a value, see the Random Options documentation
-            below.
+            To randomly set a source file, see the Notes below.
         source_time : tuple
             Specifies the desired start time in the source file. To set a
             specific value, the first item must be "const" and the second the
             desired value in seconds (float). The value must be equal to or
-            smaller than the  source file's duration - ```event_duration```.
-            To randomly set a value, see the Random Options documentation
-            below.
+            smaller than ```<source file duration> - event_duration```, and
+            larger values will be automatically changed to fulfill this
+            requirement when calling ```Scaper.generate```.
+            To randomly set a source time, see the Notes below.
         event_time : tuple
             Specifies the desired start time of the event in the soundscape.
             To set a specific value, the first item must be "const" and the
             second the desired value in seconds (float). The value must be
-            equal to or smaller than the soundscapes's duration -
-            ```event_duration```.
-            To randomly set a value, see the Random Options documentation
-            below.
+            equal to or smaller than ```<soundscapes duration> -
+            event_duration```, and larger valeus will be automatically changed
+            to fulfill this requirement when calling ```Scaper.generate```.
+            To randomly set an event time, see the Notes below.
         event_duration : tuple
             Specifies the desired duration of the event. To set a
             specific value, the first item must be "const" and the second the
             desired value in seconds (float). The value must be equal to or
-            smaller than the source file's duration.
-            To randomly set a value, see the Random Options documentation
-            below.
+            smaller than the source file's duration, and larger values will be
+            automatically to fulfill this requirement when calling
+            ```Scaper.generate```.
+            To randomly set an event duration, see the Notes below.
         snr : float
             Specifies the desired signal to noise ratio (snr) between the event
-            and the background.
-            To set a specific value, the first item must be "const" and the
-            second the desired value in dB (float).
-            To randomly set a value, see the Random Options documentation
-            below.
+            and the background. To set a specific value, the first item must
+            be "const" and the second the desired value in dB (float).
+            To randomly set an snr, see the Notes below.
 
-        Random Options
-        --------------
-        All of the aforementioned parameters can either be set to a specific
-        value using "const" as the first item in the tuple, or they can be
-        randomly chosen from a distribution. To achieve this, instead of "const"
-        the first item must be one of the supported distribution names,
-        followed by the distribution's parameters (which are distribution-
-        specific).
-        The supported distributions (and their parameters) are:
-        - ("uniform", min_value, max_value)
-        - ("normal", mean, stddev)
-        All of the parameters can take any of the aforementioned distributions
-        with the exception of ```label``` and ```source_file``` that only
-        support the following distribution (in addition to "const"):
-        - ("random")
+        Notes
+        -----
+        Each parameter of this function can either be set to a constant value
+        using the tuple ```("const", value)```, or it can be randomly
+        selected from a certain distribution. In addition to the "const"
+        tuple:
+            * ```label``` can be selected randomly from all valid background
+              labels (```Scaper.bg_labels```) by passing ```("random")```.
+            * ```source_file``` can be selected randomly from all valid
+              background source files (i.e. the files in the folder whose name
+              matches the label) by passing ```("random")```.
+            * ```source_time```, ```event_time```, ```event_duration``` and
+              ```snr``` can be randomly chosen from a distribution by
+              passing one of the supported distribution names followed by the
+              distribution's parameters (which are distribution-specific).
+              The supported distributions (and their parameters) are:
+                * ("uniform", min_value, max_value)
+                * ("normal", mean, stddev)
+
         '''
 
         # SAFETY CHECKS
