@@ -7,8 +7,8 @@ import glob
 from collections import namedtuple
 import logging
 import tempfile
-from .exceptions import ScaperError
-from .warnings import ScaperWarning
+from .scaper_exceptions import ScaperError
+from .scaper_warnings import ScaperWarning
 import numpy as np
 from contextlib import contextmanager
 
@@ -736,14 +736,24 @@ class Scaper(object):
         for event in self.bg_spec:
 
             # determine label
-            label = _get_value_from_dist(event.label, self.bg_labels)
+            if event.label[0] == "choose" and not event.label[1]:
+                label_tuple = event.label.copy()
+                label_tuple[1] = self.bg_labels
+            else:
+                label_tuple = event.label
+            label = _get_value_from_dist(label_tuple)
 
             # determine source file
-            source_files = _get_sorted_files(os.path.join(self.bg_path, label))
-            source_file = _get_value_from_dist(event.source_file,
-                                               source_files)
+            if event.source_file[0] == "choose" and not event.source_file[1]:
+                source_files = _get_sorted_files(
+                    os.path.join(self.bg_path, label))
+                source_file_tuple = event.source_file.copy()
+                source_file_tuple[1] = source_files
+            else:
+                source_file_tuple = event.source_file
+            source_file = _get_value_from_dist(source_file_tuple)
 
-            # event duration is fixed to self.duration
+            # event duration is fixed to self.duration (which must be > 0)
             event_duration = _get_value_from_dist(event.event_duration)
             source_duration = sox.file_info.duration(source_file)
             if (event_duration > source_duration):
@@ -751,10 +761,14 @@ class Scaper(object):
                     "{:s} background duration ({:.2f}) is greater that source "
                     "duration ({:.2f}), source will be concatenated to itself "
                     "to meet required background duration".format(
-                        label, event_duration, source_duration))
+                        label, event_duration, source_duration),
+                    ScaperWarning)
 
             # determine source time
-            source_time = _get_value_from_dist(event.source_time)
+            source_time = -np.Inf
+            while source_time < 0:
+                source_time = _get_value_from_dist(event.source_time)
+
             if source_time + event_duration > source_duration:
                 old_source_time = source_time
                 source_time = max(0, source_duration - event_duration)
@@ -763,7 +777,8 @@ class Scaper(object):
                     'duration ({:.2f}) and source duration ({:.2f}), changed '
                     'to {:.2f}.'.format(
                         label, old_source_time, event_duration,
-                        source_duration, source_time))
+                        source_duration, source_time),
+                    ScaperWarning)
 
             # event time is fixed to 0
             event_time = _get_value_from_dist(event.event_time)
@@ -793,15 +808,28 @@ class Scaper(object):
         for event in self.fg_spec:
 
             # determine label
-            label = _get_value_from_dist(event.label, self.fg_labels)
+            if event.label[0] == "choose" and not event.label[1]:
+                label_tuple = event.label.copy()
+                label_tuple[1] = self.fg_labels
+            else:
+                label_tuple = event.label
+            label = _get_value_from_dist(label_tuple)
 
             # determine source file
-            source_files = _get_sorted_files(os.path.join(self.fg_path, label))
-            source_file = _get_value_from_dist(event.source_file,
-                                               source_files)
+            if event.source_file[0] == "choose" and not event.source_file[1]:
+                source_files = _get_sorted_files(
+                    os.path.join(self.fg_path, label))
+                source_file_tuple = event.source_file.copy()
+                source_file_tuple[1] = source_files
+            else:
+                source_file_tuple = event.source_file
+            source_file = _get_value_from_dist(source_file_tuple)
 
             # determine event duration
-            event_duration = _get_value_from_dist(event.event_duration)
+            event_duration = -np.Inf
+            while event_duration <= 0:
+                event_duration = _get_value_from_dist(event.event_duration)
+
             source_duration = sox.file_info.duration(source_file)
             if (event_duration > source_duration or
                     event_duration > self.duration):
@@ -812,10 +840,14 @@ class Scaper(object):
                     "duration ({:.2f}) or soundscape duration ({:.2f}), "
                     "changed to {:.2f}".format(
                         label, old_duration, source_duration, self.duration,
-                        event_duration))
+                        event_duration),
+                    ScaperWarning)
 
             # determine source time
-            source_time = _get_value_from_dist(event.source_time)
+            source_time = -np.Inf
+            while source_time < 0:
+                source_time = _get_value_from_dist(event.source_time)
+
             if source_time + event_duration > source_duration:
                 old_source_time = source_time
                 source_time = source_duration - event_duration
@@ -824,10 +856,14 @@ class Scaper(object):
                     'duration ({:.2f}) and source duration ({:.2f}), changed '
                     'to {:.2f}.'.format(
                         label, old_source_time, event_duration,
-                        source_duration, source_time))
+                        source_duration, source_time),
+                    ScaperWarning)
 
             # determine event time
-            event_time = _get_value_from_dist(event.event_time)
+            event_time = -np.Inf
+            while event_time < 0:
+                event_time = _get_value_from_dist(event.event_time)
+
             if event_time + event_duration > self.duration:
                 old_event_time = event_time
                 event_time = self.duration - event_duration
@@ -836,7 +872,8 @@ class Scaper(object):
                     'duration ({:.2f}) and soundscape duration ({:.2f}), '
                     'changed to {:.2f}.'.format(
                         label, old_event_time, event_duration,
-                        self.duration, event_time))
+                        self.duration, event_time),
+                    ScaperWarning)
 
             # determine snr
             snr = _get_value_from_dist(event.snr)
