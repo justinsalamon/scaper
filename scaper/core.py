@@ -168,7 +168,7 @@ def _get_value_from_dist(dist_tuple):
     '''
     # Make sure it's a valid distribution tuple
     _validate_distribution(dist_tuple)
-    return SUPPORTED_DIST[dist_tuple[0], dist_tuple[1:]]
+    return SUPPORTED_DIST[dist_tuple[0]](dist_tuple[1:])
 
 
 def _validate_distribution(dist_tuple):
