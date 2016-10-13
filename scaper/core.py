@@ -647,11 +647,10 @@ class Scaper(object):
                               event_duration=event_duration,
                               snr=snr,
                               role=role)
-            value = value._asdict()
 
             ann.append(time=event_time,
                        duration=event_duration,
-                       value=value,
+                       value=value._asdict(),
                        confidence=1.0)
 
         # Add foreground events
@@ -718,11 +717,10 @@ class Scaper(object):
                               event_duration=event_duration,
                               snr=snr,
                               role=role)
-            value = value._asdict()
 
             ann.append(time=event_time,
                        duration=event_duration,
-                       value=value,
+                       value=value._asdict(),
                        confidence=1.0)
 
         # ADD SPECIFICATIONS TO ANNOTATION SANDBOX
