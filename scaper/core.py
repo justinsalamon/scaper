@@ -29,6 +29,59 @@ EventSpec = namedtuple(
      'snr', 'role'], verbose=False)
 
 
+def _validate_folder_path(folder_path):
+    '''
+    Validate that a provided path points to a valid folder.
+
+    Parameters
+    ----------
+    folder_path : str
+        Path to a folder.
+
+    Raises
+    ------
+    ScaperError
+        If ```folder_path``` does not point to a valid folder.
+
+    '''
+    if not os.path.isdir(folder_path):
+        raise ScaperError(
+            'Folder path "{:s}" does not point to a valid folder'.format(
+                str(folder_path)))
+
+
+def _populate_label_list(folder_path, label_list):
+    '''
+    Given a path to a folder an a list, add the names of all subfolders
+    contained in this folder (excluding '.' and '..') to the provided list.
+    This is used in scaper to populate the lists of valid foreground and
+    background labels, which are determined by the names of the folders
+    contained in the ```fg_path`` and ```bg_path``` provided during
+    initialization.
+
+    Parameters
+    ----------
+    folder_path : str
+        Path to a folder
+    label_list : list
+        List to which label (subfolder) names will be added.
+
+    Raises
+    ------
+    ScaperError
+        If ```folder_path``` does not point to a valid folder.
+
+    '''
+    # Make sure folder path is valid
+    _validate_folder_path(folder_path)
+
+    folder_names = os.listdir(folder_path)
+    for fname in folder_names:
+        if (os.path.isdir(os.path.join(folder_path, fname)) and
+                fname[0] != '.'):
+            label_list.append(fname)
+
+
 def _get_value_from_dist(*args):
     '''
 
@@ -326,41 +379,22 @@ class Scaper(object):
             self.duration = duration
         else:
             raise ScaperError('Duration must be a positive real value')
-
         # Start with empty specifications
         self.fg_spec = []
         self.bg_spec = []
-
-        # folder paths must point to valid folders
-        if os.path.isdir(fg_path):
-            self.fg_path = fg_path
-        else:
-            raise ScaperError(
-                'fg_path "{:s}" does not point to a valid folder'.format(
-                    str(fg_path)))
-
-        if os.path.isdir(bg_path):
-            self.bg_path = bg_path
-        else:
-            raise ScaperError(
-                'bg_path "{:s}" does not point to a valid folder'.format(
-                    str(bg_path)))
 
         # Populate label lists from folder paths
         self.fg_labels = []
         self.bg_labels = []
 
-        folder_names = os.listdir(self.fg_path)
-        for fname in folder_names:
-            if (os.path.isdir(os.path.join(self.fg_path, fname)) and
-                    fname[0] != '.'):
-                self.fg_labels.append(fname)
+        # Validate paths and set
+        _validate_folder_path(fg_path)
+        _validate_folder_path(bg_path)
+        self.fg_path = fg_path
+        self.bg_path = bg_path
 
-        folder_names = os.listdir(self.bg_path)
-        for fname in folder_names:
-            if (os.path.isdir(os.path.join(self.bg_path, fname)) and
-                    fname[0] != '.'):
-                self.bg_labels.append(fname)
+        _populate_label_list(self.fg_path, self.fg_labels)
+        _populate_label_list(self.bg_path, self.bg_labels)
 
     def add_background(self, label, source_file, source_time):
         '''
