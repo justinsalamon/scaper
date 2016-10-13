@@ -1,6 +1,6 @@
 
 import scaper
-from scaper.exceptions import ScaperError
+from scaper.scaper_exceptions import ScaperError
 import pytest
 
 
