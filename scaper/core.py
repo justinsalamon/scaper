@@ -8,6 +8,7 @@ from collections import namedtuple
 import logging
 import tempfile
 from .exceptions import ScaperError
+from .warnings import ScaperWarning
 import numpy as np
 from contextlib import contextmanager
 
@@ -267,16 +268,17 @@ def _validate_label(label, allowed_labels):
                 'Label value must match one of the available labels: '
                 '{:s}'.format(str(allowed_labels)))
     elif label[0] == "choose":
-        if not set(label[1]).issubset(set(allowed_labels)):
-            raise ScaperError(
-                'Label list provided must be a subset of the available labels: '
-                '{:s}'.format(str(allowed_labels)))
+        if label[1]:  # list is not empty
+            if not set(label[1]).issubset(set(allowed_labels)):
+                raise ScaperError(
+                    'Label list provided must be a subset of the available '
+                    'labels: {:s}'.format(str(allowed_labels)))
     else:
         raise ScaperError(
             'Label must be specified using a "const" or "choose" tuple.')
 
 
-def _validate_source_file(source_file, label):
+def _validate_source_file(source_file_tuple, label_tuple):
     '''
     Validate that a source_file tuple is in the right format a that it's values
     are valid.
@@ -295,22 +297,27 @@ def _validate_source_file(source_file, label):
 
     '''
     # Make sure it's a valid distribution tuple
-    _validate_distribution(source_file)
+    _validate_distribution(source_file_tuple)
+    _validate_distribution(label_tuple)
 
     # If source file is specified explicitly
-    if source_file[0] == "const":
+    if source_file_tuple[0] == "const":
         # 1. the filepath must point to an existing file
-        if not os.path.isfile(source_file[1]):
+        if not os.path.isfile(source_file_tuple[1]):
             raise ScaperError(
-                "Source file not found: {:s}".format(source_file[1]))
+                "Source file not found: {:s}".format(source_file_tuple[1]))
         # 2. the label must match the file's parent folder name
-        parent_name = os.path.basename(os.path.dirname(source_file[1]))
-        if label[0] != "const" or label[1] != parent_name:
+        parent_name = os.path.basename(os.path.dirname(source_file_tuple[1]))
+        if label_tuple[0] != "const" or label_tuple[1] != parent_name:
             raise ScaperError(
                 "Source file's parent folder name does not match label.")
     # Otherwise it must be specified using "choose"
-    elif source_file[0] == "choose":
-        pass
+    elif source_file_tuple[0] == "choose":
+        if source_file_tuple[1]:  # list is not empty
+            if not all(os.path.isfile(x) for x in source_file_tuple[1]):
+                raise ScaperError(
+                    'Source file list must either be empty or all paths in '
+                    'the list must point to valid files.')
     else:
         raise ScaperError(
             'Source file must be specified using a "const" or "choose" tuple.')
@@ -332,18 +339,36 @@ def _validate_time(time_tuple):
         If the validation fails.
 
     '''
+    # Make sure it's a valid distribution tuple
+    _validate_distribution(time_tuple)
+
+    # Ensure the values are valid for time
     if time_tuple[0] == "const":
-        if ((len(time_tuple) != 2) or
-                (not np.isrealobj(time_tuple[1])) or
-                (time_tuple[1] < 0)):
+        if not np.isrealobj(time_tuple[1]) or time_tuple[1] < 0:
             raise ScaperError(
-                'Time must be specified when using "const" and must '
-                'be non-negative.')
-    else:
-        _validate_distribution(time_tuple)
+                'Time must be a real non-negative number.')
+    elif time_tuple[0] == "choose":
+        if (not time_tuple[1] or
+                not np.isrealobj(time_tuple[1]) or
+                not all(x >= 0 for x in time_tuple[1])):
+            raise ScaperError(
+                'Time list must be a non-empty list of non-negative real '
+                'numbers.')
+    elif time_tuple[0] == "uniform":
+        if time_tuple[1] < 0:
+            raise ScaperError(
+                'A "uniform" distribution tuple for time must have '
+                'min_value >= 0')
+    elif time_tuple[0] == "normal":
+        warnings.warn(
+            'A "normal" distribution tuple for time can result in '
+            'negative values, in which case the distribution will be '
+            're-sampled until a positive value is returned: this can result '
+            'in an infinite loop!',
+            ScaperWarning)
 
 
-def _validate_duration(duration):
+def _validate_duration(duration_tuple):
     '''
     Validate that a duration tuple has the right format and that the
     specified distribution cannot result in a negative or zero value.
@@ -358,21 +383,39 @@ def _validate_duration(duration):
     ScaperError
         If the validation fails.
 
-        '''
-    if duration[0] == "const":
-        if ((len(duration) != 2) or
-                (not np.isrealobj(duration[1])) or
-                (duration[1] <= 0)):
-            raise ScaperError(
-                'Event duration must be specified when using "const" and '
-                'must be greater than zero.')
-    else:
-        _validate_distribution(duration)
-
-
-def _validate_snr(snr):
     '''
-    Validate that an snr tuple has the right format.
+    # Make sure it's a valid distribution tuple
+    _validate_distribution(duration_tuple)
+
+    # Ensure the values are valid for duration
+    if duration_tuple[0] == "const":
+        if not np.isrealobj(duration_tuple[1]) or duration_tuple[1] <= 0:
+            raise ScaperError(
+                'Duration must be a real number greater than zero.')
+    elif duration_tuple[0] == "choose":
+        if (not duration_tuple[1] or
+                not np.isrealobj(duration_tuple[1]) or
+                not all(x > 0 for x in duration_tuple[1])):
+            raise ScaperError(
+                'Duration list must be a non-empty list of positive real '
+                'numbers.')
+    elif duration_tuple[0] == "uniform":
+        if duration_tuple[1] <= 0:
+            raise ScaperError(
+                'A "uniform" distribution tuple for duration must have '
+                'min_value > 0')
+    elif duration_tuple[0] == "normal":
+        warnings.warn(
+            'A "normal" distribution tuple for duration can result in '
+            'non-positives values, in which case the distribution will be '
+            're-sampled until a positive value is returned: this can result '
+            'in an infinite loop!',
+            ScaperWarning)
+
+
+def _validate_snr(snr_tuple):
+    '''
+    Validate that an snr distribution tuple has the right format.
 
     Parameters
     ----------
@@ -385,20 +428,29 @@ def _validate_snr(snr):
         If the validation fails.
 
     '''
-    if snr[0] == "const":
-        if ((len(snr) != 2) or
-                (not np.isrealobj(snr[1]))):
+    # Make sure it's a valid distribution tuple
+    _validate_distribution(snr_tuple)
+
+    # Ensure the values are valid for SNR
+    if snr_tuple[0] == "const":
+        if not np.isrealobj(snr_tuple[1]):
             raise ScaperError(
-                'SNR must be specified when using "const".')
-    else:
-        _validate_distribution(snr)
+                'SNR must be a real number.')
+    elif snr_tuple[0] == "choose":
+        if not snr_tuple[1] or not np.isrealobj(snr_tuple[1]):
+            raise ScaperError(
+                'SNR list must be a non-empty list of real numbers.')
+
+    # No need to check for "uniform" and "normal" since they must produce a
+    # real number and technically speaking any real number is a valid SNR.
+    # TODO: do we want to impose limits on the possible SNR values?
 
 
 def _validate_event(label, source_file, source_time, event_time,
                     event_duration, snr, allowed_labels):
     '''
     Check that event parameter values are valid. See ```Scaper.add_event```
-    for detailed description of the expected format of each parameter.
+    for a detailed description of the expected format of each parameter.
 
     Parameters
     ----------
@@ -421,16 +473,10 @@ def _validate_event(label, source_file, source_time, event_time,
     Scaper.add_event : Add a foreground sound event to the foreground
     specification.
     '''
-    # ALL PARAMS except for the allowed_labels
-    args = locals()
-    for key in args:
-        if key == 'allowed_labels':
-            if not isinstance(args[key], list):
-                raise ScaperError('allowed_labels must be of type list.')
-        else:
-            if not isinstance(args[key], tuple) or len(args[key]) < 1:
-                raise ScaperError(
-                    "Parameter {:s} must be non-empty tuple.".format(key))
+    # allowed_labels must be a list. All other parameters will be validated
+    # individually.
+    if not isinstance(allowed_labels, list):
+        raise ScaperError('allowed_labels must be of type list.')
 
     # SOURCE FILE
     _validate_source_file(source_file, label)
