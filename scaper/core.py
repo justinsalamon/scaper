@@ -13,15 +13,10 @@ from contextlib import contextmanager
 
 REF_DB = -12
 N_CHANNELS = 1
-SUPPORTED_DIST = ["uniform", "normal"]
-
-# # overload my warnings
-# def _warning(
-#     message,
-#     category=UserWarning,
-#     filename='',
-#     lineno=-1): print(message)
-# warnings.showwarning = _warning
+SUPPORTED_DIST = {"const": lambda x: x,
+                  "choose": lambda x: random.choice(x),
+                  "uniform": random.uniform,
+                  "normal": random.normalvariate}
 
 # Define single event spec as namedtuple
 EventSpec = namedtuple(
@@ -120,11 +115,11 @@ def _validate_folder_path(folder_path):
 
 def _populate_label_list(folder_path, label_list):
     '''
-    Given a path to a folder an a list, add the names of all subfolders
-    contained in this folder (excluding '.' and '..') to the provided list.
-    This is used in scaper to populate the lists of valid foreground and
-    background labels, which are determined by the names of the folders
-    contained in the ```fg_path`` and ```bg_path``` provided during
+    Given a path to a folder and a list, add the names of all subfolders
+    contained in this folder (excluding folders whose name starts with '.') to
+    the provided list. This is used in scaper to populate the lists of valid
+    foreground and background labels, which are determined by the names of the
+    folders contained in ```fg_path`` and ```bg_path``` provided during
     initialization.
 
     Parameters
@@ -133,6 +128,11 @@ def _populate_label_list(folder_path, label_list):
         Path to a folder
     label_list : list
         List to which label (subfolder) names will be added.
+
+    See Also
+    --------
+    _validate_folder_path : Validate that a provided path points to a valid
+    folder.
 
     '''
     # Make sure folder path is valid
@@ -145,43 +145,29 @@ def _populate_label_list(folder_path, label_list):
             label_list.append(fname)
 
 
-def _get_value_from_dist(*args):
+def _get_value_from_dist(dist_tuple):
     '''
 
     Parameters
     ----------
-    args
+    dist_tuple : tuple
+        Distribution tuple to be validated. See Scaper.add_event for details
+        about the expected format and item values.
 
     Returns
     -------
+    value
+        A value from the specified distribution.
+
+    See Also
+    --------
+    _validate_distribution : Check whether a tuple specifying a parameter
+    distribution has a valid format, if not raise an error.
 
     '''
-    # first arg must always be a distribution tuple
-    if len(args) < 1 or not isinstance(args[0], tuple):
-        raise ScaperError("No distribution tuple provided.")
-
-    # if user specified a value
-    if args[0][0] == "const":
-        if len(args[0]) != 2:
-            raise ScaperError('"const" tuple should include exactly 2 items.')
-        else:
-            return args[0][1]
-    # choose randomly out of a list of options
-    elif args[0][0] == "random":
-        # second arg must be list of options
-        if len(args) < 2 or not isinstance(args[1], list):
-            raise ScaperError("No list provided for random selection.")
-        else:
-            # nb: random.randint range *includes* upper bound.
-            idx = random.randint(0, len(args[1]) - 1)
-            return args[1][idx]
-    else:
-        # for all other distributions we run validation
-        _validate_distribution(args[0])
-        if args[0][0] == "uniform":
-            return random.uniform(args[0][1], args[0][2])
-        elif args[0][0] == "normal":
-            return random.normalvariate(args[0][1], args[0][2])
+    # Make sure it's a valid distribution tuple
+    _validate_distribution(dist_tuple)
+    return SUPPORTED_DIST[dist_tuple[0], dist_tuple[1:]]
 
 
 def _validate_distribution(dist_tuple):
@@ -192,37 +178,70 @@ def _validate_distribution(dist_tuple):
     Parameters
     ----------
     dist_tuple : tuple
-        Tuple specifying a distribution to sample from
+        Tuple specifying a distribution to sample from. See Scaper.add_event
+        for details about the expected format of the tuple and allowed values.
 
     Raises
     ------
     ScaperError
         If the tuple does not have a valid format.
+
+    See Also
+    --------
+    Scaper.add_event : Add a foreground sound event to the foreground
+    specification.
     '''
+    # Make sure it's a tuple
+    if not isinstance(dist_tuple, tuple):
+        raise ScaperError('Distribution tuple must be of type tuple.')
+
+    # Make sure the tuple contains at least 2 items
     if len(dist_tuple) < 2:
         raise ScaperError('Distribution tuple must be at least of length 2.')
 
-    if dist_tuple[0] not in SUPPORTED_DIST:
+    # Make sure the first item is one of the supported distribution names
+    if dist_tuple[0] not in SUPPORTED_DIST.keys():
         raise ScaperError(
-            "Unsupported distribution type: {:s}".format(dist_tuple[0]))
+            "Unsupported distribution name: {:s}".format(dist_tuple[0]))
 
-    if dist_tuple[0] == "uniform":
-        if ((not np.isrealobj(dist_tuple[1])) or
-                (not np.isrealobj(dist_tuple[2])) or
-                (dist_tuple[1] >= dist_tuple[2])):
-            raise ScaperError('Uniform must specify min and max values with '
-                              'max > min.')
-    elif dist_tuple[1] == "normal":
-        if ((not np.isrealobj(dist_tuple[1])) or
-                (not np.isrealobj(dist_tuple[2])) or
-                (dist_tuple[2] <= 0)):
-            raise ScaperError('Normal must specify mean and positive stddev.')
+    # If it's a constant distribution, tuple must be of length 2
+    if dist_tuple[0] == 'const':
+        if len(dist_tuple) != 2:
+            raise ScaperError('"const" distribution tuple must be of length 2')
+    # If it's a choose, tuple must be of length 2 and second item of type list
+    elif dist_tuple[0] == 'choose':
+        if len(dist_tuple) != 2 or not isinstance(dist_tuple[1], list):
+            raise ScaperError(
+                'The "choose" distribution tuple must be of length 2 where '
+                'the second item is a list.')
+    # If it's a uniform distribution, tuple must be of length 3, 2nd item must
+    # be a real number and 3rd item must be real and greater/equal to the 2nd.
+    elif dist_tuple[0] == 'uniform':
+        if (len(dist_tuple) != 3 or
+                not np.isrealobj(dist_tuple[1]) or
+                not np.isrealobj(dist_tuple[2]) or
+                dist_tuple[1] > dist_tuple[2]):
+            raise ScaperError(
+                'The "uniform" distribution tuple be of length 2, where the '
+                '2nd item is a real number and the 3rd item is a real number '
+                'and greater/equal to the 2nd item.')
+    # If it's a normal distribution, tuple must be of length 3, 2nd item must
+    # be a real number and 3rd item must be a non-negative real
+    elif dist_tuple[1] == 'normal':
+        if (len(dist_tuple) != 3 or
+                not np.isrealobj(dist_tuple[1]) or
+                not np.isrealobj(dist_tuple[2]) or
+                dist_tuple[2] < 0):
+            raise ScaperError(
+                'The "normal" distribution tuple must be of length 3, where '
+                'the 2nd item (mean) is a real number and the 3rd item (std '
+                'dev) is real and non-negative.')
 
 
 def _validate_label(label, allowed_labels):
     '''
-    Validate that a label tuple is in the right format and that if a label
-    value is provided using "const" that it is one of the allowed labels.
+    Validate that a label tuple is in the right format and that it's values
+    are valid.
 
     Parameters
     ----------
@@ -237,23 +256,30 @@ def _validate_label(label, allowed_labels):
         If the validation fails.
 
     '''
+    # Make sure it's a valid distribution tuple
+    _validate_distribution(label)
+
+    # Make sure it's one of the allowed distributions for a label and that the
+    # label value is one of the allowed labels.
     if label[0] == "const":
-        if len(label) != 2 or not label[1] in allowed_labels:
+        if not label[1] in allowed_labels:
             raise ScaperError(
-                'Label value must be specified when using "const" and must '
-                'match one of the available background labels: '
+                'Label value must match one of the available labels: '
+                '{:s}'.format(str(allowed_labels)))
+    elif label[0] == "choose":
+        if not set(label[1]).issubset(set(allowed_labels)):
+            raise ScaperError(
+                'Label list provided must be a subset of the available labels: '
                 '{:s}'.format(str(allowed_labels)))
     else:
-        if label[0] != "random":
-            raise ScaperError(
-                'Label must be specified using "const" or "random".')
+        raise ScaperError(
+            'Label must be specified using a "const" or "choose" tuple.')
 
 
 def _validate_source_file(source_file, label):
     '''
-    Validate that a source_file tuple is in the right format and that if a
-    source_file is provided using "const" that its parent folder matches the
-    provided label.
+    Validate that a source_file tuple is in the right format a that it's values
+    are valid.
 
     Parameters
     ----------
@@ -268,26 +294,26 @@ def _validate_source_file(source_file, label):
         If the validation fails.
 
     '''
-    # If source file is specified
+    # Make sure it's a valid distribution tuple
+    _validate_distribution(source_file)
+
+    # If source file is specified explicitly
     if source_file[0] == "const":
-        # 1. it must specify a filepath
-        if not len(source_file) == 2:
-            raise ScaperError(
-                'Source file must be provided when using "const".')
-        # 2. the filepath must point to an existing file
+        # 1. the filepath must point to an existing file
         if not os.path.isfile(source_file[1]):
             raise ScaperError(
                 "Source file not found: {:s}".format(source_file[1]))
-        # 3. the label must match the files parent folder name
+        # 2. the label must match the file's parent folder name
         parent_name = os.path.basename(os.path.dirname(source_file[1]))
-        if len(label) != 2 or label[0] != "const" or label[1] != parent_name:
+        if label[0] != "const" or label[1] != parent_name:
             raise ScaperError(
-                "Label does not match source file parent folder name.")
-    # Otherwise it must be set to "random"
+                "Source file's parent folder name does not match label.")
+    # Otherwise it must be specified using "choose"
+    elif source_file[0] == "choose":
+        pass
     else:
-        if source_file[0] != "random":
-            raise ScaperError(
-                'Source file must be specified using "const" or "random".')
+        raise ScaperError(
+            'Source file must be specified using a "const" or "choose" tuple.')
 
 
 def _validate_time(time_tuple):
@@ -389,6 +415,11 @@ def _validate_event(label, source_file, source_time, event_time,
     ------
     ScaperError
         If any of the input parameters has an invalid format or value.
+
+    See Also
+    --------
+    Scaper.add_event : Add a foreground sound event to the foreground
+    specification.
     '''
     # ALL PARAMS except for the allowed_labels
     args = locals()
@@ -467,54 +498,61 @@ class Scaper(object):
     def add_background(self, label, source_file, source_time):
         '''
         Add a background recording. The duration will be equal to the duration
-        of the soundscape specified when initializing the Scaper object
-        ```Scaper.duration```. If the source file is shorter than this duration
+        of the soundscape ```Scaper.duration``` specified when initializing
+        the Scaper object. If the source file is shorter than this duration
         then it will be concatenated to itself as many times as necessary to
-        produce the specified duration.
+        produce the specified duration when calling ```Scaper.generate```.
 
         Parameters
         ----------
         label : tuple
-            Specifies the label of the background sound. To set a specific
-            value, the first item must be "const" and the second item the label
-            value (string). The value must match one of the labels in the
-            Scaper's background label list ```Scaper.bg_labels```.
-            If ```source_file``` is specified using "const", then the value of
-            ```label``` must also be specified using "const" and its value must
+            Specifies the label of the background. See Notes below for the
+            expected format of this tuple and the allowed values.
+            NOTE: The label specified by this tuple must match one
+            of the labels in the Scaper's background label list
+            ```Scaper.bg_labels```. Furthermore, if ```source_file``` is
+            specified using "const" (see Notes), then ```label``` must also be
+            specified using "const" and its ```value ``` (see Notes) must
             match the source file's parent folder's name.
-            To randomly set a value, see the Notes below.
-        source_file: tuple
-            Specifies the audio file to use as the source. To set a specific
-            value the first item must be "const" and the second item the path
-            to the audio file (string).
-            If ```source_file``` is specified using "const", then the value of
-            ```label``` must match the source file's parent folder's name.
-            To randomly set a source file, see the Notes below.
+        source_file : tuple
+            Specifies the audio file to use as the source. See Notes below for
+            the expected format of this tuple and the allowed values.
+            NOTE: If ```source_file``` is specified using "const" (see Notes),
+            then ```label``` must also be specified using "const" and its
+            ```value``` (see Notes) must match the source file's parent
+            folder's name.
         source_time : tuple
-            Specifies the desired start time in the source file. To set a
-            specific value, the first item must be "const" and the second the
-            desired value in seconds (float). The value must be equal to or
-            smaller than the source file's duration - ```self.duration```
-            (i.e. the soundscape's duration specified during initialization).
-            To randomly set a value, see the Notes below.
+            Specifies the desired start time in the source file. See Notes
+            below for the expected format of this tuple and the allowed values.
+            NOTE: the source time specified by this tuple should be equal to or
+            smaller than ```<source file duration> - <soundscape duration>```.
+            Larger values will be automatically changed to fulfill this
+            requirement when calling ```Scaper.generate```.
 
         Notes
         -----
-        Each parameter of this function can either be set to a constant value
-        using the tuple ```("const", value)```, or it can be randomly
-        selected from a certain distribution. In addition to the "const"
-        tuple:
-            * ```label``` can be selected randomly from all valid background
-              labels (```Scaper.bg_labels```) by passing ```("random")```.
-            * ```source_file``` can be selected randomly from all valid
-              background source files (i.e. the files in the folder whose name
-              matches the label) by passing ```("random")```.
-            * ```source_time``` can be randomly chosen from a distribution by
-              passing one of the supported distribution names followed by the
-              distribution's parameters (which are distribution-specific).
-              The supported distributions (and their parameters) are:
-                * ("uniform", min_value, max_value)
-                * ("normal", mean, stddev)
+        Each parameter of this function is set by passing a distribution
+        tuple, whose first item is always the distribution name and subsequent
+        items are distribution specific. The supported distribution tuples are:
+            * ```("const", value)``` : a constant, given by ```value```.
+            * ```("choose", valuelist)``` : choose a value from
+              ```valuelist``` at random (uniformly). The ```label``` and
+              ```source_file``` parameters also support providing an empty
+              ```valuelist``` i.e. ```("choose", [])```, in which case the
+              value will be chosen at random from all available labels or files
+              as determined automatically by Scaper by examining the file
+              structure of ```bg_path``` provided during initialization.
+            * ```("uniform", min_value, max_value)``` : sample a random
+              value from a uniform distribution between ```min_value```
+              and ```max_value```.
+            * ```("normal", mean, stddev)``` : sample a random value from a
+              normal distribution defined by its mean ```mean``` and
+              standard deviation ```stddev```.
+        IMPORTANT: not all parameters support all distribution tuples. In
+        particular, ```label``` and ```source_file``` only support "const" and
+        "choose", whereas ```source_time``` supports all distribution
+        tuples. As noted above, only ```label``` and ```source_file``` support
+        providing an empty ```valuelist``` with "choose".
 
         '''
         # These values are fixed for the background sound
@@ -546,69 +584,77 @@ class Scaper(object):
         Parameters
         ----------
         label : tuple
-            Specifies the label of the sound event. To set a specific value,
-            the first item must be "const" and the second item the label value
-            (string). The value must match one of the labels in the Scaper's
-            foreground label list ```Scaper.fg_labels```.
-            If ```source_file``` is specified using "const", then the value of
-            ```label``` must match the source file's parent folder's name.
-            To randomly set a value, see the Notes below.
-        source_file : tuple
-            Specifies the audio file to use as the source. To set a specific
-            value the first item must be "const" and the second item the path
-            to the audio file (string).
-            If ```source_file``` is specified using "const", then the value of
-            ```label``` must also be specified using "const" and its value must
+            Specifies the label of the sound event. See Notes below for the
+            expected format of this tuple and the allowed values.
+            NOTE: The label specified by this tuple must match one
+            of the labels in the Scaper's foreground label list
+            ```Scaper.fg_labels```. Furthermore, if ```source_file``` is
+            specified using "const" (see Notes), then ```label``` must also be
+            specified using "const" and its ```value ``` (see Notes) must
             match the source file's parent folder's name.
-            To randomly set a source file, see the Notes below.
+        source_file : tuple
+            Specifies the audio file to use as the source. See Notes below for
+            the expected format of this tuple and the allowed values.
+            NOTE: If ```source_file``` is specified using "const" (see Notes),
+            then ```label``` must also be specified using "const" and its
+            ```value``` (see Notes) must match the source file's parent
+            folder's name.
         source_time : tuple
-            Specifies the desired start time in the source file. To set a
-            specific value, the first item must be "const" and the second the
-            desired value in seconds (float). The value must be equal to or
-            smaller than ```<source file duration> - event_duration```, and
-            larger values will be automatically changed to fulfill this
-            requirement when calling ```Scaper.generate```.
-            To randomly set a source time, see the Notes below.
+            Specifies the desired start time in the source file. See Notes
+            below for the expected format of this tuple and the allowed values.
+            NOTE: the source time specified by this tuple should be equal to or
+            smaller than ```<source file duration> - event_duration```. Larger
+            values will be automatically changed to fulfill this requirement
+            when calling ```Scaper.generate```.
         event_time : tuple
             Specifies the desired start time of the event in the soundscape.
-            To set a specific value, the first item must be "const" and the
-            second the desired value in seconds (float). The value must be
-            equal to or smaller than ```<soundscapes duration> -
-            event_duration```, and larger valeus will be automatically changed
-            to fulfill this requirement when calling ```Scaper.generate```.
-            To randomly set an event time, see the Notes below.
+            See Notes below for the expected format of this tuple and the
+            allowed values.
+            NOTE: The value specified by this tuple should be equal to or
+            smaller than ```<soundscapes duration> - event_duration```, and
+            larger values will be automatically changed to fulfill this
+            requirement when calling ```Scaper.generate```.
         event_duration : tuple
-            Specifies the desired duration of the event. To set a
-            specific value, the first item must be "const" and the second the
-            desired value in seconds (float). The value must be equal to or
+            Specifies the desired duration of the event. See Notes below for
+            the expected format of this tuple and the allowed values.
+            NOTE: The value specified by this tuple should be equal to or
             smaller than the source file's duration, and larger values will be
-            automatically to fulfill this requirement when calling
+            automatically changed to fulfill this requirement when calling
             ```Scaper.generate```.
-            To randomly set an event duration, see the Notes below.
         snr : float
-            Specifies the desired signal to noise ratio (snr) between the event
-            and the background. To set a specific value, the first item must
-            be "const" and the second the desired value in dB (float).
-            To randomly set an snr, see the Notes below.
+            Specifies the desired signal to noise ratio (SNR) between the event
+            and the background. See Notes below for the expected format of
+            this tuple and the allowed values.
 
         Notes
         -----
-        Each parameter of this function can either be set to a constant value
-        using the tuple ```("const", value)```, or it can be randomly
-        selected from a certain distribution. In addition to the "const"
-        tuple:
-            * ```label``` can be selected randomly from all valid background
-              labels (```Scaper.bg_labels```) by passing ```("random")```.
-            * ```source_file``` can be selected randomly from all valid
-              background source files (i.e. the files in the folder whose name
-              matches the label) by passing ```("random")```.
-            * ```source_time```, ```event_time```, ```event_duration``` and
-              ```snr``` can be randomly chosen from a distribution by
-              passing one of the supported distribution names followed by the
-              distribution's parameters (which are distribution-specific).
-              The supported distributions (and their parameters) are:
-                * ("uniform", min_value, max_value)
-                * ("normal", mean, stddev)
+        Each parameter of this function is set by passing a distribution
+        tuple, whose first item is always the distribution name and subsequent
+        items are distribution specific. The supported distribution tuples are:
+            * ```("const", value)``` : a constant, given by ```value```.
+            * ```("choose", valuelist)``` : choose a value from
+              ```valuelist``` at random (uniformly). The ```label``` and
+              ```source_file``` parameters also support providing an empty
+              ```valuelist``` i.e. ```("choose", [])```, in which case the
+              value will be chosen at random from all available labels or
+              source files as determined automatically by Scaper by examining
+              the file structure of ```fg_path``` provided during
+              initialization.
+            * ```("uniform", min_value, max_value)``` : sample a random
+              value from a uniform distribution between ```min_value```
+              and ```max_value``` (including ```max_value```).
+            * ```("normal", mean, stddev)``` : sample a random value from a
+              normal distribution defined by its mean ```mean``` and
+              standard deviation ```stddev```.
+        IMPORTANT: not all parameters support all distribution tuples. In
+        particular, ```label``` and ```source_file``` only support "const" and
+        "choose", whereas the remaining parameters support all distribution
+        tuples. As noted above, only ```label``` and ```source_file``` support
+        providing an empty ```valuelist``` with "choose".
+
+        See Also
+        --------
+        _validate_event : Check that event parameter values are valid.
 
         '''
 
