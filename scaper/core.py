@@ -168,7 +168,7 @@ def _get_value_from_dist(dist_tuple):
     '''
     # Make sure it's a valid distribution tuple
     _validate_distribution(dist_tuple)
-    return SUPPORTED_DIST[dist_tuple[0]](dist_tuple[1:])
+    return SUPPORTED_DIST[dist_tuple[0]](*dist_tuple[1:])
 
 
 def _validate_distribution(dist_tuple):
@@ -737,8 +737,9 @@ class Scaper(object):
 
             # determine label
             if event.label[0] == "choose" and not event.label[1]:
-                label_tuple = event.label.copy()
+                label_tuple = list(event.label)
                 label_tuple[1] = self.bg_labels
+                label_tuple = tuple(label_tuple)
             else:
                 label_tuple = event.label
             label = _get_value_from_dist(label_tuple)
@@ -747,8 +748,9 @@ class Scaper(object):
             if event.source_file[0] == "choose" and not event.source_file[1]:
                 source_files = _get_sorted_files(
                     os.path.join(self.bg_path, label))
-                source_file_tuple = event.source_file.copy()
+                source_file_tuple = list(event.source_file)
                 source_file_tuple[1] = source_files
+                source_file_tuple = tuple(source_file_tuple)
             else:
                 source_file_tuple = event.source_file
             source_file = _get_value_from_dist(source_file_tuple)
@@ -809,8 +811,9 @@ class Scaper(object):
 
             # determine label
             if event.label[0] == "choose" and not event.label[1]:
-                label_tuple = event.label.copy()
+                label_tuple = list(event.label)
                 label_tuple[1] = self.fg_labels
+                label_tuple = tuple(label_tuple)
             else:
                 label_tuple = event.label
             label = _get_value_from_dist(label_tuple)
@@ -819,8 +822,9 @@ class Scaper(object):
             if event.source_file[0] == "choose" and not event.source_file[1]:
                 source_files = _get_sorted_files(
                     os.path.join(self.fg_path, label))
-                source_file_tuple = event.source_file.copy()
+                source_file_tuple = list(event.source_file)
                 source_file_tuple[1] = source_files
+                source_file_tuple = tuple(source_file_tuple)
             else:
                 source_file_tuple = event.source_file
             source_file = _get_value_from_dist(source_file_tuple)
