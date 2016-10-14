@@ -605,6 +605,202 @@ class Scaper(object):
         # Add event to foreground specification
         self.fg_spec.append(event)
 
+    def _instantiate_background_event(self, event):
+        '''
+        Given a background event specification containing distribution tuples,
+        instantiate the event, i.e. samples values for the label, source_file,
+        source_time, event_time, event_duration and snr from their respective
+        distribution tuples, and return the sampled values in as a new event
+        specification.
+
+        Parameters
+        ----------
+        event : EventSpec
+            Event specification containing distribution tuples.
+
+        Returns
+        -------
+        instantiated_event : EventSpec
+            Event specification containing values samples from the distribution
+            tuples of the input event specification.
+
+        '''
+        # determine label
+        if event.label[0] == "choose" and not event.label[1]:
+            label_tuple = list(event.label)
+            label_tuple[1] = self.bg_labels
+            label_tuple = tuple(label_tuple)
+        else:
+            label_tuple = event.label
+        label = _get_value_from_dist(label_tuple)
+
+        # determine source file
+        if event.source_file[0] == "choose" and not event.source_file[1]:
+            source_files = _get_sorted_files(
+                os.path.join(self.bg_path, label))
+            source_file_tuple = list(event.source_file)
+            source_file_tuple[1] = source_files
+            source_file_tuple = tuple(source_file_tuple)
+        else:
+            source_file_tuple = event.source_file
+        source_file = _get_value_from_dist(source_file_tuple)
+
+        # event duration is fixed to self.duration (which must be > 0)
+        event_duration = _get_value_from_dist(event.event_duration)
+        source_duration = sox.file_info.duration(source_file)
+        if (event_duration > source_duration):
+            warnings.warn(
+                "{:s} background duration ({:.2f}) is greater that source "
+                "duration ({:.2f}), source will be concatenated to itself "
+                "to meet required background duration".format(
+                    label, event_duration, source_duration),
+                ScaperWarning)
+
+        # determine source time
+        source_time = -np.Inf
+        while source_time < 0:
+            source_time = _get_value_from_dist(event.source_time)
+
+        if source_time + event_duration > source_duration:
+            old_source_time = source_time
+            source_time = max(0, source_duration - event_duration)
+            warnings.warn(
+                '{:s} source time ({:.2f}) is too great given background '
+                'duration ({:.2f}) and source duration ({:.2f}), changed '
+                'to {:.2f}.'.format(
+                    label, old_source_time, event_duration,
+                    source_duration, source_time),
+                ScaperWarning)
+
+        # event time is fixed to 0
+        event_time = _get_value_from_dist(event.event_time)
+
+        # snr is fixed to 0
+        snr = _get_value_from_dist(event.snr)
+
+        # get role (which can only take "foreground" or "background") and
+        # is set internally, not by the user.
+        role = event.role
+
+        # pack up values for JAMS
+        instantiated_event = EventSpec(label=label,
+                                       source_file=source_file,
+                                       source_time=source_time,
+                                       event_time=event_time,
+                                       event_duration=event_duration,
+                                       snr=snr,
+                                       role=role)
+
+        return instantiated_event
+
+    def _instantiate_foreground_event(self, event):
+        '''
+        Given a foreground event specification containing distribution tuples,
+        instantiate the event, i.e. samples values for the label, source_file,
+        source_time, event_time, event_duration and snr from their respective
+        distribution tuples, and return the sampled values in as a new event
+        specification.
+
+        Parameters
+        ----------
+        event : EventSpec
+            Event specification containing distribution tuples.
+
+        Returns
+        -------
+        instantiated_event : EventSpec
+            Event specification containing values samples from the distribution
+            tuples of the input event specification.
+
+        '''
+        # determine label
+        if event.label[0] == "choose" and not event.label[1]:
+            label_tuple = list(event.label)
+            label_tuple[1] = self.fg_labels
+            label_tuple = tuple(label_tuple)
+        else:
+            label_tuple = event.label
+        label = _get_value_from_dist(label_tuple)
+
+        # determine source file
+        if event.source_file[0] == "choose" and not event.source_file[1]:
+            source_files = _get_sorted_files(
+                os.path.join(self.fg_path, label))
+            source_file_tuple = list(event.source_file)
+            source_file_tuple[1] = source_files
+            source_file_tuple = tuple(source_file_tuple)
+        else:
+            source_file_tuple = event.source_file
+        source_file = _get_value_from_dist(source_file_tuple)
+
+        # determine event duration
+        event_duration = -np.Inf
+        while event_duration <= 0:
+            event_duration = _get_value_from_dist(event.event_duration)
+
+        source_duration = sox.file_info.duration(source_file)
+        if (event_duration > source_duration or
+                event_duration > self.duration):
+            old_duration = event_duration  # for warning
+            event_duration = min(source_duration, self.duration)
+            warnings.warn(
+                "{:s} event duration ({:.2f}) is greater that source "
+                "duration ({:.2f}) or soundscape duration ({:.2f}), "
+                "changed to {:.2f}".format(
+                    label, old_duration, source_duration, self.duration,
+                    event_duration),
+                ScaperWarning)
+
+        # determine source time
+        source_time = -np.Inf
+        while source_time < 0:
+            source_time = _get_value_from_dist(event.source_time)
+
+        if source_time + event_duration > source_duration:
+            old_source_time = source_time
+            source_time = source_duration - event_duration
+            warnings.warn(
+                '{:s} source time ({:.2f}) is too great given event '
+                'duration ({:.2f}) and source duration ({:.2f}), changed '
+                'to {:.2f}.'.format(
+                    label, old_source_time, event_duration,
+                    source_duration, source_time),
+                ScaperWarning)
+
+        # determine event time
+        event_time = -np.Inf
+        while event_time < 0:
+            event_time = _get_value_from_dist(event.event_time)
+
+        if event_time + event_duration > self.duration:
+            old_event_time = event_time
+            event_time = self.duration - event_duration
+            warnings.warn(
+                '{:s} event time ({:.2f}) is too great given event '
+                'duration ({:.2f}) and soundscape duration ({:.2f}), '
+                'changed to {:.2f}.'.format(
+                    label, old_event_time, event_duration,
+                    self.duration, event_time),
+                ScaperWarning)
+
+        # determine snr
+        snr = _get_value_from_dist(event.snr)
+
+        # get role (which can only take "foreground" or "background") and
+        # is set internally, not by the user.
+        role = event.role
+
+        # pack up values for JAMS
+        instantiated_event = EventSpec(label=label,
+                                       source_file=source_file,
+                                       source_time=source_time,
+                                       event_time=event_time,
+                                       event_duration=event_duration,
+                                       snr=snr,
+                                       role=role)
+
+        return instantiated_event
+
     def _instantiate(self):
         '''
         Instantiate a specific soundscape in JAMS format based on the current
@@ -619,169 +815,17 @@ class Scaper(object):
 
         # Add background sounds
         for event in self.bg_spec:
-
-            # determine label
-            if event.label[0] == "choose" and not event.label[1]:
-                label_tuple = list(event.label)
-                label_tuple[1] = self.bg_labels
-                label_tuple = tuple(label_tuple)
-            else:
-                label_tuple = event.label
-            label = _get_value_from_dist(label_tuple)
-
-            # determine source file
-            if event.source_file[0] == "choose" and not event.source_file[1]:
-                source_files = _get_sorted_files(
-                    os.path.join(self.bg_path, label))
-                source_file_tuple = list(event.source_file)
-                source_file_tuple[1] = source_files
-                source_file_tuple = tuple(source_file_tuple)
-            else:
-                source_file_tuple = event.source_file
-            source_file = _get_value_from_dist(source_file_tuple)
-
-            # event duration is fixed to self.duration (which must be > 0)
-            event_duration = _get_value_from_dist(event.event_duration)
-            source_duration = sox.file_info.duration(source_file)
-            if (event_duration > source_duration):
-                warnings.warn(
-                    "{:s} background duration ({:.2f}) is greater that source "
-                    "duration ({:.2f}), source will be concatenated to itself "
-                    "to meet required background duration".format(
-                        label, event_duration, source_duration),
-                    ScaperWarning)
-
-            # determine source time
-            source_time = -np.Inf
-            while source_time < 0:
-                source_time = _get_value_from_dist(event.source_time)
-
-            if source_time + event_duration > source_duration:
-                old_source_time = source_time
-                source_time = max(0, source_duration - event_duration)
-                warnings.warn(
-                    '{:s} source time ({:.2f}) is too great given background '
-                    'duration ({:.2f}) and source duration ({:.2f}), changed '
-                    'to {:.2f}.'.format(
-                        label, old_source_time, event_duration,
-                        source_duration, source_time),
-                    ScaperWarning)
-
-            # event time is fixed to 0
-            event_time = _get_value_from_dist(event.event_time)
-
-            # snr is fixed to 0
-            snr = _get_value_from_dist(event.snr)
-
-            # get role (which can only take "foreground" or "background") and
-            # is set internally, not by the user.
-            role = event.role
-
-            # pack up values for JAMS
-            value = EventSpec(label=label,
-                              source_file=source_file,
-                              source_time=source_time,
-                              event_time=event_time,
-                              event_duration=event_duration,
-                              snr=snr,
-                              role=role)
-
-            ann.append(time=event_time,
-                       duration=event_duration,
+            value = self._instantiate_background_event(event)
+            ann.append(time=value.event_time,
+                       duration=value.event_duration,
                        value=value._asdict(),
                        confidence=1.0)
 
         # Add foreground events
         for event in self.fg_spec:
-
-            # determine label
-            if event.label[0] == "choose" and not event.label[1]:
-                label_tuple = list(event.label)
-                label_tuple[1] = self.fg_labels
-                label_tuple = tuple(label_tuple)
-            else:
-                label_tuple = event.label
-            label = _get_value_from_dist(label_tuple)
-
-            # determine source file
-            if event.source_file[0] == "choose" and not event.source_file[1]:
-                source_files = _get_sorted_files(
-                    os.path.join(self.fg_path, label))
-                source_file_tuple = list(event.source_file)
-                source_file_tuple[1] = source_files
-                source_file_tuple = tuple(source_file_tuple)
-            else:
-                source_file_tuple = event.source_file
-            source_file = _get_value_from_dist(source_file_tuple)
-
-            # determine event duration
-            event_duration = -np.Inf
-            while event_duration <= 0:
-                event_duration = _get_value_from_dist(event.event_duration)
-
-            source_duration = sox.file_info.duration(source_file)
-            if (event_duration > source_duration or
-                    event_duration > self.duration):
-                old_duration = event_duration  # for warning
-                event_duration = min(source_duration, self.duration)
-                warnings.warn(
-                    "{:s} event duration ({:.2f}) is greater that source "
-                    "duration ({:.2f}) or soundscape duration ({:.2f}), "
-                    "changed to {:.2f}".format(
-                        label, old_duration, source_duration, self.duration,
-                        event_duration),
-                    ScaperWarning)
-
-            # determine source time
-            source_time = -np.Inf
-            while source_time < 0:
-                source_time = _get_value_from_dist(event.source_time)
-
-            if source_time + event_duration > source_duration:
-                old_source_time = source_time
-                source_time = source_duration - event_duration
-                warnings.warn(
-                    '{:s} source time ({:.2f}) is too great given event '
-                    'duration ({:.2f}) and source duration ({:.2f}), changed '
-                    'to {:.2f}.'.format(
-                        label, old_source_time, event_duration,
-                        source_duration, source_time),
-                    ScaperWarning)
-
-            # determine event time
-            event_time = -np.Inf
-            while event_time < 0:
-                event_time = _get_value_from_dist(event.event_time)
-
-            if event_time + event_duration > self.duration:
-                old_event_time = event_time
-                event_time = self.duration - event_duration
-                warnings.warn(
-                    '{:s} event time ({:.2f}) is too great given event '
-                    'duration ({:.2f}) and soundscape duration ({:.2f}), '
-                    'changed to {:.2f}.'.format(
-                        label, old_event_time, event_duration,
-                        self.duration, event_time),
-                    ScaperWarning)
-
-            # determine snr
-            snr = _get_value_from_dist(event.snr)
-
-            # get role (which can only take "foreground" or "background") and
-            # is set internally, not by the user.
-            role = event.role
-
-            # pack up values for JAMS
-            value = EventSpec(label=label,
-                              source_file=source_file,
-                              source_time=source_time,
-                              event_time=event_time,
-                              event_duration=event_duration,
-                              snr=snr,
-                              role=role)
-
-            ann.append(time=event_time,
-                       duration=event_duration,
+            value = self._instantiate_foreground_event(event)
+            ann.append(time=value.event_time,
+                       duration=value.event_duration,
                        value=value._asdict(),
                        confidence=1.0)
 
