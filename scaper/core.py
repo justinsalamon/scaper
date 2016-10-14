@@ -15,8 +15,6 @@ from .util import _get_sorted_files
 from .util import _validate_folder_path
 from .util import _populate_label_list
 
-REF_DB = -12
-N_CHANNELS = 1
 SUPPORTED_DIST = {"const": lambda x: x,
                   "choose": lambda x: random.choice(x),
                   "uniform": random.uniform,
@@ -406,6 +404,8 @@ class Scaper(object):
             raise ScaperError('Duration must be a positive real value')
 
         # Initialize parameters
+        self.ref_db = -12
+        self.n_channels = 1
         self.fade_in_len = 0.01  # 10 ms
         self.fade_out_len = 0.01  # 10 ms
 
@@ -830,13 +830,13 @@ class Scaper(object):
                         # Create combiner
                         cmb = sox.Combiner()
                         # First ensure files has predefined number of channels
-                        cmb.channels(N_CHANNELS)
+                        cmb.channels(self.n_channels)
                         # Then trim
                         cmb.trim(e.value['source_time'],
                                  e.value['source_time'] +
                                  e.value['event_duration'])
                         # After trimming, normalize background to reference DB.
-                        cmb.norm(db_level=REF_DB)
+                        cmb.norm(db_level=self.ref_db)
                         # Finally save result to a tmp file
                         tmpfiles.append(
                             tempfile.NamedTemporaryFile(
@@ -849,7 +849,7 @@ class Scaper(object):
                         # Create transformer
                         tfm = sox.Transformer()
                         # First ensure files has predefined number of channels
-                        tfm.channels(N_CHANNELS)
+                        tfm.channels(self.n_channels)
                         # Trim
                         tfm.trim(e.value['source_time'],
                                  e.value['source_time'] +
@@ -858,8 +858,9 @@ class Scaper(object):
                         # (avoid unnatural sound onsets/offsets)
                         tfm.fade(fade_in_len=self.fade_in_len,
                                  fade_out_len=self.fade_out_len)
-                        # Normalize to specified SNR with respect to REF_DB
-                        tfm.norm(REF_DB + e.value['snr'])
+                        # Normalize to specified SNR with respect to
+                        # self.ref_db
+                        tfm.norm(self.ref_db + e.value['snr'])
                         # Pad with silence before/after event to match the
                         # soundscape duration
                         prepad = e.value['event_time']
