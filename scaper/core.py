@@ -605,9 +605,9 @@ class Scaper(object):
         # Add event to foreground specification
         self.fg_spec.append(event)
 
-    def _instantiate_background_event(self, event):
+    def _instantiate_event(self, event, isbackground=False):
         '''
-        Given a background event specification containing distribution tuples,
+        Given an event specification containing distribution tuples,
         instantiate the event, i.e. samples values for the label, source_file,
         source_time, event_time, event_duration and snr from their respective
         distribution tuples, and return the sampled values in as a new event
@@ -617,18 +617,30 @@ class Scaper(object):
         ----------
         event : EventSpec
             Event specification containing distribution tuples.
+        isbackground : bool
+            Flag indicating whether the event to instantiate is a background
+            event or not (False implies it is a foreground event).
 
         Returns
         -------
         instantiated_event : EventSpec
-            Event specification containing values samples from the distribution
+            Event specification containing values sampled from the distribution
             tuples of the input event specification.
 
         '''
+        # set paths and labels depending on whether its a foreground/background
+        # event
+        if isbackground:
+            file_path = self.bg_path
+            allowed_labels = self.bg_labels
+        else:
+            file_path = self.fg_path
+            allowed_labels = self.fg_labels
+
         # determine label
         if event.label[0] == "choose" and not event.label[1]:
             label_tuple = list(event.label)
-            label_tuple[1] = self.bg_labels
+            label_tuple[1] = allowed_labels
             label_tuple = tuple(label_tuple)
         else:
             label_tuple = event.label
@@ -637,95 +649,7 @@ class Scaper(object):
         # determine source file
         if event.source_file[0] == "choose" and not event.source_file[1]:
             source_files = _get_sorted_files(
-                os.path.join(self.bg_path, label))
-            source_file_tuple = list(event.source_file)
-            source_file_tuple[1] = source_files
-            source_file_tuple = tuple(source_file_tuple)
-        else:
-            source_file_tuple = event.source_file
-        source_file = _get_value_from_dist(source_file_tuple)
-
-        # event duration is fixed to self.duration (which must be > 0)
-        event_duration = _get_value_from_dist(event.event_duration)
-        source_duration = sox.file_info.duration(source_file)
-        if (event_duration > source_duration):
-            warnings.warn(
-                "{:s} background duration ({:.2f}) is greater that source "
-                "duration ({:.2f}), source will be concatenated to itself "
-                "to meet required background duration".format(
-                    label, event_duration, source_duration),
-                ScaperWarning)
-
-        # determine source time
-        source_time = -np.Inf
-        while source_time < 0:
-            source_time = _get_value_from_dist(event.source_time)
-
-        if source_time + event_duration > source_duration:
-            old_source_time = source_time
-            source_time = max(0, source_duration - event_duration)
-            warnings.warn(
-                '{:s} source time ({:.2f}) is too great given background '
-                'duration ({:.2f}) and source duration ({:.2f}), changed '
-                'to {:.2f}.'.format(
-                    label, old_source_time, event_duration,
-                    source_duration, source_time),
-                ScaperWarning)
-
-        # event time is fixed to 0
-        event_time = _get_value_from_dist(event.event_time)
-
-        # snr is fixed to 0
-        snr = _get_value_from_dist(event.snr)
-
-        # get role (which can only take "foreground" or "background") and
-        # is set internally, not by the user.
-        role = event.role
-
-        # pack up values for JAMS
-        instantiated_event = EventSpec(label=label,
-                                       source_file=source_file,
-                                       source_time=source_time,
-                                       event_time=event_time,
-                                       event_duration=event_duration,
-                                       snr=snr,
-                                       role=role)
-
-        return instantiated_event
-
-    def _instantiate_foreground_event(self, event):
-        '''
-        Given a foreground event specification containing distribution tuples,
-        instantiate the event, i.e. samples values for the label, source_file,
-        source_time, event_time, event_duration and snr from their respective
-        distribution tuples, and return the sampled values in as a new event
-        specification.
-
-        Parameters
-        ----------
-        event : EventSpec
-            Event specification containing distribution tuples.
-
-        Returns
-        -------
-        instantiated_event : EventSpec
-            Event specification containing values samples from the distribution
-            tuples of the input event specification.
-
-        '''
-        # determine label
-        if event.label[0] == "choose" and not event.label[1]:
-            label_tuple = list(event.label)
-            label_tuple[1] = self.fg_labels
-            label_tuple = tuple(label_tuple)
-        else:
-            label_tuple = event.label
-        label = _get_value_from_dist(label_tuple)
-
-        # determine source file
-        if event.source_file[0] == "choose" and not event.source_file[1]:
-            source_files = _get_sorted_files(
-                os.path.join(self.fg_path, label))
+                os.path.join(file_path, label))
             source_file_tuple = list(event.source_file)
             source_file_tuple[1] = source_files
             source_file_tuple = tuple(source_file_tuple)
@@ -734,10 +658,14 @@ class Scaper(object):
         source_file = _get_value_from_dist(source_file_tuple)
 
         # determine event duration
+        # For background events the duration is fixed to self.duration
+        # (which must be > 0), but for foreground events it could potentially
+        # be non-positive, hence the loop.
         event_duration = -np.Inf
         while event_duration <= 0:
             event_duration = _get_value_from_dist(event.event_duration)
-
+        # Check if chosen event duration is longer than the duration of the
+        # selected source file, if so adjust the event duration.
         source_duration = sox.file_info.duration(source_file)
         if (event_duration > source_duration or
                 event_duration > self.duration):
@@ -755,7 +683,9 @@ class Scaper(object):
         source_time = -np.Inf
         while source_time < 0:
             source_time = _get_value_from_dist(event.source_time)
-
+        # Make sure source time + event duration is not greater than the
+        # source duration, if it is, adjust the source time (i.e. duration
+        # takes precedences over start time).
         if source_time + event_duration > source_duration:
             old_source_time = source_time
             source_time = source_duration - event_duration
@@ -768,10 +698,15 @@ class Scaper(object):
                 ScaperWarning)
 
         # determine event time
+        # for background events the event time is fixed to 0, but for
+        # foreground events it's not.
         event_time = -np.Inf
         while event_time < 0:
             event_time = _get_value_from_dist(event.event_time)
-
+        # Make sure the selected event time + event duration are is not greater
+        # than the total duration of the soundscape, if it is adjust the event
+        # time. This means event duration takes precedence over the event
+        # start time.
         if event_time + event_duration > self.duration:
             old_event_time = event_time
             event_time = self.duration - event_duration
@@ -786,11 +721,11 @@ class Scaper(object):
         # determine snr
         snr = _get_value_from_dist(event.snr)
 
-        # get role (which can only take "foreground" or "background") and
-        # is set internally, not by the user.
+        # get role (which can only take "foreground" or "background" and
+        # is set internally, not by the user).
         role = event.role
 
-        # pack up values for JAMS
+        # pack up instantiated values in an EventSpec
         instantiated_event = EventSpec(label=label,
                                        source_file=source_file,
                                        source_time=source_time,
@@ -798,7 +733,7 @@ class Scaper(object):
                                        event_duration=event_duration,
                                        snr=snr,
                                        role=role)
-
+        # Return
         return instantiated_event
 
     def _instantiate(self):
@@ -815,7 +750,7 @@ class Scaper(object):
 
         # Add background sounds
         for event in self.bg_spec:
-            value = self._instantiate_background_event(event)
+            value = self._instantiate_event(event, isbackground=True)
             ann.append(time=value.event_time,
                        duration=value.event_duration,
                        value=value._asdict(),
@@ -823,7 +758,7 @@ class Scaper(object):
 
         # Add foreground events
         for event in self.fg_spec:
-            value = self._instantiate_foreground_event(event)
+            value = self._instantiate_event(event, isbackground=False)
             ann.append(time=value.event_time,
                        duration=value.event_duration,
                        value=value._asdict(),
