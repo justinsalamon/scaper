@@ -9,6 +9,7 @@ import logging
 import os
 import glob
 from .scaper_exceptions import ScaperError
+import scipy
 
 
 @contextmanager
@@ -129,3 +130,34 @@ def _populate_label_list(folder_path, label_list):
         if (os.path.isdir(os.path.join(folder_path, fname)) and
                 fname[0] != '.'):
             label_list.append(fname)
+
+
+def _trunc_norm(mu, sigma, trunc_min, trunc_max):
+    '''
+    Return a random value sampled from a truncated normal distribution with
+    mean ```mu``` and standard deviation ```sigma``` whose values are limited
+    between ```trunc_min``` and ```trunc_max```.
+
+    Parameters
+    ----------
+    mu : float
+        The mean of the truncated normal distribution
+    sig : float
+        The standard deviation of the truncated normal distribution
+    trunc_min : float
+        The minimum value allowed for the distribution (lower boundary)
+    trunc_max : float
+        The maximum value allowed for the distribution (upper boundary)
+
+    Returns
+    -------
+    value : float
+        A random value sampled from the truncated normal distribution defined
+        by ```mu```, ```sigma```, ```trunc_min``` and ```trunc_max```.
+
+    '''
+    # By default truncnorm expects a (lower boundary) and b (upper boundary)
+    # values for a standard normal distribution (mu=0, sigma=1), so we need
+    # to recompute a and b given the user specified parameters.
+    a, b = (trunc_min - mu) / float(sigma), (trunc_max - mu) / float(sigma)
+    return scipy.stats.truncnorm.rvs(a, b, mu, sigma)
