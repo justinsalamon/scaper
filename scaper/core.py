@@ -14,11 +14,13 @@ from .util import _set_temp_logging_level
 from .util import _get_sorted_files
 from .util import _validate_folder_path
 from .util import _populate_label_list
+from .util import _trunc_norm
 
 SUPPORTED_DIST = {"const": lambda x: x,
                   "choose": lambda x: random.choice(x),
                   "uniform": random.uniform,
-                  "normal": random.normalvariate}
+                  "normal": random.normalvariate,
+                  "truncnorm": _trunc_norm}
 
 # Define single event spec as namedtuple
 EventSpec = namedtuple(
@@ -120,6 +122,20 @@ def _validate_distribution(dist_tuple):
                 'The "normal" distribution tuple must be of length 3, where '
                 'the 2nd item (mean) is a real number and the 3rd item (std '
                 'dev) is real and non-negative.')
+    elif dist_tuple[1] == 'truncnorm':
+        if (len(dist_tuple) != 5 or
+                not np.isrealobj(dist_tuple[1]) or
+                not np.isrealobj(dist_tuple[2]) or
+                not np.isrealobj(dist_tuple[3]) or
+                not np.isrealobj(dist_tuple[4]) or
+                dist_tuple[2] < 0 or
+                dist_tuple[4] < dist_tuple[3]):
+            raise ScaperError(
+                'The "truncnorm" distribution tuple must be of length 5, '
+                'where the 2nd item (mean) is a real number, the 3rd item '
+                '(std dev) is real and non-negative, the 4th item (trunc_min) '
+                'is a real number and the 5th item (trun_max) is a real '
+                'number that is equal to or greater than trunc_min.')
 
 
 def _validate_label(label, allowed_labels):
@@ -249,6 +265,11 @@ def _validate_time(time_tuple):
             're-sampled until a positive value is returned: this can result '
             'in an infinite loop!',
             ScaperWarning)
+    elif time_tuple[0] == "truncnorm":
+        if time_tuple[3] < 0:
+            raise ScaperError(
+                'A "truncnorm" distirbution tuple for time must specify a non-'
+                'negative trunc_min value.')
 
 
 def _validate_duration(duration_tuple):
@@ -294,6 +315,11 @@ def _validate_duration(duration_tuple):
             're-sampled until a positive value is returned: this can result '
             'in an infinite loop!',
             ScaperWarning)
+    elif duration_tuple[0] == "truncnorm":
+        if duration_tuple[3] <= 0:
+            raise ScaperError(
+                'A "truncnorm" distirbution tuple for time must specify a '
+                'positive trunc_min value.')
 
 
 def _validate_snr(snr_tuple):
