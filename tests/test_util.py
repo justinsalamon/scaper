@@ -25,7 +25,6 @@ def test_close_temp_files():
                 tempfile.NamedTemporaryFile(suffix='.wav', delete=True))
 
     for tf in tmpfiles:
-        assert tf.close_called
         assert tf.file.closed
         assert not os.path.isfile(tf.name)
 
