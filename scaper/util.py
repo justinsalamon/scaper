@@ -205,3 +205,40 @@ def max_polyphony(ann):
     polyphony = np.max(np.cumsum(entry_log_sorted[:, 1]))
 
     return int(polyphony)
+
+
+def crop_annotation(ann, crop):
+    '''
+    Given a ```sound_event ``` JAMS annotation, crop it to the middle
+    ```crop``` seconds.
+
+    Parameters
+    ----------
+    ann : jams.Annotation
+        A JAMS ```sound_event``` annotation to crop.
+    crop : float
+        The duration (in seconds) to crop from the middle of the soundscape.
+        Must be a positive real number. If the specified value is greater than
+        the current duration of the annotation, then the returned annotation
+        will be identical to the input annotation.
+    '''
+    # Ensure it's a sound event annotation (others not supported)
+    if not ann.namespace == 'sound_event':
+        raise ScaperError(
+            'This function only supports the sound_event annotation '
+            'namespace.')
+
+    # Ensure crop is valid
+    if not np.isrealobj(crop) or crop <= 0:
+        raise ScaperError(
+            'Crop duration must be a real positive number.')
+
+    if crop >= ann.duration:
+        pass
+    else:
+        # Compute new start/end times for soundscape
+        crop_start = (ann.duration - crop) / 2.0
+        crop_end = ann.duration - crop_start
+
+        # Remove all events that end before new start time
+        ann.data = ann.data[ann.data.time != 0]
