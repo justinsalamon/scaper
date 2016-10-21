@@ -16,7 +16,6 @@ from .util import _validate_folder_path
 from .util import _populate_label_list
 from .util import _trunc_norm
 from .util import max_polyphony
-from .util import crop_annotation
 
 SUPPORTED_DIST = {"const": lambda x: x,
                   "choose": lambda x: random.choice(x),
@@ -764,11 +763,12 @@ class Scaper(object):
         # Return
         return instantiated_event
 
-    def _instantiate(self, crop=None):
+    def _instantiate(self):
         '''
         Instantiate a specific soundscape in JAMS format based on the current
-        specification. Any non-deterministic event values will be set randomly
-        based on the allowed values.
+        specification. Any non-deterministic event values (i.e. distribution
+        tuples) will be sampled randomly from based on the distribution
+        parameters.
 
         Parameters
         ----------
@@ -806,17 +806,13 @@ class Scaper(object):
                        value=value._asdict(),
                        confidence=1.0)
 
-        if crop is not None:
-            crop_annotation(ann, crop)
-
         # Compute max polyphony
         poly = max_polyphony(ann)
 
         # Add specs and other info to sandbox
         ann.sandbox.scaper = jams.Sandbox(fg_spec=self.fg_spec,
                                           bg_spec=self.bg_spec,
-                                          max_polyphony=poly,
-                                          crop=crop)
+                                          max_polyphony=poly)
 
         # Add annotation to jams
         jam.annotations.append(ann)
@@ -827,8 +823,7 @@ class Scaper(object):
         # Return
         return jam
 
-    def generate(self, audio_path, jams_path, crop=None,
-                 disable_sox_warnings=True):
+    def generate(self, audio_path, jams_path, disable_sox_warnings=True):
         '''
         Generate a soundscape based on the current specification and save to
         disk as both an audio file and a JAMS file describing the soundscape.
@@ -839,19 +834,12 @@ class Scaper(object):
             Path for saving soundscape audio
         jams_path : str
             Path for saving soundscape jams
-        crop : float or None
-            Crop the generated soundscape to the center ```crop``` seconds. By
-            default set to ```None``` which means no cropping is performed.
-            IMPORTANT: since soundscape instantiation occurs prior to cropping,
-            there is no guarantee that all the foreground events added to the
-            scaper will be present in the cropped soundscape. Both the output
-            audio file and JAMS file will reflect the cropped soundscape.
         disable_sox_warnings : bool
             When True (default), warnings from the pysox module are suppressed
             unless their level is 'CRITICAL'.
         '''
         # Create specific instance of a soundscape based on the spec
-        jam = self._instantiate(crop=crop)
+        jam = self._instantiate()
         ann = jam.annotations.search(namespace='sound_event')[0]
 
         # disable sox warnings
