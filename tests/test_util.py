@@ -7,12 +7,28 @@ Tests for functions in util.py
 from scaper.util import _close_temp_files
 from scaper.util import _set_temp_logging_level
 from scaper.util import _validate_folder_path
+from scaper.util import _get_sorted_files
+from scaper.util import _populate_label_list
+from scaper.util import _trunc_norm
 from scaper.scaper_exceptions import ScaperError
 import tempfile
 import os
 import logging
 import pytest
 import shutil
+import numpy as np
+from scipy.stats import truncnorm
+
+
+# FIXTURES
+FG_PATH = 'tests/data/audio/foreground/'
+FG_PATH_HUMANVOICE = 'tests/data/audio/foreground/human_voice'
+FG_LABEL_LIST = ['car_horn', 'human_voice', 'siren']
+HUMANVOICE_FILES = (
+    [os.path.join(FG_PATH_HUMANVOICE,
+                  '42-Human-Vocal-Voice-all-aboard_edit.wav'),
+     os.path.join(FG_PATH_HUMANVOICE, '42-Human-Vocal-Voice-taxi-1_edit.wav'),
+     os.path.join(FG_PATH_HUMANVOICE, '42-Human-Vocal-Voice-taxi-2_edit.wav')])
 
 
 def test_close_temp_files():
@@ -45,6 +61,14 @@ def test_set_temp_logging_level():
     assert logging.getLevelName(logger.level) == 'DEBUG'
 
 
+def test_get_sorted_files():
+    '''
+    Ensure files are returned in expected order.
+
+    '''
+    assert _get_sorted_files(FG_PATH_HUMANVOICE) == HUMANVOICE_FILES
+
+
 def test_validate_folder_path():
     '''
     Make sure invalid folder paths are caught
@@ -61,3 +85,34 @@ def test_validate_folder_path():
     _validate_folder_path(tmpdir)
     # remove it
     shutil.rmtree(tmpdir)
+
+
+def test_populate_label_list():
+    '''
+    Should add folder names contained within provided folder to provided list.
+
+    '''
+    labellist = []
+    _populate_label_list(FG_PATH, labellist)
+    assert sorted(labellist) == sorted(FG_LABEL_LIST)
+
+
+def test_trunc_norm():
+    '''
+    Should return values from a truncated normal distribution.
+
+    '''
+    # sample values from a distribution
+    mu, sigma, trunc_min, trunc_max = 2, 1, 0, 5
+    x = [_trunc_norm(mu, sigma, trunc_min, trunc_max) for _ in range(100000)]
+    x = np.asarray(x)
+
+    # simple check: values must be within truncated bounds
+    assert (x >= trunc_min).all() and (x <= trunc_max).all()
+
+    # trickier check: values must approximate distribution's PDF
+    hist, bins = np.histogram(x, bins=np.arange(0, 10.1, 0.2), normed=True)
+    xticks = bins[:-1] + 0.1
+    a, b = (trunc_min - mu) / float(sigma), (trunc_max - mu) / float(sigma)
+    trunc_closed = truncnorm.pdf(xticks, a, b, mu, sigma)
+    assert np.allclose(hist, trunc_closed, atol=0.01)
