@@ -6,9 +6,10 @@ import jams
 from collections import namedtuple
 import logging
 import tempfile
+import numpy as np
+import shutil
 from .scaper_exceptions import ScaperError
 from .scaper_warnings import ScaperWarning
-import numpy as np
 from .util import _close_temp_files
 from .util import _set_temp_logging_level
 from .util import _get_sorted_files
@@ -28,6 +29,66 @@ EventSpec = namedtuple(
     'EventSpec',
     ['label', 'source_file', 'source_time', 'event_time', 'event_duration',
      'snr', 'role'], verbose=False)
+
+
+def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
+         end_time, strict=False):
+    '''
+    Given an input audio file and corresponding jams file, trim both the audio
+    and all annotations in the jams file to the time range [`trim_start`,
+    `trim_end`] and save the result to audio_outfile and jams_outfile
+    respectively. This function uses `jams.trim()` for trimming the jams file.
+
+    Parameters
+    ----------
+    audio_infile : str
+        Path to input audio file
+    jams_infile : str
+        Path to input jams file
+    audio_outfile : str
+        Path to output trimmed audio file
+    jams_outfile : str
+        Path to output trimmed jams file
+    start_time : float
+        Start time for trimmed audio/jams
+    end_time : float
+        End time for trimmed audio/jams
+    strict : bool
+        Passed to `jams.trim()`, when `True` the time range defined by
+        [`start_time`, `end_time`] must be a contained within the time range
+        spanned by every annotation in the jams file (otherwise raises an
+        error). When `False`, each annotation in the jams file will be trimmed
+        to the time range given by the intersection of [`start_time`,
+        `end_time`] and the time range spanned by the annotation. This can
+        result in some annotations spanning a different time range compared to
+        the trimmed audio file. See the `jams.trim` documentation for further
+        details.
+
+    '''
+    # First trim jams (might raise an error)
+    jam = jams.load(jams_infile)
+    jam_trimmed = jam.trim(start_time, end_time, strict=strict)
+
+    # Save result to output jams file
+    jam_trimmed.save(jams_outfile)
+
+    # Next, trim audio
+    tfm = sox.Transformer()
+    tfm.trim(start_time, end_time)
+    if audio_outfile != audio_infile:
+        tfm.build(audio_infile, audio_outfile)
+    else:
+        # must use temp file in order to save to same file
+        tmpfiles = []
+        with _close_temp_files(tmpfiles):
+            # Create tmp file
+            tmpfiles.append(
+                tempfile.NamedTemporaryFile(
+                    suffix='.wav', delete=True))
+            # Save trimmed result to temp file
+            tfm.build(audio_infile, tmpfiles[-1].name)
+            # Copy result back to original file
+            shutil.copyfile(tmpfiles[-1].name, audio_outfile)
 
 
 def _get_value_from_dist(dist_tuple):
