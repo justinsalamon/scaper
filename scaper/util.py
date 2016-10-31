@@ -179,30 +179,34 @@ def max_polyphony(ann):
     polyphony : int
         Maximum number of simultaneous events at any point in the annotation.
     '''
-    # Keep only foreground events
-    int_time, int_val = ann.data.to_interval_values()
-    int_time_clean = []
-    for t, v in zip(int_time, int_val):
-        if v['role'] == 'foreground':
-            int_time_clean.append(t)
-    int_time_clean = np.asarray(int_time_clean)
+    # If there are no foreground events the polyphony is 0
+    if ann.data.empty:
+        return 0
+    else:
+        # Keep only foreground events
+        int_time, int_val = ann.data.to_interval_values()
+        int_time_clean = []
+        for t, v in zip(int_time, int_val):
+            if v['role'] == 'foreground':
+                int_time_clean.append(t)
+        int_time_clean = np.asarray(int_time_clean)
 
-    # Sort and reshape
-    arrivals = np.sort(int_time_clean[:, 0]).reshape(-1, 1)
-    departures = np.sort(int_time_clean[:, 1]).reshape(-1, 1)
+        # Sort and reshape
+        arrivals = np.sort(int_time_clean[:, 0]).reshape(-1, 1)
+        departures = np.sort(int_time_clean[:, 1]).reshape(-1, 1)
 
-    # Onsets are +1, offsets are -1
-    arrivals = np.concatenate(
-        (arrivals, np.ones(arrivals.shape)), axis=1)
-    departures = np.concatenate(
-        (departures, -np.ones(departures.shape)), axis=1)
+        # Onsets are +1, offsets are -1
+        arrivals = np.concatenate(
+            (arrivals, np.ones(arrivals.shape)), axis=1)
+        departures = np.concatenate(
+            (departures, -np.ones(departures.shape)), axis=1)
 
-    # Merge arrivals and departures and sort
-    entry_log = np.concatenate((arrivals, departures), axis=0)
-    entry_log_sorted = entry_log[entry_log[:, 0].argsort()]
+        # Merge arrivals and departures and sort
+        entry_log = np.concatenate((arrivals, departures), axis=0)
+        entry_log_sorted = entry_log[entry_log[:, 0].argsort()]
 
-    # Get maximum number of simultaneously occurring events
-    polyphony = np.max(np.cumsum(entry_log_sorted[:, 1]))
+        # Get maximum number of simultaneously occurring events
+        polyphony = np.max(np.cumsum(entry_log_sorted[:, 1]))
 
-    return int(polyphony)
+        return int(polyphony)
 
