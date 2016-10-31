@@ -10,6 +10,7 @@ from scaper.util import _validate_folder_path
 from scaper.util import _get_sorted_files
 from scaper.util import _populate_label_list
 from scaper.util import _trunc_norm
+from scaper.util import max_polyphony
 from scaper.scaper_exceptions import ScaperError
 import tempfile
 import os
@@ -18,6 +19,8 @@ import pytest
 import shutil
 import numpy as np
 from scipy.stats import truncnorm
+import jams
+from scaper import EventSpec
 
 
 # FIXTURES
@@ -116,3 +119,38 @@ def test_trunc_norm():
     a, b = (trunc_min - mu) / float(sigma), (trunc_max - mu) / float(sigma)
     trunc_closed = truncnorm.pdf(xticks, a, b, mu, sigma)
     assert np.allclose(hist, trunc_closed, atol=0.01)
+
+
+def test_max_polyphony():
+    '''
+    Test the computation of polyphony of a scaper soundscape instantiation.
+
+    '''
+    def __create_annotation_with_overlapping_events(n_events):
+
+        ann = jams.Annotation(namespace='sound_event')
+        ann.duration = n_events / 2. + 10
+
+        for ind in range(n_events):
+            instantiated_event = EventSpec(label='siren',
+                                           source_file='/the/source/file.wav',
+                                           source_time=0,
+                                           event_time=ind / 2.,
+                                           event_duration=10,
+                                           snr=0,
+                                           role='foreground')
+
+            ann.append(time=ind / 2.,
+                       duration=10,
+                       value=instantiated_event._asdict(),
+                       confidence=1.0)
+
+        return ann
+
+    # 0 through 10 overlapping events
+    for poly in range(10):
+        ann = __create_annotation_with_overlapping_events(poly)
+        est_poly = max_polyphony(ann)
+        assert est_poly == poly
+
+
