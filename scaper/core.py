@@ -37,7 +37,8 @@ def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
     Given an input audio file and corresponding jams file, trim both the audio
     and all annotations in the jams file to the time range [`trim_start`,
     `trim_end`] and save the result to audio_outfile and jams_outfile
-    respectively. This function uses `jams.trim()` for trimming the jams file.
+    respectively. This function uses `jams.trim()` with `adjust_times=True`
+    for trimming the jams file.
 
     Parameters
     ----------
@@ -67,7 +68,29 @@ def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
     '''
     # First trim jams (might raise an error)
     jam = jams.load(jams_infile)
-    jam_trimmed = jam.trim(start_time, end_time, strict=strict)
+    jam_trimmed = jam.trim(start_time, end_time, strict=strict,
+                           adjust_times=True)
+
+    # Special work for annotations of the scaper 'sound_event' namespace
+    for ann in jam_trimmed.annotations:
+        if ann.namespace == 'sound_event':
+
+            # Adjust the event_time and event_duration of every event (in the
+            # value field).
+            # Also use this loop to count number of foreground events
+            n_events = 0
+            for idx, line in ann.data.iterrows():
+                line.value['event_time'] = line.time.total_seconds()
+                line.value['event_duration'] = line.duration.total_seconds()
+                if line.value['role'] == 'foreground':
+                    n_events += 1
+
+            # Re-compute max polyphony
+            poly = max_polyphony(ann)
+
+            # Update specs in sandbox
+            ann.sandbox.scaper['max_polyphony'] = poly
+            ann.sandbox.scaper['n_events'] = n_events
 
     # Save result to output jams file
     jam_trimmed.save(jams_outfile)
@@ -870,10 +893,14 @@ class Scaper(object):
         # Compute max polyphony
         poly = max_polyphony(ann)
 
+        # Compute the number of foreground events
+        n_events = len(self.fg_spec)
+
         # Add specs and other info to sandbox
         ann.sandbox.scaper = jams.Sandbox(fg_spec=self.fg_spec,
                                           bg_spec=self.bg_spec,
-                                          max_polyphony=poly)
+                                          max_polyphony=poly,
+                                          n_events=n_events)
 
         # Add annotation to jams
         jam.annotations.append(ann)
