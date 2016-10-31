@@ -147,10 +147,37 @@ def test_max_polyphony():
 
         return ann
 
+    def __create_annotation_without_overlapping_events(n_events):
+
+        ann = jams.Annotation(namespace='sound_event')
+        ann.duration = n_events * 10
+
+        for ind in range(n_events):
+            instantiated_event = EventSpec(label='siren',
+                                           source_file='/the/source/file.wav',
+                                           source_time=0,
+                                           event_time=ind * 10,
+                                           event_duration=5,
+                                           snr=0,
+                                           role='foreground')
+
+            ann.append(time=ind * 10,
+                       duration=5,
+                       value=instantiated_event._asdict(),
+                       confidence=1.0)
+
+        return ann
+
     # 0 through 10 overlapping events
-    for poly in range(10):
+    for poly in range(11):
         ann = __create_annotation_with_overlapping_events(poly)
         est_poly = max_polyphony(ann)
         assert est_poly == poly
+
+    # 1 through 10 NON-overlapping events
+    for n_events in range(1, 11):
+        ann = __create_annotation_without_overlapping_events(n_events)
+        est_poly = max_polyphony(ann)
+        assert est_poly == 1
 
 
