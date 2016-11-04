@@ -35,10 +35,11 @@ def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
          end_time, strict=False):
     '''
     Given an input audio file and corresponding jams file, trim both the audio
-    and all annotations in the jams file to the time range [`trim_start`,
-    `trim_end`] and save the result to audio_outfile and jams_outfile
-    respectively. This function uses `jams.trim()` with `adjust_times=True`
-    for trimming the jams file.
+    and all annotations in the jams file to the time range [`start_time`,
+    `end_time`] and save the result to `audio_outfile` and `jams_outfile`
+    respectively. This function uses `jams.slice()` for trimming the jams file
+    while ensuring the start times of the jam's annotations and observations
+    they contain match the trimmed audio file.
 
     Parameters
     ----------
@@ -55,24 +56,20 @@ def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
     end_time : float
         End time for trimmed audio/jams
     strict : bool
-        Passed to `jams.trim()`, when `True` the time range defined by
-        [`start_time`, `end_time`] must be a contained within the time range
-        spanned by every annotation in the jams file (otherwise raises an
-        error). When `False`, each annotation in the jams file will be trimmed
-        to the time range given by the intersection of [`start_time`,
-        `end_time`] and the time range spanned by the annotation. This can
-        result in some annotations spanning a different time range compared to
-        the trimmed audio file. See the `jams.trim` documentation for further
-        details.
+        Passed to `jams.slice()`, when `False` (default) observations that lie
+        at the boundaries of the slicing range (see `Annotation.slice` for
+        details), will have their time and/or duration adjusted such that only
+        the part of the observation that lies within the slice range is kept.
+        When `True` such observations are discarded and not included in the
+        sliced annotation.
 
     '''
     # First trim jams (might raise an error)
     jam = jams.load(jams_infile)
-    jam_trimmed = jam.trim(start_time, end_time, strict=strict,
-                           adjust_times=True)
+    jam_sliced = jam.slice(start_time, end_time, strict=strict)
 
     # Special work for annotations of the scaper 'sound_event' namespace
-    for ann in jam_trimmed.annotations:
+    for ann in jam_sliced.annotations:
         if ann.namespace == 'sound_event':
 
             # Adjust the event_time and event_duration of every event (in the
@@ -93,7 +90,7 @@ def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
             ann.sandbox.scaper['n_events'] = n_events
 
     # Save result to output jams file
-    jam_trimmed.save(jams_outfile)
+    jam_sliced.save(jams_outfile)
 
     # Next, trim audio
     tfm = sox.Transformer()
