@@ -34,9 +34,11 @@ EventSpec = namedtuple(
 def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
          end_time, strict=False):
     '''
+    Trim and audio file and corresponding Scaper JAMS file and save to disk.
+
     Given an input audio file and corresponding jams file, trim both the audio
-    and all annotations in the jams file to the time range [`start_time`,
-    `end_time`] and save the result to `audio_outfile` and `jams_outfile`
+    and all annotations in the jams file to the time range ``[start_time,
+    end_time]`` and save the result to ``audio_outfile`` and ``jams_outfile``
     respectively. This function uses `jams.slice()` for trimming the jams file
     while ensuring the start times of the jam's annotations and observations
     they contain match the trimmed audio file.
@@ -113,14 +115,16 @@ def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
 
 def _get_value_from_dist(dist_tuple):
     '''
+    Sample a value from the provided distribution tuple.
+
     Given a distribution tuple, validate its format/values and then sample
     and return a single value from the distribution specified by the tuple.
 
     Parameters
     ----------
     dist_tuple : tuple
-        Distribution tuple to be validated. See Scaper.add_event for details
-        about the expected format and item values.
+        Distribution tuple to be validated. See `Scaper.add_event` for details
+        about the expected format for the distribution tuple.
 
     Returns
     -------
@@ -440,7 +444,7 @@ def _validate_snr(snr_tuple):
 def _validate_event(label, source_file, source_time, event_time,
                     event_duration, snr, allowed_labels):
     '''
-    Check that event parameter values are valid. See ```Scaper.add_event```
+    Check that event parameter values are valid. See `Scaper.add_event`
     for a detailed description of the expected format of each parameter.
 
     Parameters
@@ -549,11 +553,13 @@ class Scaper(object):
 
     def add_background(self, label, source_file, source_time):
         '''
-        Add a background recording. The duration will be equal to the duration
-        of the soundscape ```Scaper.duration``` specified when initializing
-        the Scaper object. If the source file is shorter than this duration
-        then it will be concatenated to itself as many times as necessary to
-        produce the specified duration when calling ```Scaper.generate```.
+        Add a background recording to the background specification.
+
+        The background duration will be equal to the duration of the
+        soundscape ``Scaper.duration`` specified when initializing the Scaper
+        object. If the source file is shorter than this duration then it will
+        be concatenated to itself as many times as necessary to produce the
+        specified duration when calling `Scaper.generate`.
 
         Parameters
         ----------
@@ -562,49 +568,50 @@ class Scaper(object):
             expected format of this tuple and the allowed values.
             NOTE: The label specified by this tuple must match one
             of the labels in the Scaper's background label list
-            ```Scaper.bg_labels```. Furthermore, if ```source_file``` is
-            specified using "const" (see Notes), then ```label``` must also be
-            specified using "const" and its ```value ``` (see Notes) must
+            ``Scaper.bg_labels``. Furthermore, if ``source_file`` is
+            specified using "const" (see Notes), then ``label`` must also be
+            specified using "const" and its ``value `` (see Notes) must
             match the source file's parent folder's name.
         source_file : tuple
             Specifies the audio file to use as the source. See Notes below for
             the expected format of this tuple and the allowed values.
-            NOTE: If ```source_file``` is specified using "const" (see Notes),
-            then ```label``` must also be specified using "const" and its
-            ```value``` (see Notes) must match the source file's parent
+            NOTE: If ``source_file`` is specified using "const" (see Notes),
+            then ``label`` must also be specified using "const" and its
+            ``value`` (see Notes) must match the source file's parent
             folder's name.
         source_time : tuple
             Specifies the desired start time in the source file. See Notes
             below for the expected format of this tuple and the allowed values.
             NOTE: the source time specified by this tuple should be equal to or
-            smaller than ```<source file duration> - <soundscape duration>```.
+            smaller than ``<source file duration> - <soundscape duration>``.
             Larger values will be automatically changed to fulfill this
-            requirement when calling ```Scaper.generate```.
+            requirement when calling `Scaper.generate`.
 
         Notes
         -----
         Each parameter of this function is set by passing a distribution
         tuple, whose first item is always the distribution name and subsequent
         items are distribution specific. The supported distribution tuples are:
-            * ```("const", value)``` : a constant, given by ```value```.
-            * ```("choose", valuelist)``` : choose a value from
-              ```valuelist``` at random (uniformly). The ```label``` and
-              ```source_file``` parameters also support providing an empty
-              ```valuelist``` i.e. ```("choose", [])```, in which case the
+            * ``("const", value)`` : a constant, given by ``value``.
+            * ``("choose", valuelist)`` : choose a value from
+              ``valuelist`` at random (uniformly). The ``label`` and
+              ``source_file`` parameters also support providing an empty
+              ``valuelist`` i.e. ``("choose", [])``, in which case the
               value will be chosen at random from all available labels or files
               as determined automatically by Scaper by examining the file
-              structure of ```bg_path``` provided during initialization.
-            * ```("uniform", min_value, max_value)``` : sample a random
-              value from a uniform distribution between ```min_value```
-              and ```max_value```.
-            * ```("normal", mean, stddev)``` : sample a random value from a
-              normal distribution defined by its mean ```mean``` and
-              standard deviation ```stddev```.
+              structure of ``bg_path`` provided during initialization.
+            * ``("uniform", min_value, max_value)`` : sample a random
+              value from a uniform distribution between ``min_value``
+              and ``max_value``.
+            * ``("normal", mean, stddev)`` : sample a random value from a
+              normal distribution defined by its mean ``mean`` and
+              standard deviation ``stddev``.
+
         IMPORTANT: not all parameters support all distribution tuples. In
-        particular, ```label``` and ```source_file``` only support "const" and
-        "choose", whereas ```source_time``` supports all distribution
-        tuples. As noted above, only ```label``` and ```source_file``` support
-        providing an empty ```valuelist``` with "choose".
+        particular, ``label`` and ``source_file`` only support "const" and
+        "choose", whereas ``source_time`` supports all distribution tuples.
+        As noted above, only ``label`` and ``source_file`` support providing an
+        empty ``valuelist`` with "choose".
 
         '''
         # These values are fixed for the background sound
@@ -640,39 +647,39 @@ class Scaper(object):
             expected format of this tuple and the allowed values.
             NOTE: The label specified by this tuple must match one
             of the labels in the Scaper's foreground label list
-            ```Scaper.fg_labels```. Furthermore, if ```source_file``` is
-            specified using "const" (see Notes), then ```label``` must also be
-            specified using "const" and its ```value ``` (see Notes) must
+            ``Scaper.fg_labels``. Furthermore, if ``source_file`` is
+            specified using "const" (see Notes), then ``label`` must also be
+            specified using "const" and its ``value `` (see Notes) must
             match the source file's parent folder's name.
         source_file : tuple
             Specifies the audio file to use as the source. See Notes below for
             the expected format of this tuple and the allowed values.
-            NOTE: If ```source_file``` is specified using "const" (see Notes),
-            then ```label``` must also be specified using "const" and its
-            ```value``` (see Notes) must match the source file's parent
+            NOTE: If ``source_file`` is specified using "const" (see Notes),
+            then ``label`` must also be specified using "const" and its
+            ``value`` (see Notes) must match the source file's parent
             folder's name.
         source_time : tuple
             Specifies the desired start time in the source file. See Notes
             below for the expected format of this tuple and the allowed values.
             NOTE: the source time specified by this tuple should be equal to or
-            smaller than ```<source file duration> - event_duration```. Larger
+            smaller than ``<source file duration> - event_duration``. Larger
             values will be automatically changed to fulfill this requirement
-            when calling ```Scaper.generate```.
+            when calling `Scaper.generate`.
         event_time : tuple
             Specifies the desired start time of the event in the soundscape.
             See Notes below for the expected format of this tuple and the
             allowed values.
             NOTE: The value specified by this tuple should be equal to or
-            smaller than ```<soundscapes duration> - event_duration```, and
+            smaller than ``<soundscapes duration> - event_duration``, and
             larger values will be automatically changed to fulfill this
-            requirement when calling ```Scaper.generate```.
+            requirement when calling `Scaper.generate`.
         event_duration : tuple
             Specifies the desired duration of the event. See Notes below for
             the expected format of this tuple and the allowed values.
             NOTE: The value specified by this tuple should be equal to or
             smaller than the source file's duration, and larger values will be
             automatically changed to fulfill this requirement when calling
-            ```Scaper.generate```.
+            `Scaper.generate`.
         snr : float
             Specifies the desired signal to noise ratio (SNR) between the event
             and the background. See Notes below for the expected format of
@@ -683,30 +690,35 @@ class Scaper(object):
         Each parameter of this function is set by passing a distribution
         tuple, whose first item is always the distribution name and subsequent
         items are distribution specific. The supported distribution tuples are:
-            * ```("const", value)``` : a constant, given by ```value```.
-            * ```("choose", valuelist)``` : choose a value from
-              ```valuelist``` at random (uniformly). The ```label``` and
-              ```source_file``` parameters also support providing an empty
-              ```valuelist``` i.e. ```("choose", [])```, in which case the
+            * ``("const", value)`` : a constant, given by ``value``.
+            * ``("choose", valuelist)`` : choose a value from
+              ``valuelist`` at random (uniformly). The ``label`` and
+              ``source_file`` parameters also support providing an empty
+              ``valuelist`` i.e. ``("choose", [])``, in which case the
               value will be chosen at random from all available labels or
               source files as determined automatically by Scaper by examining
-              the file structure of ```fg_path``` provided during
+              the file structure of ``fg_path`` provided during
               initialization.
-            * ```("uniform", min_value, max_value)``` : sample a random
-              value from a uniform distribution between ```min_value```
-              and ```max_value``` (including ```max_value```).
-            * ```("normal", mean, stddev)``` : sample a random value from a
-              normal distribution defined by its mean ```mean``` and
-              standard deviation ```stddev```.
+            * ``("uniform", min_value, max_value)`` : sample a random
+              value from a uniform distribution between ``min_value``
+              and ``max_value`` (including ``max_value``).
+            * ``("normal", mean, stddev)`` : sample a random value from a
+              normal distribution defined by its mean ``mean`` and
+              standard deviation ``stddev``.
+
         IMPORTANT: not all parameters support all distribution tuples. In
-        particular, ```label``` and ```source_file``` only support "const" and
+        particular, ``label`` and ``source_file`` only support "const" and
         "choose", whereas the remaining parameters support all distribution
-        tuples. As noted above, only ```label``` and ```source_file``` support
-        providing an empty ```valuelist``` with "choose".
+        tuples. As noted above, only ``label`` and ``source_file`` support
+        providing an empty ``valuelist`` with "choose".
 
         See Also
         --------
-        _validate_event : Check that event parameter values are valid.
+        `_validate_event` : Check that event parameter values are valid.
+
+        `Scaper.generate` : Generate a soundscape based on the current
+        specification and save to disk as both an audio file and a JAMS file
+        describing the soundscape.
 
         '''
 
@@ -728,6 +740,8 @@ class Scaper(object):
 
     def _instantiate_event(self, event, isbackground=False):
         '''
+        Instantiate an event specification.
+
         Given an event specification containing distribution tuples,
         instantiate the event, i.e. samples values for the label, source_file,
         source_time, event_time, event_duration and snr from their respective
@@ -860,20 +874,16 @@ class Scaper(object):
     def _instantiate(self):
         '''
         Instantiate a specific soundscape in JAMS format based on the current
-        specification. Any non-deterministic event values (i.e. distribution
-        tuples) will be sampled randomly from based on the distribution
-        parameters.
+        specification.
 
-        Parameters
-        ----------
-        crop : float or None
-            Crop the instantiated soundscape to the center ```crop``` seconds.
-            By default set to ```None``` which means no cropping is performed.
-            IMPORTANT: since soundscape instantiation occurs independently of
-            cropping, there is no guarantee that all the foreground events
-            added to the scaper will be present in the cropped soundscape.
-            Both the output audio file and JAMS file will reflect the cropped
-            soundscape.
+        Any non-deterministic event values (i.e. distribution tuples) will be
+        sampled randomly from based on the distribution parameters.
+
+        Returns
+        -------
+        jam : JAMS object
+            A JAMS object containing a sound_event annotation representing the
+            instantiated soundscape.
         '''
         jam = jams.JAMS()
         ann = jams.Annotation(namespace='sound_event')
@@ -935,6 +945,7 @@ class Scaper(object):
         disable_sox_warnings : bool
             When True (default), warnings from the pysox module are suppressed
             unless their level is 'CRITICAL'.
+            
         '''
         # Create specific instance of a soundscape based on the spec
         jam = self._instantiate()
