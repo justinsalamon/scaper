@@ -790,29 +790,44 @@ class Scaper(object):
             source_file_tuple = tuple(source_file_tuple)
         else:
             source_file_tuple = event.source_file
-        source_file = _get_value_from_dist(source_file_tuple)
 
-        # determine event duration
-        # For background events the duration is fixed to self.duration
-        # (which must be > 0), but for foreground events it could potentially
-        # be non-positive, hence the loop.
-        event_duration = -np.Inf
-        while event_duration <= 0:
-            event_duration = _get_value_from_dist(event.event_duration)
+        source_file = _get_value_from_dist(source_file_tuple)
+        source_duration = sox.file_info.duration(source_file)
+
+        # If the foreground event's label is in the protected list, use the
+        # source file's duration without modification.
+        if label in self.protected_labels:
+            event_duration = source_duration
+        else:
+            # determine event duration
+            # For background events the duration is fixed to self.duration
+            # (which must be > 0), but for foreground events it could
+            # potentially be non-positive, hence the loop.
+            event_duration = -np.Inf
+            while event_duration <= 0:
+                event_duration = _get_value_from_dist(event.event_duration)
+
         # Check if chosen event duration is longer than the duration of the
         # selected source file, if so adjust the event duration.
-        source_duration = sox.file_info.duration(source_file)
-        if (event_duration > source_duration or
-                event_duration > self.duration):
+        if (event_duration > source_duration):
             old_duration = event_duration  # for warning
-            event_duration = min(source_duration, self.duration)
+            event_duration = source_duration
             warnings.warn(
                 "{:s} event duration ({:.2f}) is greater that source "
-                "duration ({:.2f}) or soundscape duration ({:.2f}), "
-                "changed to {:.2f}".format(
-                    label, old_duration, source_duration, self.duration,
-                    event_duration),
+                "duration ({:.2f}), changing to {:.2f}".format(
+                    label, old_duration, source_duration, event_duration),
                 ScaperWarning)
+
+        # If the event duration is longer than the soundscape we can trim it
+        # without losing validity (since the event will end when the soundscape
+        # ends).
+        if (event_duration > self.duration):
+            old_duration = event_duration  # for warning
+            event_duration = self.duration
+            warnings.warn(
+                "{:s} event duration ({:.2f}) is greater than the soundscape "
+                "duration ({:.2f}), changing to {:.2f}".format(
+                    label, old_duration, self.duration, self.duration))
 
         # determine source time
         source_time = -np.Inf
@@ -945,7 +960,7 @@ class Scaper(object):
         disable_sox_warnings : bool
             When True (default), warnings from the pysox module are suppressed
             unless their level is 'CRITICAL'.
-            
+
         '''
         # Create specific instance of a soundscape based on the spec
         jam = self._instantiate()
