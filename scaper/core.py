@@ -490,19 +490,30 @@ def _validate_event(label, source_file, source_time, event_time,
 
 class Scaper(object):
 
-    def __init__(self, duration, fg_path, bg_path):
+    def __init__(self, duration, fg_path, bg_path, protected_labels=[]):
         '''
-        Initialization, need to provide desired duration, and paths to
-        foreground and background folders.
+        Create a Scaper object.
 
         Parameters
         ----------
         duration : float
-            Duration of soundscape, in seconds.
+            Duration of the soundscape, in seconds.
         fg_path : str
             Path to foreground folder.
         bg_path : str
             Path to background folder.
+        protected_labels : list
+            Provide a list of protected foreground labels. When a foreground
+            label is in the protected list it means that when a sound event
+            matching the label gets added to a soundscape instantiation the
+            duration of the source audio file cannot be altered, and the
+            duration value that was provided in the specification will be
+            ignored.
+
+            Adding labels to the protected list is useful for sound events
+            whose semantic validity would be lost if the sound were trimmed
+            before the sound event ends, for example an animal vocalization
+            such as a dog bark.
 
         '''
         # Duration must be a positive real number
@@ -521,18 +532,20 @@ class Scaper(object):
         self.fg_spec = []
         self.bg_spec = []
 
-        # Populate label lists from folder paths
-        self.fg_labels = []
-        self.bg_labels = []
-
         # Validate paths and set
         _validate_folder_path(fg_path)
         _validate_folder_path(bg_path)
         self.fg_path = fg_path
         self.bg_path = bg_path
 
+        # Populate label lists from folder paths
+        self.fg_labels = []
+        self.bg_labels = []
         _populate_label_list(self.fg_path, self.fg_labels)
         _populate_label_list(self.bg_path, self.bg_labels)
+
+        # Copy list of protected labels
+        self.protected_labels = protected_labels[:]
 
     def add_background(self, label, source_file, source_time):
         '''
