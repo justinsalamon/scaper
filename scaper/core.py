@@ -738,7 +738,8 @@ class Scaper(object):
         # Add event to foreground specification
         self.fg_spec.append(event)
 
-    def _instantiate_event(self, event, isbackground=False):
+    def _instantiate_event(self, event, isbackground=False,
+                           allow_repeated_source=True, used_source_files=[]):
         '''
         Instantiate an event specification.
 
@@ -755,12 +756,28 @@ class Scaper(object):
         isbackground : bool
             Flag indicating whether the event to instantiate is a background
             event or not (False implies it is a foreground event).
+        allow_repeated_source : bool
+            When True (default) any source file matching the selected label can
+            be used, including a source file that has already been used for
+            another event. When False, only a source file that is not already
+            in ``used_source_files`` can be selected.
+        used_source_files : list
+            List of full paths to source files that have already been used in
+            the current soundscape instantiation. The source file selected for
+            instantiating the event will be appended to this list unless its
+            already in it.
 
         Returns
         -------
         instantiated_event : EventSpec
             Event specification containing values sampled from the distribution
             tuples of the input event specification.
+
+        Raises
+        ------
+        ScaperError
+            If allow_repeated_source is False and there is no valid source file
+            to select.
 
         '''
         # set paths and labels depending on whether its a foreground/background
@@ -792,6 +809,25 @@ class Scaper(object):
             source_file_tuple = event.source_file
 
         source_file = _get_value_from_dist(source_file_tuple)
+
+        # Make sure we can use this source file
+        if (not allow_repeated_source) and (source_file in used_source_files):
+            source_files = _get_sorted_files(os.path.join(file_path, label))
+            if (len(source_files) == len(used_source_files) or
+                    source_file_tuple[0] == "const"):
+                raise ScaperError(
+                    "Cannot instantiate event {:s}: all available source "
+                    "files have already been used and "
+                    "allow_repeated_source=False.".format(label))
+            else:
+                while source_file in used_source_files:
+                    source_file = _get_value_from_dist(source_file_tuple)
+
+        # Update the used source files list
+        if source_file not in used_source_files:
+            used_source_files.append(source_file)
+
+        # Get the duration of the source audio file
         source_duration = sox.file_info.duration(source_file)
 
         # If the foreground event's label is in the protected list, use the
@@ -886,13 +922,20 @@ class Scaper(object):
         # Return
         return instantiated_event
 
-    def _instantiate(self):
+    def _instantiate(self, allow_repeated_source=True):
         '''
         Instantiate a specific soundscape in JAMS format based on the current
         specification.
 
         Any non-deterministic event values (i.e. distribution tuples) will be
         sampled randomly from based on the distribution parameters.
+
+        Parameters
+        ----------
+        allow_repeated_source : bool
+            When True (default) the same source file can be used more than once
+            in a soundscape instantiation. When False every source file can
+            only be used once.
 
         Returns
         -------
@@ -910,16 +953,28 @@ class Scaper(object):
         # NOTE: logic for instantiating bg and fg events is NOT the same.
 
         # Add background sounds
+        bg_source_files = []
         for event in self.bg_spec:
-            value = self._instantiate_event(event, isbackground=True)
+            value = self._instantiate_event(
+                event,
+                isbackground=True,
+                allow_repeated_source=allow_repeated_source,
+                used_source_files=bg_source_files)
+
             ann.append(time=value.event_time,
                        duration=value.event_duration,
                        value=value._asdict(),
                        confidence=1.0)
 
         # Add foreground events
+        fg_source_files = []
         for event in self.fg_spec:
-            value = self._instantiate_event(event, isbackground=False)
+            value = self._instantiate_event(
+                event,
+                isbackground=False,
+                allow_repeated_source=allow_repeated_source,
+                used_source_files=fg_source_files)
+
             ann.append(time=value.event_time,
                        duration=value.event_duration,
                        value=value._asdict(),
@@ -946,7 +1001,8 @@ class Scaper(object):
         # Return
         return jam
 
-    def generate(self, audio_path, jams_path, disable_sox_warnings=True):
+    def generate(self, audio_path, jams_path, allow_repeated_source=True,
+                 disable_sox_warnings=True):
         '''
         Generate a soundscape based on the current specification and save to
         disk as both an audio file and a JAMS file describing the soundscape.
@@ -957,13 +1013,17 @@ class Scaper(object):
             Path for saving soundscape audio
         jams_path : str
             Path for saving soundscape jams
+        allow_repeated_source : bool
+            When True (default) the same source file can be used more than once
+            in a soundscape instantiation. When False every source file can
+            only be used once.
         disable_sox_warnings : bool
             When True (default), warnings from the pysox module are suppressed
             unless their level is 'CRITICAL'.
 
         '''
         # Create specific instance of a soundscape based on the spec
-        jam = self._instantiate()
+        jam = self._instantiate(allow_repeated_source=allow_repeated_source)
         ann = jam.annotations.search(namespace='sound_event')[0]
 
         # disable sox warnings
