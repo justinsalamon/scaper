@@ -118,7 +118,7 @@ def test_trunc_norm():
     xticks = bins[:-1] + 0.1
     a, b = (trunc_min - mu) / float(sigma), (trunc_max - mu) / float(sigma)
     trunc_closed = truncnorm.pdf(xticks, a, b, mu, sigma)
-    assert np.allclose(hist, trunc_closed, atol=0.01)
+    assert np.allclose(hist, trunc_closed, atol=0.015)
 
 
 def test_max_polyphony():
