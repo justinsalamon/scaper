@@ -1002,7 +1002,7 @@ class Scaper(object):
         return jam
 
     def generate(self, audio_path, jams_path, allow_repeated_source=True,
-                 disable_sox_warnings=True):
+                 reverb=None, disable_sox_warnings=True):
         '''
         Generate a soundscape based on the current specification and save to
         disk as both an audio file and a JAMS file describing the soundscape.
@@ -1017,11 +1017,32 @@ class Scaper(object):
             When True (default) the same source file can be used more than once
             in a soundscape instantiation. When False every source file can
             only be used once.
+        reverb : float or None
+            Amount of reverb to apply to the generated soundscape between 0
+            (no reverberation) and 1 (maximum reverberation). Use None
+            (default) to prevent the soundscape from going through the reverb
+            module at all.
         disable_sox_warnings : bool
             When True (default), warnings from the pysox module are suppressed
             unless their level is 'CRITICAL'.
 
+        Raises
+        ------
+        ScaperError
+            If the reverb parameter is passed an invalid value.
+
+        See Also
+        --------
+        `Scaper._instantiate`
+
         '''
+        # Check parameter validity
+        if reverb is not None:
+            if not (0 <= reverb <= 1):
+                raise ScaperError(
+                    'Invalid value for reverb: must be in range [0, 1] or '
+                    'None.')
+
         # Create specific instance of a soundscape based on the spec
         jam = self._instantiate(allow_repeated_source=allow_repeated_source)
         ann = jam.annotations.search(namespace='sound_event')[0]
@@ -1108,8 +1129,10 @@ class Scaper(object):
                             'Unsupported event role: {:s}'.format(
                                 e.value['role']))
 
-                # Finally combine all the files
+                # Finally combine all the files and optionally apply reverb
                 cmb = sox.Combiner()
+                if reverb is not None:
+                    cmb.reverb(reverberance=reverb * 100)
                 # TODO: do we want to normalize the final output?
                 cmb.build([t.name for t in tmpfiles], audio_path, 'mix')
 
