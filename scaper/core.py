@@ -17,6 +17,7 @@ from .util import _validate_folder_path
 from .util import _populate_label_list
 from .util import _trunc_norm
 from .util import max_polyphony
+from .util import polyphony_entropy
 
 SUPPORTED_DIST = {"const": lambda x: x,
                   "choose": lambda x: random.choice(x),
@@ -87,9 +88,13 @@ def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
             # Re-compute max polyphony
             poly = max_polyphony(ann)
 
+            # Re-compute polyphony entropy
+            entropy = polyphony_entropy(ann)
+
             # Update specs in sandbox
             ann.sandbox.scaper['max_polyphony'] = poly
             ann.sandbox.scaper['n_events'] = n_events
+            ann.sandbox.scaper['polyphony_entropy'] = entropy
 
     # Save result to output jams file
     jam_sliced.save(jams_outfile)
@@ -986,11 +991,15 @@ class Scaper(object):
         # Compute the number of foreground events
         n_events = len(self.fg_spec)
 
+        # Compute entropy
+        entropy = polyphony_entropy(ann)
+
         # Add specs and other info to sandbox
         ann.sandbox.scaper = jams.Sandbox(fg_spec=self.fg_spec,
                                           bg_spec=self.bg_spec,
                                           max_polyphony=poly,
-                                          n_events=n_events)
+                                          n_events=n_events,
+                                          polyphony_entropy=entropy)
 
         # Add annotation to jams
         jam.annotations.append(ann)
