@@ -210,3 +210,53 @@ def max_polyphony(ann):
 
         return int(polyphony)
 
+
+def polyphony_entropy(ann, hop_size=0.01):
+    '''
+    Compute the normalized entropy of the annotation's polyphony time series.
+
+    Parameters
+    ----------
+    ann : jams.Annotation
+        Annotation for which to compute the normalized polyphony entropy. Must
+        be of the sound_event namespace.
+    hop_size : float
+        The hop size for sampling the polyphony time series.
+
+    Returns
+    -------
+    norm_entropy : float
+        Normalized entropy computed from the annotation's polyphony time
+        series.
+
+    Raises
+    ------
+    ScaperError
+        If the annotation does not have a duration value or if its namespace is
+        not sound_event.
+
+    '''
+    if not ann.duration:
+        raise ScaperError('Annotation does not have a duration value set.')
+
+    if ann.namespace != 'sound_event':
+        raise ScaperError(
+            'Annotation namespace must be sound_event, found {:s}.'.format(
+                ann.namespace))
+
+    # Sample the polyphony using the specified hop size
+    n_samples = np.floor(ann.duration / float(hop_size)) + 1
+    times = np.linspace(0, n_samples * hop_size, n_samples)
+    values = np.zeros_like(times)
+
+    for idx in ann.data.index:
+        if ann.data.loc[idx, 'value']['role'] == 'foreground':
+            start_time = ann.data.loc[idx, 'time'].total_seconds()
+            end_time = (
+                start_time + ann.data.loc[idx, 'duration'].total_seconds())
+            start_idx = np.argmin(np.abs(times - start_time))
+            end_idx = np.argmin(np.abs(times - end_time))
+            values[start_idx:end_idx + 1] += 1
+
+    return scipy.stats.entropy(values) / np.log(len(values))
+
