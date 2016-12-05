@@ -636,6 +636,7 @@ class Scaper(object):
             raise ScaperError('Duration must be a positive real value')
 
         # Initialize parameters
+        self.sr = 44100
         self.ref_db = -12
         self.n_channels = 1
         self.fade_in_len = 0.01  # 10 ms
@@ -1203,8 +1204,10 @@ class Scaper(object):
 
                         # Create combiner
                         cmb = sox.Combiner()
-                        # First ensure files has predefined number of channels
-                        cmb.channels(self.n_channels)
+                        # Ensure consistent sampling rate and channels
+                        cmb.convert(samplerate=self.sr,
+                                    n_channels=self.n_channels,
+                                    bitdepth=None)
                         # Then trim
                         cmb.trim(e.value['source_time'],
                                  e.value['source_time'] +
@@ -1222,8 +1225,10 @@ class Scaper(object):
                     elif e.value['role'] == 'foreground':
                         # Create transformer
                         tfm = sox.Transformer()
-                        # First ensure files has predefined number of channels
-                        tfm.channels(self.n_channels)
+                        # Ensure consistent sampling rate and channels
+                        tfm.convert(samplerate=self.sr,
+                                    n_channels=self.n_channels,
+                                    bitdepth=None)
                         # Trim
                         tfm.trim(e.value['source_time'],
                                  e.value['source_time'] +
