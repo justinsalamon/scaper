@@ -849,7 +849,10 @@ class Scaper(object):
         self.fg_spec.append(event)
 
     def _instantiate_event(self, event, isbackground=False,
-                           allow_repeated_source=True, used_source_files=[]):
+                           allow_repeated_label=True,
+                           allow_repeated_source=True,
+                           used_labels=[],
+                           used_source_files=[]):
         '''
         Instantiate an event specification.
 
@@ -866,11 +869,19 @@ class Scaper(object):
         isbackground : bool
             Flag indicating whether the event to instantiate is a background
             event or not (False implies it is a foreground event).
+        allow_repeated_label : bool
+            When True (default) any label can be used, including a label that
+            has already been used for another event. When False, only a label
+            that is not already in ``used_labels`` can be selected.
         allow_repeated_source : bool
             When True (default) any source file matching the selected label can
             be used, including a source file that has already been used for
             another event. When False, only a source file that is not already
             in ``used_source_files`` can be selected.
+        used_labels : list
+            List labels that have already been used in the current soundscape
+            instantiation. The label selected for instantiating the event will
+            be appended to this list unless its already in it.
         used_source_files : list
             List of full paths to source files that have already been used in
             the current soundscape instantiation. The source file selected for
@@ -907,6 +918,22 @@ class Scaper(object):
         else:
             label_tuple = event.label
         label = _get_value_from_dist(label_tuple)
+
+        # Make sure we can use this label
+        if (not allow_repeated_label) and (label in used_labels):
+            if (len(allowed_labels) == len(used_labels) or
+                    label_tuple[0] == "const"):
+                raise ScaperError(
+                    "Cannot instantiate event {:s}: all available labels "
+                    "have already been used and "
+                    "allow_repeated_label=False.".format(label))
+            else:
+                while label in used_labels:
+                    label = _get_value_from_dist(label_tuple)
+
+        # Update the used labels list
+        if label not in used_labels:
+            used_labels.append(label)
 
         # determine source file
         if event.source_file[0] == "choose" and not event.source_file[1]:
@@ -1032,7 +1059,8 @@ class Scaper(object):
         # Return
         return instantiated_event
 
-    def _instantiate(self, allow_repeated_source=True, reverb=None):
+    def _instantiate(self, allow_repeated_label=True,
+                     allow_repeated_source=True, reverb=None):
         '''
         Instantiate a specific soundscape in JAMS format based on the current
         specification.
@@ -1042,6 +1070,10 @@ class Scaper(object):
 
         Parameters
         ----------
+        allow_repeated_label : bool
+            When True (default) the same label can be used more than once
+            in a soundscape instantiation. When False every label can
+            only be used once.
         allow_repeated_source : bool
             When True (default) the same source file can be used more than once
             in a soundscape instantiation. When False every source file can
@@ -1071,12 +1103,15 @@ class Scaper(object):
         # NOTE: logic for instantiating bg and fg events is NOT the same.
 
         # Add background sounds
+        bg_labels = []
         bg_source_files = []
         for event in self.bg_spec:
             value = self._instantiate_event(
                 event,
                 isbackground=True,
+                allow_repeated_label=allow_repeated_label,
                 allow_repeated_source=allow_repeated_source,
+                used_labels=bg_labels,
                 used_source_files=bg_source_files)
 
             ann.append(time=value.event_time,
@@ -1085,12 +1120,15 @@ class Scaper(object):
                        confidence=1.0)
 
         # Add foreground events
+        fg_labels = []
         fg_source_files = []
         for event in self.fg_spec:
             value = self._instantiate_event(
                 event,
                 isbackground=False,
+                allow_repeated_label=allow_repeated_label,
                 allow_repeated_source=allow_repeated_source,
+                used_labels=fg_labels,
                 used_source_files=fg_source_files)
 
             ann.append(time=value.event_time,
@@ -1124,6 +1162,7 @@ class Scaper(object):
             n_events=n_events,
             polyphony_max=poly,
             polyphony_entropy=entropy,
+            allow_repeated_label=allow_repeated_label,
             allow_repeated_source=allow_repeated_source,
             reverb=reverb)
 
@@ -1264,7 +1303,8 @@ class Scaper(object):
                 # TODO: do we want to normalize the final output?
                 cmb.build([t.name for t in tmpfiles], audio_path, 'mix')
 
-    def generate(self, audio_path, jams_path, allow_repeated_source=True,
+    def generate(self, audio_path, jams_path, allow_repeated_label=True,
+                 allow_repeated_source=True,
                  reverb=None, disable_sox_warnings=True):
         '''
         Generate a soundscape based on the current specification and save to
@@ -1276,6 +1316,10 @@ class Scaper(object):
             Path for saving soundscape audio
         jams_path : str
             Path for saving soundscape jams
+        allow_repeated_label : bool
+            When True (default) the same label can be used more than once
+            in a soundscape instantiation. When False every label can
+            only be used once.
         allow_repeated_source : bool
             When True (default) the same source file can be used more than once
             in a soundscape instantiation. When False every source file can
@@ -1309,7 +1353,9 @@ class Scaper(object):
 
         # Create specific instance of a soundscape based on the spec
         jam = self._instantiate(
-            allow_repeated_source=allow_repeated_source, reverb=reverb)
+            allow_repeated_label=allow_repeated_label,
+            allow_repeated_source=allow_repeated_source,
+            reverb=reverb)
         ann = jam.annotations.search(namespace='sound_event')[0]
 
         # Generate the audio and save to disk
