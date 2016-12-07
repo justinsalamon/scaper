@@ -137,7 +137,7 @@ def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
 
 
 def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
-         end_time, strict=False):
+         end_time, strict=False, no_audio=False):
     '''
     Trim and audio file and corresponding Scaper JAMS file and save to disk.
 
@@ -169,6 +169,9 @@ def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
         the part of the observation that lies within the slice range is kept.
         When `True` such observations are discarded and not included in the
         sliced annotation.
+    no_audio : bool
+        If true, operates on the jams only. Audio input and output paths
+        don't have to point to valid files.
 
     '''
     # First trim jams (might raise an error)
@@ -204,22 +207,23 @@ def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
     jam_sliced.save(jams_outfile)
 
     # Next, trim audio
-    tfm = sox.Transformer()
-    tfm.trim(start_time, end_time)
-    if audio_outfile != audio_infile:
-        tfm.build(audio_infile, audio_outfile)
-    else:
-        # must use temp file in order to save to same file
-        tmpfiles = []
-        with _close_temp_files(tmpfiles):
-            # Create tmp file
-            tmpfiles.append(
-                tempfile.NamedTemporaryFile(
-                    suffix='.wav', delete=True))
-            # Save trimmed result to temp file
-            tfm.build(audio_infile, tmpfiles[-1].name)
-            # Copy result back to original file
-            shutil.copyfile(tmpfiles[-1].name, audio_outfile)
+    if not no_audio:
+        tfm = sox.Transformer()
+        tfm.trim(start_time, end_time)
+        if audio_outfile != audio_infile:
+            tfm.build(audio_infile, audio_outfile)
+        else:
+            # must use temp file in order to save to same file
+            tmpfiles = []
+            with _close_temp_files(tmpfiles):
+                # Create tmp file
+                tmpfiles.append(
+                    tempfile.NamedTemporaryFile(
+                        suffix='.wav', delete=True))
+                # Save trimmed result to temp file
+                tfm.build(audio_infile, tmpfiles[-1].name)
+                # Copy result back to original file
+                shutil.copyfile(tmpfiles[-1].name, audio_outfile)
 
 
 def _get_value_from_dist(dist_tuple):
@@ -1305,7 +1309,7 @@ class Scaper(object):
 
     def generate(self, audio_path, jams_path, allow_repeated_label=True,
                  allow_repeated_source=True,
-                 reverb=None, disable_sox_warnings=True):
+                 reverb=None, disable_sox_warnings=True, no_audio=False):
         '''
         Generate a soundscape based on the current specification and save to
         disk as both an audio file and a JAMS file describing the soundscape.
@@ -1332,6 +1336,8 @@ class Scaper(object):
         disable_sox_warnings : bool
             When True (default), warnings from the pysox module are suppressed
             unless their level is 'CRITICAL'.
+        no_audio : bool
+            If true only generates a JAMS file and no audio is saved to disk.
 
         Raises
         ------
@@ -1359,8 +1365,9 @@ class Scaper(object):
         ann = jam.annotations.search(namespace='sound_event')[0]
 
         # Generate the audio and save to disk
-        self._generate_audio(audio_path, ann, reverb=reverb,
-                             disable_sox_warnings=disable_sox_warnings)
+        if not no_audio:
+            self._generate_audio(audio_path, ann, reverb=reverb,
+                                 disable_sox_warnings=disable_sox_warnings)
 
         # Finally save JAMS to disk too
         jam.save(jams_path)
