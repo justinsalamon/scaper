@@ -245,6 +245,11 @@ def polyphony_entropy(ann, hop_size=0.01):
             'Annotation namespace must be sound_event, found {:s}.'.format(
                 ann.namespace))
 
+    # If there are no foreground events the normalized entropy is 1
+    roles = [v['role'] for v in ann.data['value']]
+    if 'foreground' not in roles:
+        return 1.0
+
     # Sample the polyphony using the specified hop size
     n_samples = np.floor(ann.duration / float(hop_size)) + 1
     times = np.linspace(0, n_samples * hop_size, n_samples)
