@@ -180,7 +180,8 @@ def max_polyphony(ann):
         Maximum number of simultaneous events at any point in the annotation.
     '''
     # If there are no foreground events the polyphony is 0
-    if ann.data.empty:
+    roles = [v['role'] for v in ann.data['value']]
+    if 'foreground' not in roles:
         return 0
     else:
         # Keep only foreground events
