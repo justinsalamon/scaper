@@ -212,9 +212,15 @@ def max_polyphony(ann):
         return int(polyphony)
 
 
-def polyphony_entropy(ann, hop_size=0.01):
+def polyphony_gini(ann, hop_size=0.01):
     '''
-    Compute the normalized entropy of the annotation's polyphony time series.
+    Compute the gini coefficient of the annotation's polyphony time series.
+
+    Useful as an estimate of the polyphony "flatness" or entropy. The
+    coefficient is in the range [0,1] and roughly inverse to entropy: a
+    distribution that's close to uniform will have a low gini coefficient
+    (high entropy), vice versa.
+    https://en.wikipedia.org/wiki/Gini_coefficient
 
     Parameters
     ----------
@@ -226,9 +232,8 @@ def polyphony_entropy(ann, hop_size=0.01):
 
     Returns
     -------
-    norm_entropy : float
-        Normalized entropy computed from the annotation's polyphony time
-        series.
+    polyphony_gini: float
+        Gini coefficient computed from the annotation's polyphony time series.
 
     Raises
     ------
@@ -245,10 +250,10 @@ def polyphony_entropy(ann, hop_size=0.01):
             'Annotation namespace must be sound_event, found {:s}.'.format(
                 ann.namespace))
 
-    # If there are no foreground events the normalized entropy is 1
+    # If there are no foreground events the gini coefficient is 0
     roles = [v['role'] for v in ann.data['value']]
     if 'foreground' not in roles:
-        return 1.0
+        return 0
 
     # Sample the polyphony using the specified hop size
     n_samples = np.floor(ann.duration / float(hop_size)) + 1
@@ -264,5 +269,11 @@ def polyphony_entropy(ann, hop_size=0.01):
             end_idx = np.argmin(np.abs(times - end_time))
             values[start_idx:end_idx + 1] += 1
 
-    return scipy.stats.entropy(values) / np.log(len(values))
-
+    # Compute gini as per:
+    # http://www.statsdirect.com/help/default.htm#nonparametric_methods/gini.htm
+    values += 1e-6  # all values must be positive
+    values = np.sort(values)  # sort values
+    n = len(values)
+    i = np.arange(n) + 1
+    gini = np.sum((2*i - n - 1) * values) / (n * np.sum(values))
+    return (1 - gini)
