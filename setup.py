@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 with open('README.md') as file:
     long_description = file.read()
@@ -10,7 +10,9 @@ setup(
     author='Justin Salamon & Duncan MacConnell',
     author_email='justin.salamon@gmail.com',
     url='https://github.com/justinsalamon/scaper',
-    packages=['scaper'],
+    packages=find_packages(),
+    package_data={'': ['namespaces/sound_event.json']},
+    include_package_data=True,
     long_description=long_description,
     keywords='audio sound soundscape environmental dsp mixing',
     license='GPL',
