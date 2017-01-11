@@ -1287,8 +1287,9 @@ class Scaper(object):
                         # Pad with silence before/after event to match the
                         # soundscape duration
                         prepad = e.value['event_time']
-                        postpad = self.duration - (e.value['event_time'] +
-                                                   e.value['event_duration'])
+                        postpad = max(
+                            0, self.duration - (e.value['event_time'] +
+                                                e.value['event_duration']))
                         tfm.pad(prepad, postpad)
                         # Finally save result to a tmp file
                         tmpfiles.append(
