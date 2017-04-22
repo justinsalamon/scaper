@@ -4,3 +4,5 @@
 scaper.egg-info/*
 tests/local/*
 .coverage
+build/*
+dist/*
