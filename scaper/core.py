@@ -29,7 +29,7 @@ SUPPORTED_DIST = {"const": lambda x: x,
 EventSpec = namedtuple(
     'EventSpec',
     ['label', 'source_file', 'source_time', 'event_time', 'event_duration',
-     'snr', 'role'], verbose=False)
+     'snr', 'role', 'pitch_shift', 'time_stretch'], verbose=False)
 
 
 def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
@@ -555,8 +555,102 @@ def _validate_snr(snr_tuple):
     # TODO: do we want to impose limits on the possible SNR values?
 
 
+def _validate_pitch_shift(pitch_shift_tuple):
+    '''
+    Validate that a pitch_shift distribution tuple has the right format.
+
+    Parameters
+    ----------
+    pitch_shift_tuple : tuple
+        Pitch shift tuple (see ```Scaper.add_event``` for required format).
+
+    Raises
+    ------
+    ScaperError
+        If the validation fails.
+
+    '''
+    # If the tuple is none then it's valid
+    if pitch_shift_tuple is not None:
+        # Make sure it's a valid distribution tuple
+        _validate_distribution(pitch_shift_tuple)
+
+        # Ensure the values are valid for pitch shift
+        if pitch_shift_tuple[0] == "const":
+            if not np.isrealobj(pitch_shift_tuple[1]):
+                raise ScaperError(
+                    'Pitch shift must be a real number.')
+        elif pitch_shift_tuple[0] == "choose":
+            if (not pitch_shift_tuple[1] or
+                    not np.isrealobj(pitch_shift_tuple[1])):
+                raise ScaperError(
+                    'Pitch shift list must be a non-empty list of real '
+                    'numbers.')
+
+        # No need to check for "uniform" and "normal" since they must produce a
+        # real number and technically speaking any real number is a valid pitch
+        # shift
+        # TODO: do we want to impose limits on the possible pitch shift values?
+
+
+def _validate_time_stretch(time_stretch_tuple):
+    '''
+    Validate that a time_stretch distribution tuple has the right format.
+
+    Parameters
+    ----------
+    time_stretch_tuple: tuple
+        Time stretch tuple (see ```Scaper.add_event``` for required format).
+
+    Raises
+    ------
+    ScaperError
+        If the validation fails.
+
+    '''
+    # if the tuple is none then its valid
+    if time_stretch_tuple is not None:
+        # Make sure it's a valid distribution tuple
+        _validate_distribution(time_stretch_tuple)
+
+        # Ensure the values are valid for time stretch
+        if time_stretch_tuple[0] == "const":
+            if (not np.isrealobj(time_stretch_tuple[1]) or
+                    time_stretch_tuple[1] <= 0):
+                raise ScaperError(
+                    'Time stretch must be a real number greater than zero.')
+        elif time_stretch_tuple[0] == "choose":
+            if (not time_stretch_tuple[1] or
+                    not np.isrealobj(time_stretch_tuple[1]) or
+                    not all(x > 0 for x in time_stretch_tuple[1])):
+                raise ScaperError(
+                    'Time stretch list must be a non-empty list of positive '
+                    'real numbers.')
+        elif time_stretch_tuple[0] == "uniform":
+            if time_stretch_tuple[1] <= 0:
+                raise ScaperError(
+                    'A "uniform" distribution tuple for time stretch must have '
+                    'min_value > 0')
+        elif time_stretch_tuple[0] == "normal":
+            time_stretch_tuple.warn(
+                'A "normal" distribution tuple for time stretch can result in '
+                'non-positives values, in which case the distribution will be '
+                're-sampled until a positive value is returned: this can '
+                'result in an infinite loop!',
+                ScaperWarning)
+        elif time_stretch_tuple[0] == "truncnorm":
+            if time_stretch_tuple[3] <= 0:
+                raise ScaperError(
+                    'A "truncnorm" distirbution tuple for time stretch must '
+                    'specify a positive trunc_min value.')
+
+        # TODO: do we want to impose limits on the possible time stretch
+        # values?
+
+
 def _validate_event(label, source_file, source_time, event_time,
-                    event_duration, snr, allowed_labels):
+                    event_duration, snr, allowed_labels, pitch_shift,
+                    time_stretch):
     '''
     Check that event parameter values are valid. See `Scaper.add_event`
     for a detailed description of the expected format of each parameter.
@@ -571,6 +665,8 @@ def _validate_event(label, source_file, source_time, event_time,
     snr : tuple
     allowed_labels : list
         List of allowed labels for the event.
+    pitch_shift : tuple or None
+    time_stretch: tuple or None
 
     Raises
     ------
@@ -604,6 +700,12 @@ def _validate_event(label, source_file, source_time, event_time,
 
     # SNR
     _validate_snr(snr)
+
+    # Pitch shift
+    _validate_pitch_shift(pitch_shift)
+
+    # Time stretch
+    _validate_time_stretch(time_stretch)
 
 
 class Scaper(object):
@@ -736,7 +838,7 @@ class Scaper(object):
 
         # Validate parameter format and values
         _validate_event(label, source_file, source_time, event_time,
-                        event_duration, snr, self.bg_labels)
+                        event_duration, snr, self.bg_labels, None, None)
 
         # Create background sound event
         bg_event = EventSpec(label=label,
@@ -745,13 +847,15 @@ class Scaper(object):
                              event_time=event_time,
                              event_duration=event_duration,
                              snr=snr,
-                             role='background')
+                             role='background',
+                             pitch_shift=None,
+                             time_stretch=None)
 
         # Add event to background spec
         self.bg_spec.append(bg_event)
 
     def add_event(self, label, source_file, source_time, event_time,
-                  event_duration, snr):
+                  event_duration, snr, pitch_shift, time_stretch):
         '''
         Add a foreground sound event to the foreground specification.
 
@@ -795,10 +899,16 @@ class Scaper(object):
             smaller than the source file's duration, and larger values will be
             automatically changed to fulfill this requirement when calling
             `Scaper.generate`.
-        snr : float
+        snr : tuple
             Specifies the desired signal to noise ratio (SNR) between the event
             and the background. See Notes below for the expected format of
             this tuple and the allowed values.
+        pitch_shift : tuple
+            Specifies the number of semitones to shift the event by. None means
+            no pitch shift.
+        time_stretch: tuple
+            Specifies the time stretch factor (value>1 will make it slower and
+            longer, value<1 will makes it faster and shorter).
 
         Notes
         -----
@@ -839,7 +949,8 @@ class Scaper(object):
 
         # SAFETY CHECKS
         _validate_event(label, source_file, source_time, event_time,
-                        event_duration, snr, self.fg_labels)
+                        event_duration, snr, self.fg_labels, pitch_shift,
+                        time_stretch)
 
         # Create event
         event = EventSpec(label=label,
@@ -848,7 +959,9 @@ class Scaper(object):
                           event_time=event_time,
                           event_duration=event_duration,
                           snr=snr,
-                          role='foreground')
+                          role='foreground',
+                          pitch_shift=pitch_shift,
+                          time_stretch=time_stretch)
 
         # Add event to foreground specification
         self.fg_spec.append(event)
@@ -996,21 +1109,45 @@ class Scaper(object):
                     label, old_duration, source_duration, event_duration),
                 ScaperWarning)
 
+        # Get time stretch value
+        if event.time_stretch is None:
+            time_stretch = None
+            event_duration_stretched = event_duration
+        else:
+            time_stretch = -np.Inf
+            while time_stretch <= 0:
+                time_stretch = _get_value_from_dist(event.time_stretch)
+            # compute duration after stretching
+            event_duration_stretched = event_duration * time_stretch
+
         # If the event duration is longer than the soundscape we can trim it
         # without losing validity (since the event will end when the soundscape
         # ends).
-        if (event_duration > self.duration):
-            old_duration = event_duration  # for warning
-            event_duration = self.duration
-            warnings.warn(
-                "{:s} event duration ({:.2f}) is greater than the soundscape "
-                "duration ({:.2f}), changing to {:.2f}".format(
-                    label, old_duration, self.duration, self.duration))
+        if time_stretch is None:
+            if (event_duration > self.duration):
+                old_duration = event_duration  # for warning
+                event_duration = self.duration
+                warnings.warn(
+                    "{:s} event duration ({:.2f}) is greater than the "
+                    "soundscape duration ({:.2f}), changing to {:.2f}".format(
+                        label, old_duration, self.duration, self.duration))
+        else:
+            if (event_duration_stretched > self.duration):
+                old_duration = event_duration  # for warning
+                event_duration = self.duration / float(time_stretch)
+                warnings.warn(
+                    "{:s} event duration ({:.2f}) with stretch factor {:.2f} "
+                    "gives {:.2f} which is greater than the soundscape "
+                    "duration ({:.2f}), changing to {:.2f}".format(
+                        label, old_duration, time_stretch,
+                        event_duration_stretched, self.duration,
+                        event_duration))
 
         # determine source time
         source_time = -np.Inf
         while source_time < 0:
             source_time = _get_value_from_dist(event.source_time)
+
         # Make sure source time + event duration is not greater than the
         # source duration, if it is, adjust the source time (i.e. duration
         # takes precedences over start time).
@@ -1031,20 +1168,33 @@ class Scaper(object):
         event_time = -np.Inf
         while event_time < 0:
             event_time = _get_value_from_dist(event.event_time)
+
         # Make sure the selected event time + event duration are is not greater
         # than the total duration of the soundscape, if it is adjust the event
         # time. This means event duration takes precedence over the event
         # start time.
-        if event_time + event_duration > self.duration:
-            old_event_time = event_time
-            event_time = self.duration - event_duration
-            warnings.warn(
-                '{:s} event time ({:.2f}) is too great given event '
-                'duration ({:.2f}) and soundscape duration ({:.2f}), '
-                'changed to {:.2f}.'.format(
-                    label, old_event_time, event_duration,
-                    self.duration, event_time),
-                ScaperWarning)
+        if time_stretch is None:
+            if event_time + event_duration > self.duration:
+                old_event_time = event_time
+                event_time = self.duration - event_duration
+                warnings.warn(
+                    '{:s} event time ({:.2f}) is too great given event '
+                    'duration ({:.2f}) and soundscape duration ({:.2f}), '
+                    'changed to {:.2f}.'.format(
+                        label, old_event_time, event_duration,
+                        self.duration, event_time),
+                    ScaperWarning)
+        else:
+            if event_time + event_duration_stretched > self.duration:
+                old_event_time = event_time
+                event_time = self.duration - event_duration_stretched
+                warnings.warn(
+                    '{:s} event time ({:.2f}) is too great given stretched '
+                    'event duration ({:.2f}) and soundscape duration ({:.2f}), '
+                    'changed to {:.2f}.'.format(
+                        label, old_event_time, event_duration_stretched,
+                        self.duration, event_time),
+                    ScaperWarning)
 
         # determine snr
         snr = _get_value_from_dist(event.snr)
@@ -1053,6 +1203,12 @@ class Scaper(object):
         # is set internally, not by the user).
         role = event.role
 
+        # determine pitch_shift
+        if event.pitch_shift is not None:
+            pitch_shift = _get_value_from_dist(event.pitch_shift)
+        else:
+            pitch_shift = None
+
         # pack up instantiated values in an EventSpec
         instantiated_event = EventSpec(label=label,
                                        source_file=source_file,
@@ -1060,7 +1216,9 @@ class Scaper(object):
                                        event_time=event_time,
                                        event_duration=event_duration,
                                        snr=snr,
-                                       role=role)
+                                       role=role,
+                                       pitch_shift=pitch_shift,
+                                       time_stretch=time_stretch)
         # Return
         return instantiated_event
 
@@ -1119,8 +1277,14 @@ class Scaper(object):
                 used_labels=bg_labels,
                 used_source_files=bg_source_files)
 
+            if value.time_stretch is not None:
+                event_duration_stretched = (
+                    value.event_duration * value.time_stretch)
+            else:
+                event_duration_stretched = value.event_duration
+
             ann.append(time=value.event_time,
-                       duration=value.event_duration,
+                       duration=event_duration_stretched,
                        value=value._asdict(),
                        confidence=1.0)
 
@@ -1136,8 +1300,14 @@ class Scaper(object):
                 used_labels=fg_labels,
                 used_source_files=fg_source_files)
 
+            if value.time_stretch is not None:
+                event_duration_stretched = (
+                    value.event_duration * value.time_stretch)
+            else:
+                event_duration_stretched = value.event_duration
+
             ann.append(time=value.event_time,
-                       duration=value.event_duration,
+                       duration=event_duration_stretched,
                        value=value._asdict(),
                        confidence=1.0)
 
@@ -1277,6 +1447,15 @@ class Scaper(object):
                         tfm.trim(e.value['source_time'],
                                  e.value['source_time'] +
                                  e.value['event_duration'])
+
+                        # Pitch shift
+                        if e.value['pitch_shift'] is not None:
+                            tfm.pitch(e.value['pitch_shift'])
+
+                        # Time stretch
+                        if e.value['time_stretch'] is not None:
+                            tfm.tempo(1.0 / float(e.value['time_stretch']))
+
                         # Apply very short fade in and out
                         # (avoid unnatural sound onsets/offsets)
                         tfm.fade(fade_in_len=self.fade_in_len,

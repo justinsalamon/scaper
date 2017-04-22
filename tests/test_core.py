@@ -64,5 +64,7 @@ def test_scaper_add_background():
                                   event_time=("const", 0),
                                   event_duration=("const", sc.duration),
                                   snr=("const", 0),
-                                  role='background')
+                                  role='background',
+                                  pitch_shift=None,
+                                  time_stretch=None)
     assert sc.bg_spec == [bg_event_expected]
