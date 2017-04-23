@@ -8,6 +8,7 @@ import logging
 import tempfile
 import numpy as np
 import shutil
+import pandas as pd
 from .scaper_exceptions import ScaperError
 from .scaper_warnings import ScaperWarning
 from .util import _close_temp_files
@@ -1466,9 +1467,15 @@ class Scaper(object):
                         # Pad with silence before/after event to match the
                         # soundscape duration
                         prepad = e.value['event_time']
-                        postpad = max(
-                            0, self.duration - (e.value['event_time'] +
-                                                e.value['event_duration']))
+                        if e.value['time_stretch'] is None:
+                            postpad = max(
+                                0, self.duration - (e.value['event_time'] +
+                                                    e.value['event_duration']))
+                        else:
+                            postpad = max(
+                                0, self.duration - (e.value['event_time'] +
+                                                    e.value['event_duration'] *
+                                                    e.value['time_stretch']))
                         tfm.pad(prepad, postpad)
                         # Finally save result to a tmp file
                         tmpfiles.append(
@@ -1490,7 +1497,8 @@ class Scaper(object):
 
     def generate(self, audio_path, jams_path, allow_repeated_label=True,
                  allow_repeated_source=True,
-                 reverb=None, disable_sox_warnings=True, no_audio=False):
+                 reverb=None, disable_sox_warnings=True, no_audio=False,
+                 txt_path=None):
         '''
         Generate a soundscape based on the current specification and save to
         disk as both an audio file and a JAMS file describing the soundscape.
@@ -1519,6 +1527,10 @@ class Scaper(object):
             unless their level is 'CRITICAL'.
         no_audio : bool
             If true only generates a JAMS file and no audio is saved to disk.
+        txt_path: str or None
+            If not None, in addition to the JAMS file output a simplified
+            annotation in a space separated format [onset  offset  label],
+            saved to the provided path (good for loading labels in audacity).
 
         Raises
         ------
@@ -1552,3 +1564,18 @@ class Scaper(object):
 
         # Finally save JAMS to disk too
         jam.save(jams_path)
+
+        # Optionally save to CSV as well
+        if txt_path is not None:
+
+            df = pd.DataFrame(columns=['onset', 'offset', 'label'])
+
+            for idx, row in ann.data.iterrows():
+                if row.value['role'] == 'foreground':
+                    newrow = ([row.time.total_seconds(),
+                               row.time.total_seconds() +
+                               row.duration.total_seconds(),
+                               row.value['label']])
+                    df.loc[len(df)] = newrow
+
+            df.to_csv(txt_path, index=False, header=False, sep=' ')
