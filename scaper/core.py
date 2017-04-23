@@ -19,6 +19,7 @@ from .util import _populate_label_list
 from .util import _trunc_norm
 from .util import max_polyphony
 from .util import polyphony_gini
+from .audio import get_integrated_lufs
 
 SUPPORTED_DIST = {"const": lambda x: x,
                   "choose": lambda x: random.choice(x),
@@ -1427,12 +1428,17 @@ class Scaper(object):
                         cmb.trim(e.value['source_time'],
                                  e.value['source_time'] +
                                  e.value['event_duration'])
+
                         # After trimming, normalize background to reference DB.
-                        cmb.norm(db_level=self.ref_db)
-                        # Finally save result to a tmp file
+                        bg_lufs = get_integrated_lufs(e.value['source_file'])
+                        gain = self.ref_db - bg_lufs
+                        cmb.gain(gain_db=gain, normalize=False)
+
+                        # Prepare tmp file for output
                         tmpfiles.append(
                             tempfile.NamedTemporaryFile(
                                 suffix='.wav', delete=True))
+
                         cmb.build(
                             [e.value['source_file']] * ntiles,
                             tmpfiles[-1].name, 'concatenate')
@@ -1461,9 +1467,13 @@ class Scaper(object):
                         # (avoid unnatural sound onsets/offsets)
                         tfm.fade(fade_in_len=self.fade_in_len,
                                  fade_out_len=self.fade_out_len)
+
                         # Normalize to specified SNR with respect to
                         # self.ref_db
-                        tfm.norm(self.ref_db + e.value['snr'])
+                        fg_lufs = get_integrated_lufs(e.value['source_file'])
+                        gain = self.ref_db + e.value['snr'] - fg_lufs
+                        tfm.gain(gain_db=gain, normalize=False)
+
                         # Pad with silence before/after event to match the
                         # soundscape duration
                         prepad = e.value['event_time']
@@ -1477,6 +1487,7 @@ class Scaper(object):
                                                     e.value['event_duration'] *
                                                     e.value['time_stretch']))
                         tfm.pad(prepad, postpad)
+
                         # Finally save result to a tmp file
                         tmpfiles.append(
                             tempfile.NamedTemporaryFile(
