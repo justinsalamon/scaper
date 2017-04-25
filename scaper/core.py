@@ -1589,4 +1589,7 @@ class Scaper(object):
                                row.value['label']])
                     df.loc[len(df)] = newrow
 
+            # sort events by onset time
+            df = df.sort_values('onset')
+            df.reset_index(inplace=True, drop=True)
             df.to_csv(txt_path, index=False, header=False, sep=' ')
