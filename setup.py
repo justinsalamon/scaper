@@ -19,5 +19,13 @@ setup(
     install_requires=[
         'sox >= 1.1.2',
         'jams >= 0.2.0'
-    ]
+    ],
+    extras_require={
+        'docs': [
+                'sphinx==1.2.3',  # autodoc was broken in 1.3.1
+                'sphinxcontrib-napoleon',
+                'sphinx_rtd_theme',
+                'numpydoc',
+            ]
+    }
 )
