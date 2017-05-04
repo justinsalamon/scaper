@@ -1,0 +1,3 @@
+numpydoc>=0.5
+scaper>=0.1
+numpy
