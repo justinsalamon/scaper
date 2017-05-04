@@ -2,6 +2,8 @@
 
 A library for soundscape synthesis and augmentation
 
+[![Build Status](https://travis-ci.org/justinsalamon/scaper.svg?branch=master)](https://travis-ci.org/justinsalamon/scaper)
+
 ## Installation
 
 Clone or pull the lastest version:
