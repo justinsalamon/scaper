@@ -20,3 +20,10 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
+
+API Reference
+=============
+.. toctree::
+   :maxdepth: 2
+
+   api
