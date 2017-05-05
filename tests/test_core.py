@@ -7,8 +7,8 @@ from scaper.core import EventSpec
 
 # FIXTURES
 # Paths to files for testing
-FG_PATH = 'data/audio/foreground'
-BG_PATH = 'data/audio/background'
+FG_PATH = 'tests/data/audio/foreground'
+BG_PATH = 'tests/data/audio/background'
 
 # fg and bg labels for testing
 FB_LABELS = ['car_horn', 'human_voice', 'siren']

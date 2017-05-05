@@ -8,11 +8,11 @@ from scaper.scaper_exceptions import ScaperError
 from pkg_resources import resource_filename
 
 # fixtures
-SIREN_FILE = 'data/audio/foreground/siren/69-Siren-1.wav'
+SIREN_FILE = 'tests/data/audio/foreground/siren/69-Siren-1.wav'
 CARHORN_FILE = (
-    'data/audio/foreground/car_horn/17-CAR-Rolls-Royce-Horn.wav')
+    'tests/data/audio/foreground/car_horn/17-CAR-Rolls-Royce-Horn.wav')
 HUMANVOICE_FILE = (
-    'data/audio/foreground/human_voice/'
+    'tests/data/audio/foreground/human_voice/'
     '42-Human-Vocal-Voice-all-aboard_edit.wav')
 
 SIREN_LUFS_I = -23.0
@@ -30,7 +30,7 @@ HUMANVOICE_LUFS_DICT = {'I': -20.0, 'I Threshold': -30.0, 'LRA': 0.0,
 def test_get_integrated_lufs():
 
     # should get error is can't return lufs
-    fakefile = 'test/data/audio/foreground/siren/fakefile.wav'
+    fakefile = 'tests/data/audio/foreground/siren/fakefile.wav'
     pytest.raises(ScaperError, get_integrated_lufs, fakefile)
 
     # test correct functionality
@@ -46,7 +46,7 @@ def test_get_integrated_lufs():
 def test_r128stats():
 
     # should return false if can't get data
-    fakefile = 'test/data/audio/foreground/siren/fakefile.wav'
+    fakefile = 'tests/data/audio/foreground/siren/fakefile.wav'
     d = r128stats(fakefile)
     assert not d
 

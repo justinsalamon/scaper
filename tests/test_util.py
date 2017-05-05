@@ -26,9 +26,9 @@ from scaper import Scaper
 
 
 # FIXTURES
-BG_PATH = 'data/audio/background/'
-FG_PATH = 'data/audio/foreground/'
-FG_PATH_HUMANVOICE = 'data/audio/foreground/human_voice'
+BG_PATH = 'tests/data/audio/background/'
+FG_PATH = 'tests/data/audio/foreground/'
+FG_PATH_HUMANVOICE = 'tests/data/audio/foreground/human_voice'
 
 FG_LABEL_LIST = ['car_horn', 'human_voice', 'siren']
 HUMANVOICE_FILES = (
