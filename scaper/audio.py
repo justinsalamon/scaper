@@ -26,6 +26,12 @@ def r128stats(filepath):
                                 universal_newlines=True)
         stats = proc.communicate()[1]
         summary_index = stats.rfind('Summary:')
+
+        if summary_index == -1:
+            raise ScaperError(
+                'Unable to find LUFS summary, stats string:\n{:s}'.format(
+                    stats))
+
         summary_list = stats[summary_index:].split()
         i_lufs = float(summary_list[summary_list.index('I:') + 1])
         i_thresh = float(summary_list[summary_list.index('I:') + 4])
