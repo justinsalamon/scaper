@@ -5,13 +5,14 @@ import numpy as np
 import os
 import pytest
 from scaper.scaper_exceptions import ScaperError
+from pkg_resources import resource_filename
 
 # fixtures
-SIREN_FILE = 'tests/data/audio/foreground/siren/69-Siren-1.wav'
+SIREN_FILE = 'data/audio/foreground/siren/69-Siren-1.wav'
 CARHORN_FILE = (
-    'tests/data/audio/foreground/car_horn/17-CAR-Rolls-Royce-Horn.wav')
+    'data/audio/foreground/car_horn/17-CAR-Rolls-Royce-Horn.wav')
 HUMANVOICE_FILE = (
-    'tests/data/audio/foreground/human_voice/'
+    'data/audio/foreground/human_voice/'
     '42-Human-Vocal-Voice-all-aboard_edit.wav')
 
 SIREN_LUFS_I = -23.0
