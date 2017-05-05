@@ -13,7 +13,6 @@ addons:
   apt:
     packages:
     - sox
-    - ffmpeg
 
 before_install:
     - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
@@ -31,6 +30,7 @@ before_install:
     - deps='pip numpy scipy'
     - conda create -q -n test-environment "python=$TRAVIS_PYTHON_VERSION" $deps
     - source activate test-environment
+    - conda install -c conda-forge ffmpeg
     - pip install python-coveralls
     - pip install pytest-faulthandler
     - pip install pytest-cov
