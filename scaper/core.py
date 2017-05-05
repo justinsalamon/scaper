@@ -86,7 +86,7 @@ def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
     if fg_path is None:
         new_fg_path = ann.sandbox.scaper['fg_path']
     else:
-        new_fg_path = fg_path
+        new_fg_path = os.path.expanduser(fg_path)
         # Update source files
         for idx in ann.data.index:
             if ann.data.loc[idx, 'value']['role'] == 'foreground':
@@ -95,7 +95,7 @@ def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
                 parent = os.path.dirname(sourcefile)
                 parentname = os.path.basename(parent)
                 newsourcefile = os.path.join(
-                    fg_path, parentname, sourcefilename)
+                    new_fg_path, parentname, sourcefilename)
                 ann.data.loc[idx, 'value']['source_file'] = newsourcefile
         # Update sandbox
         ann.sandbox.scaper['fg_path'] = new_fg_path
@@ -103,7 +103,7 @@ def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
     if bg_path is None:
         new_bg_path = ann.sandbox.scaper['bg_path']
     else:
-        new_bg_path = bg_path
+        new_bg_path = os.path.expanduser(bg_path)
         # Update source files
         for idx in ann.data.index:
             if ann.data.loc[idx, 'value']['role'] == 'background':
@@ -112,7 +112,7 @@ def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
                 parent = os.path.dirname(sourcefile)
                 parentname = os.path.basename(parent)
                 newsourcefile = os.path.join(
-                    bg_path, parentname, sourcefilename)
+                    new_bg_path, parentname, sourcefilename)
                 ann.data.loc[idx, 'value']['source_file'] = newsourcefile
         # Update sandbox
         ann.sandbox.scaper['bg_path'] = new_bg_path
@@ -756,10 +756,12 @@ class Scaper(object):
         self.bg_spec = []
 
         # Validate paths and set
-        _validate_folder_path(fg_path)
-        _validate_folder_path(bg_path)
-        self.fg_path = fg_path
-        self.bg_path = bg_path
+        expanded_fg_path = os.path.expanduser(fg_path)
+        expanded_bg_path = os.path.expanduser(bg_path)
+        _validate_folder_path(expanded_fg_path)
+        _validate_folder_path(expanded_bg_path)
+        self.fg_path = expanded_fg_path
+        self.bg_path = expanded_bg_path
 
         # Populate label lists from folder paths
         self.fg_labels = []
