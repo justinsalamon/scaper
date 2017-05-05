@@ -6,21 +6,7 @@ A library for soundscape synthesis and augmentation
 
 ## Installation
 
-Clone or pull the lastest version:
-
-```
-git clone git@github.com:justinsalamon/scaper.git
-```
-
-Install using pip to handle dependencies:
-
-```
-cd scaper
-pip install -e .
-```
-
-## Non-Python dependencies
-
+### Non-python dependencies
 Scaper has two non-python dependencies:
 - SoX: http://sox.sourceforge.net/
 - FFmpeg: https://ffmpeg.org/
@@ -32,16 +18,32 @@ brew install sox
 brew install ffmpeg
 ```
 
-On linux you can use your distribution's package manager, e.g. on Ubuntu:
+On linux you can use your distribution's package manager, e.g. on Ubuntu (15.04 "Vivid Vervet" or newer):
 
 ```
 sudo apt-get install sox
 sudo apt-get install ffmpeg
 ```
+NOTE: on earlier versions of Ubuntu [ffmpeg may point to a Libav binary](http://stackoverflow.com/a/9477756/2007700) which is not the correct binary. If you are using anaconda, you can install the correct version by calling `conda install -c conda-forge ffmpeg`. Otherwise, you can [obtain a static binary from the ffmpeg website](https://ffmpeg.org/download.html).
 
 On windows you can use the provided installation binaries:
 - SoX: https://sourceforge.net/projects/sox/files/sox/
 - FFmpeg: https://ffmpeg.org/download.html#build-windows
+
+### Installing Scaper
+
+Clone or pull the lastest version:
+
+```
+git clone git@github.com:justinsalamon/scaper.git
+```
+
+Install using pip to handle python dependencies:
+
+```
+cd scaper
+pip install -e .
+```
 
 ## Example
 
