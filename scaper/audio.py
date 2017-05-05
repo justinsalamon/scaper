@@ -13,7 +13,7 @@ def r128stats(filepath):
     """ takes a path to an audio file, returns a dict with the loudness
     stats computed by the ffmpeg ebur128 filter """
     ffargs = ['ffmpeg',
-              '-nostats',
+              # '-nostats',
               '-i',
               filepath,
               '-filter_complex',
