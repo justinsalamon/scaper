@@ -29,7 +29,7 @@ HUMANVOICE_LUFS_DICT = {'I': -20.0, 'I Threshold': -30.0, 'LRA': 0.0,
 
 def test_get_integrated_lufs():
 
-    # should get error is can't return lufs
+    # should get error (from r1238stats) if can't return lufs
     fakefile = 'tests/data/audio/foreground/siren/fakefile.wav'
     pytest.raises(ScaperError, get_integrated_lufs, fakefile)
 
@@ -47,8 +47,7 @@ def test_r128stats():
 
     # should return false if can't get data
     fakefile = 'tests/data/audio/foreground/siren/fakefile.wav'
-    d = r128stats(fakefile)
-    assert not d
+    pytest.raises(ScaperError, r128stats, fakefile)
 
     # test correct functionality
     audiofiles = [SIREN_FILE, CARHORN_FILE, HUMANVOICE_FILE]

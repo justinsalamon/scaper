@@ -36,8 +36,11 @@ def r128stats(filepath):
         stats_dict = {'I': i_lufs, 'I Threshold': i_thresh, 'LRA': lra,
                       'LRA Threshold': lra_thresh, 'LRA Low': lra_low,
                       'LRA High': lra_high}
-    except:
-        return False
+    except Exception as e:
+        raise ScaperError(
+            'Unable to obtain LUFS data for {:s}, error message:\n{:s}'.format(
+                filepath, e.__str__()))
+
     return stats_dict
 
 
@@ -45,7 +48,4 @@ def get_integrated_lufs(filepath):
     '''Returns the integrated lufs for an audiofile'''
 
     loudness_stats = r128stats(filepath)
-    if not loudness_stats:
-        raise ScaperError(
-            'Unable to obtain LUFS state for {:s}'.format(filepath))
     return loudness_stats['I']
