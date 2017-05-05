@@ -256,8 +256,8 @@ def polyphony_gini(ann, hop_size=0.01):
         return 0
 
     # Sample the polyphony using the specified hop size
-    n_samples = np.floor(ann.duration / float(hop_size)) + 1
-    times = np.linspace(0, n_samples * hop_size, n_samples)
+    n_samples = int(np.floor(ann.duration / float(hop_size)) + 1)
+    times = np.linspace(0, (n_samples-1) * hop_size, n_samples)
     values = np.zeros_like(times)
 
     for idx in ann.data.index:
@@ -266,8 +266,14 @@ def polyphony_gini(ann, hop_size=0.01):
             end_time = (
                 start_time + ann.data.loc[idx, 'duration'].total_seconds())
             start_idx = np.argmin(np.abs(times - start_time))
-            end_idx = np.argmin(np.abs(times - end_time))
+            end_idx = np.argmin(np.abs(times - end_time)) - 1
             values[start_idx:end_idx + 1] += 1
+    values = values[:-1]
+
+    # DEBUG
+    # vstring = ('{:d} ' * len(values)).format(*tuple([int(v) for v in values]))
+    # print(vstring)
+    # print(' ')
 
     # Compute gini as per:
     # http://www.statsdirect.com/help/default.htm#nonparametric_methods/gini.htm
