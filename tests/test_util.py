@@ -11,6 +11,7 @@ from scaper.util import _get_sorted_files
 from scaper.util import _populate_label_list
 from scaper.util import _trunc_norm
 from scaper.util import max_polyphony
+from scaper.util import polyphony_gini
 from scaper.scaper_exceptions import ScaperError
 import tempfile
 import os
@@ -21,9 +22,11 @@ import numpy as np
 from scipy.stats import truncnorm
 import jams
 from scaper import EventSpec
+from scaper import Scaper
 
 
 # FIXTURES
+BG_PATH = 'tests/data/audio/background/'
 FG_PATH = 'tests/data/audio/foreground/'
 FG_PATH_HUMANVOICE = 'tests/data/audio/foreground/human_voice'
 FG_LABEL_LIST = ['car_horn', 'human_voice', 'siren']
@@ -32,6 +35,7 @@ HUMANVOICE_FILES = (
                   '42-Human-Vocal-Voice-all-aboard_edit.wav'),
      os.path.join(FG_PATH_HUMANVOICE, '42-Human-Vocal-Voice-taxi-1_edit.wav'),
      os.path.join(FG_PATH_HUMANVOICE, '42-Human-Vocal-Voice-taxi-2_edit.wav')])
+SIREN_FILE = os.path.join(FG_PATH, 'siren', '69-Siren-1.wav')
 
 
 def test_close_temp_files():
@@ -185,3 +189,75 @@ def test_max_polyphony():
         assert est_poly == 1
 
 
+def test_polyphony_gini():
+    '''
+    Test computation of polyphony gini
+    '''
+
+    # Annotation must have namespace sound_event, otherwise raise error
+    ann = jams.Annotation('tag_open', duration=10)
+    gini = pytest.raises(ScaperError, polyphony_gini, ann)
+
+    # Annotation without duration set should raise error
+    ann = jams.Annotation('sound_event', duration=None)
+    gini = pytest.raises(ScaperError, polyphony_gini, ann)
+
+    # Annotation with no foreground events returns a gini of 0
+    sc = Scaper(10.0, FG_PATH, BG_PATH)
+
+    # add background
+    sc.add_background(label=('choose', []),
+                      source_file=('choose', []),
+                      source_time=('const', 0))
+    jam = sc._instantiate()
+    ann = jam.annotations[0]
+    gini = polyphony_gini(ann)
+    assert gini == 0
+
+    def __test_gini_from_event_times(event_time_list, expected_gini,
+                                     hop_size=0.01):
+
+        print(event_time_list)
+
+        # create scaper
+        sc = Scaper(10.0, FG_PATH, BG_PATH)
+
+        # add background
+        sc.add_background(label=('choose', []),
+                          source_file=('choose', []),
+                          source_time=('const', 0))
+
+        # add foreground events based on the event time list
+        # always use siren file since it is 26 s long, so we can choose the
+        # event duration flexibly
+        for onset, offset in event_time_list:
+
+            sc.add_event(label=('const', 'siren'),
+                         source_file=('const', SIREN_FILE),
+                         source_time=('const', 0),
+                         event_time=('const', onset),
+                         event_duration=('const', offset - onset),
+                         snr=('uniform', 6, 30),
+                         pitch_shift=('uniform', -3, 3),
+                         time_stretch=None)
+
+        jam = sc._instantiate()
+        ann = jam.annotations[0]
+        gini = polyphony_gini(ann, hop_size=hop_size)
+        print(gini, expected_gini)
+        assert np.allclose([gini], [expected_gini], atol=1e-5)
+
+    event_time_lists = ([
+        [],
+        [(0, 1)],
+        [(0, 5), (5, 10)],
+        [(0, 10), (3, 7), (4, 6)]
+    ])
+
+    expected_ginis = [0, 0.1, 1, 0.75]
+
+    for etl, g in zip(event_time_lists, expected_ginis):
+        __test_gini_from_event_times(etl, g, hop_size=0.01)
+
+    for etl, g in zip(event_time_lists, expected_ginis):
+        __test_gini_from_event_times(etl, g, hop_size=1.0)
