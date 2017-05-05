@@ -6,3 +6,4 @@ tests/local/*
 .coverage
 build/*
 dist/*
+docs/_build/*
