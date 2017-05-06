@@ -308,6 +308,8 @@ def _validate_distribution(dist_tuple):
         if (len(dist_tuple) != 3 or
                 not np.isrealobj(dist_tuple[1]) or
                 not np.isrealobj(dist_tuple[2]) or
+                not np.isreal(dist_tuple[1]) or
+                not np.isreal(dist_tuple[2]) or
                 dist_tuple[1] > dist_tuple[2]):
             raise ScaperError(
                 'The "uniform" distribution tuple be of length 2, where the '
@@ -315,21 +317,27 @@ def _validate_distribution(dist_tuple):
                 'and greater/equal to the 2nd item.')
     # If it's a normal distribution, tuple must be of length 3, 2nd item must
     # be a real number and 3rd item must be a non-negative real
-    elif dist_tuple[1] == 'normal':
+    elif dist_tuple[0] == 'normal':
         if (len(dist_tuple) != 3 or
                 not np.isrealobj(dist_tuple[1]) or
                 not np.isrealobj(dist_tuple[2]) or
+                not np.isreal(dist_tuple[1]) or
+                not np.isreal(dist_tuple[2]) or
                 dist_tuple[2] < 0):
             raise ScaperError(
                 'The "normal" distribution tuple must be of length 3, where '
                 'the 2nd item (mean) is a real number and the 3rd item (std '
                 'dev) is real and non-negative.')
-    elif dist_tuple[1] == 'truncnorm':
+    elif dist_tuple[0] == 'truncnorm':
         if (len(dist_tuple) != 5 or
                 not np.isrealobj(dist_tuple[1]) or
                 not np.isrealobj(dist_tuple[2]) or
                 not np.isrealobj(dist_tuple[3]) or
                 not np.isrealobj(dist_tuple[4]) or
+                not np.isreal(dist_tuple[1]) or
+                not np.isreal(dist_tuple[2]) or
+                not np.isreal(dist_tuple[3]) or
+                not np.isreal(dist_tuple[4]) or
                 dist_tuple[2] < 0 or
                 dist_tuple[4] < dist_tuple[3]):
             raise ScaperError(
