@@ -1,8 +1,11 @@
 
 import scaper
 from scaper.scaper_exceptions import ScaperError
+from scaper.scaper_warnings import ScaperWarning
 import pytest
 from scaper.core import EventSpec
+import tempfile
+import os
 
 
 # FIXTURES
@@ -110,3 +113,82 @@ def test_validate_distribution():
                ('truncnorm', 0, 2, 2, 0)]
     __test_bad_tuple_list(badargs)
 
+
+def test_validate_label():
+
+    # label must be in list of allowed labels
+    allowed_labels = ['yes']
+    pytest.raises(ScaperError, scaper.core._validate_label, ('const', 'no'),
+                  allowed_labels)
+
+    # Choose list must be subset of allowed labels
+    allowed_labels = ['yes', 'hello']
+    pytest.raises(ScaperError, scaper.core._validate_label, ('choose', ['no']),
+                  allowed_labels)
+
+    # Label tuple must start with either 'const' or 'choose'
+    bad_label_dists = [('uniform', 0, 1), ('normal', 0, 1),
+                       ('truncnorm', 0, 1, 0, 1)]
+    for bld in bad_label_dists:
+        pytest.raises(ScaperError, scaper.core._validate_label, bld,
+                      allowed_labels)
+
+
+def test_validate_source_file():
+
+    # file must exist
+    # create temp folder so we have path to file we know doesn't exist
+    with tempfile.TemporaryDirectory() as tmpdir:
+        nonfile = os.path.join(tmpdir, 'notafile')
+        pytest.raises(ScaperError, scaper.core._validate_source_file,
+                      ('const', nonfile), ('const', 'siren'))
+
+    # label must be const and match file foldername
+    sourcefile = 'tests/data/audio/foreground/siren/69-Siren-1.wav'
+    pytest.raises(ScaperError, scaper.core._validate_source_file,
+                  ('const', sourcefile), ('choose', []))
+
+    pytest.raises(ScaperError, scaper.core._validate_source_file,
+                  ('const', sourcefile), ('const', 'car_horn'))
+
+    # if choose, all files in list of files must exist
+    sourcefile = 'tests/data/audio/foreground/siren/69-Siren-1.wav'
+    with tempfile.TemporaryDirectory() as tmpdir:
+        nonfile = os.path.join(tmpdir, 'notafile')
+        source_file_list = [sourcefile, nonfile]
+        pytest.raises(ScaperError, scaper.core._validate_source_file,
+                      ('choose', source_file_list), ('const', 'siren'))
+
+    # must be const or choose
+    bad_label_dists = [('uniform', 0, 1), ('normal', 0, 1),
+                       ('truncnorm', 0, 1, 0, 1)]
+    for bld in bad_label_dists:
+        pytest.raises(ScaperError, scaper.core._validate_source_file, bld,
+                      ('const', 'siren'))
+
+
+def test_validate_time():
+
+    def __test_bad_time_tuple(time_tuple):
+        pytest.raises(ScaperError, scaper.core._validate_time, time_tuple)
+
+    # bad consts
+    bad_time_values = [None, -1, 1j, 'yes', [], [5]]
+    for btv in bad_time_values:
+        __test_bad_time_tuple(('const', btv))
+
+    # empty list for choose
+        __test_bad_time_tuple(('choose', []))
+
+    # bad consts in list for choose
+    for btv in bad_time_values:
+        __test_bad_time_tuple(('choose', [btv]))
+
+    # uniform can't have negative min value
+    __test_bad_time_tuple(('uniform', -1, 1))
+
+    # using normal will issue a warning since it can generate neg values
+    pytest.warns(ScaperWarning, scaper.core._validate_time, ('normal', 5, 2))
+
+    # truncnorm can't have negative min value
+    __test_bad_time_tuple(('truncnorm', 0, 1, -1, 1))
