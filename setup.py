@@ -28,6 +28,6 @@ setup(
                 'sphinx_rtd_theme',
                 'numpydoc',
             ],
-        'tests': ['backports']
+        'tests': ['backports.tempfile']
     }
 )
