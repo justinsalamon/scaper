@@ -453,12 +453,19 @@ def _validate_time(time_tuple):
 
     # Ensure the values are valid for time
     if time_tuple[0] == "const":
-        if not np.isrealobj(time_tuple[1]) or time_tuple[1] < 0:
+        if (time_tuple[1] is None or
+                not np.isreal(time_tuple[1]) or
+                not np.isrealobj(time_tuple[1]) or
+                not np.isscalar(time_tuple[1]) or
+                time_tuple[1] < 0):
             raise ScaperError(
                 'Time must be a real non-negative number.')
     elif time_tuple[0] == "choose":
         if (not time_tuple[1] or
+                not np.isreal(time_tuple[1]) or
                 not np.isrealobj(time_tuple[1]) or
+                not np.isscalar(time_tuple[1]) or
+                not all(x is not None for x in time_tuple[1]) or
                 not all(x >= 0 for x in time_tuple[1])):
             raise ScaperError(
                 'Time list must be a non-empty list of non-negative real '
