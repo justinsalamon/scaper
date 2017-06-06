@@ -27,6 +27,7 @@ setup(
                 'sphinxcontrib-napoleon',
                 'sphinx_rtd_theme',
                 'numpydoc',
-            ]
+            ],
+        'tests': ['backports']
     }
 )

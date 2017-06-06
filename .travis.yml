@@ -37,7 +37,7 @@ before_install:
 #    - pip install numpydoc
 
 install:
-    - pip install -e .
+    - pip install -e .[tests]
 
 #before_script:
 #    - pep8 mir_eval evaluators tests
