@@ -17,8 +17,9 @@ setup(
     keywords='audio sound soundscape environmental dsp mixing',
     license='BSD-3-Clause',
     install_requires=[
-        'sox >= 1.1.2',
-        'jams >= 0.2.0'
+        'sox==1.1.2',
+        'jams==0.2.2',
+        'pandas==0.19.2'
     ],
     extras_require={
         'docs': [
