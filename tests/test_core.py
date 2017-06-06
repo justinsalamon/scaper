@@ -4,7 +4,8 @@ from scaper.scaper_exceptions import ScaperError
 from scaper.scaper_warnings import ScaperWarning
 import pytest
 from scaper.core import EventSpec
-import tempfile
+# import tempfile
+from backports import tempfile
 import os
 
 
