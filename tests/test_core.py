@@ -179,7 +179,7 @@ def test_validate_time():
         __test_bad_time_tuple(('const', btv))
 
     # empty list for choose
-        __test_bad_time_tuple(('choose', []))
+    __test_bad_time_tuple(('choose', []))
 
     # bad consts in list for choose
     for btv in bad_time_values:
@@ -193,3 +193,53 @@ def test_validate_time():
 
     # truncnorm can't have negative min value
     __test_bad_time_tuple(('truncnorm', 0, 1, -1, 1))
+
+
+def test_validate_duration():
+
+    def __test_bad_duration_tuple(duration_tuple):
+        pytest.raises(ScaperError, scaper.core._validate_duration,
+                      duration_tuple)
+
+    # bad consts
+    bad_dur_values = [None, -1, 0, 1j, 'yes', [], [5]]
+    for bdv in bad_dur_values:
+        __test_bad_duration_tuple(('const', bdv))
+
+    # empty list for choose
+    __test_bad_duration_tuple(('choose', []))
+
+    # bad consts in list for choose
+    for bdv in bad_dur_values:
+        __test_bad_duration_tuple(('choose', [bdv]))
+
+    # uniform can't have negative or 0 min value
+    __test_bad_duration_tuple(('uniform', -1, 1))
+    __test_bad_duration_tuple(('uniform', 0, 1))
+
+    # using normal will issue a warning since it can generate neg values
+    pytest.warns(ScaperWarning, scaper.core._validate_duration,
+                 ('normal', 5, 2))
+
+    # truncnorm can't have negative or zero min value
+    __test_bad_duration_tuple(('truncnorm', 0, 1, -1, 1))
+    __test_bad_duration_tuple(('truncnorm', 0, 1, 0, 1))
+
+
+def test_validate_snr():
+
+    def __test_bad_snr_tuple(snr_tuple):
+        pytest.raises(ScaperError, scaper.core._validate_snr, snr_tuple)
+
+    # bad consts
+    bad_snr_values = [None, 1j, 'yes', [], [5]]
+    for bsv in bad_snr_values:
+        __test_bad_snr_tuple(('const', bsv))
+
+    # empty list for choose
+    __test_bad_snr_tuple(('choose', []))
+
+    # bad consts in list for choose
+    for bsv in bad_snr_values:
+        __test_bad_snr_tuple(('choose', [bsv]))
+
