@@ -328,7 +328,7 @@ def is_real_array(array):
     if not (type(array) is list or type(array) is np.ndarray):
         return False
     else:
-        if (not np.isreal(array).all() or
+        if (not np.all([np.isreal(x) for x in array]) or
                 not np.isrealobj(array) or
                 not np.asarray(list(map(np.isscalar, array))).all()):
             return False
