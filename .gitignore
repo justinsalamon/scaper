@@ -7,3 +7,4 @@ tests/local/*
 build/*
 dist/*
 docs/_build/*
+scaper/bin/*
