@@ -12,6 +12,7 @@ from scaper.util import _populate_label_list
 from scaper.util import _trunc_norm
 from scaper.util import max_polyphony
 from scaper.util import polyphony_gini
+from scaper.util import is_real_number, is_real_array
 from scaper.scaper_exceptions import ScaperError
 import tempfile
 import os
@@ -262,3 +263,27 @@ def test_polyphony_gini():
 
     for etl, g in zip(event_time_lists, expected_ginis):
         __test_gini_from_event_times(etl, g, hop_size=1.0)
+
+
+def test_is_real_number():
+
+    non_reals = [None, 1j, 'yes']
+    yes_reals = [-1e12, -1, -1.0, 0, 1, 1.0, 1e12]
+
+    # test single value
+    for nr in non_reals:
+        assert not is_real_number(nr)
+    for yr in yes_reals:
+        assert is_real_number(yr)
+
+
+def test_is_real_array():
+
+    non_reals = [None, 1j, 'yes']
+    yes_reals = [-1e12, -1, -1.0, 0, 1, 1.0, 1e12]
+
+    # test array
+    for nr in non_reals:
+        assert not is_real_array([nr])
+    for yr in yes_reals:
+        assert is_real_array([yr])

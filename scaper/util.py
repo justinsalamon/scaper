@@ -283,3 +283,54 @@ def polyphony_gini(ann, hop_size=0.01):
     i = np.arange(n) + 1
     gini = np.sum((2*i - n - 1) * values) / (n * np.sum(values))
     return (1 - gini)
+
+
+def is_real_number(num):
+    '''
+    Check if a value is a real scalar by aggregating several numpy checks.
+
+    Parameters
+    ----------
+    num : any type
+        The parameter to check
+
+    Returns
+    ------
+    check : bool
+        True if ```num``` is a real scalar, False otherwise.
+
+    '''
+    if (not np.isreal(num) or
+            not np.isrealobj(num) or
+            not np.isscalar(num)):
+        return False
+    else:
+        return True
+
+
+def is_real_array(array):
+    '''
+    Check if a value is a list or array of real scalars by aggregating several
+    numpy checks.
+
+    Parameters
+    ----------
+    array: any type
+        The parameter to check
+
+    Returns
+    ------
+    check : bool
+        True if ```array``` is a list or array of a real scalars, False
+        otherwise.
+
+    '''
+    if not (type(array) is list or type(array) is np.ndarray):
+        return False
+    else:
+        if (not np.isreal(array).all() or
+                not np.isrealobj(array) or
+                not np.asarray(list(map(np.isscalar, array))).all()):
+            return False
+        else:
+            return True

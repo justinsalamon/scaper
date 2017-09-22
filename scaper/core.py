@@ -19,6 +19,7 @@ from .util import _populate_label_list
 from .util import _trunc_norm
 from .util import max_polyphony
 from .util import polyphony_gini
+from .util import is_real_number, is_real_array
 from .audio import get_integrated_lufs
 
 SUPPORTED_DIST = {"const": lambda x: x,
@@ -306,10 +307,8 @@ def _validate_distribution(dist_tuple):
     # be a real number and 3rd item must be real and greater/equal to the 2nd.
     elif dist_tuple[0] == 'uniform':
         if (len(dist_tuple) != 3 or
-                not np.isrealobj(dist_tuple[1]) or
-                not np.isrealobj(dist_tuple[2]) or
-                not np.isreal(dist_tuple[1]) or
-                not np.isreal(dist_tuple[2]) or
+                not is_real_number(dist_tuple[1]) or
+                not is_real_number(dist_tuple[2]) or
                 dist_tuple[1] > dist_tuple[2]):
             raise ScaperError(
                 'The "uniform" distribution tuple be of length 2, where the '
@@ -319,10 +318,8 @@ def _validate_distribution(dist_tuple):
     # be a real number and 3rd item must be a non-negative real
     elif dist_tuple[0] == 'normal':
         if (len(dist_tuple) != 3 or
-                not np.isrealobj(dist_tuple[1]) or
-                not np.isrealobj(dist_tuple[2]) or
-                not np.isreal(dist_tuple[1]) or
-                not np.isreal(dist_tuple[2]) or
+                not is_real_number(dist_tuple[1]) or
+                not is_real_number(dist_tuple[2]) or
                 dist_tuple[2] < 0):
             raise ScaperError(
                 'The "normal" distribution tuple must be of length 3, where '
@@ -330,14 +327,10 @@ def _validate_distribution(dist_tuple):
                 'dev) is real and non-negative.')
     elif dist_tuple[0] == 'truncnorm':
         if (len(dist_tuple) != 5 or
-                not np.isrealobj(dist_tuple[1]) or
-                not np.isrealobj(dist_tuple[2]) or
-                not np.isrealobj(dist_tuple[3]) or
-                not np.isrealobj(dist_tuple[4]) or
-                not np.isreal(dist_tuple[1]) or
-                not np.isreal(dist_tuple[2]) or
-                not np.isreal(dist_tuple[3]) or
-                not np.isreal(dist_tuple[4]) or
+                not is_real_number(dist_tuple[1]) or
+                not is_real_number(dist_tuple[2]) or
+                not is_real_number(dist_tuple[3]) or
+                not is_real_number(dist_tuple[4]) or
                 dist_tuple[2] < 0 or
                 dist_tuple[4] < dist_tuple[3]):
             raise ScaperError(
@@ -454,17 +447,13 @@ def _validate_time(time_tuple):
     # Ensure the values are valid for time
     if time_tuple[0] == "const":
         if (time_tuple[1] is None or
-                not np.isreal(time_tuple[1]) or
-                not np.isrealobj(time_tuple[1]) or
-                not np.isscalar(time_tuple[1]) or
+                not is_real_number(time_tuple[1]) or
                 time_tuple[1] < 0):
             raise ScaperError(
                 'Time must be a real non-negative number.')
     elif time_tuple[0] == "choose":
         if (not time_tuple[1] or
-                not np.isreal(time_tuple[1]) or
-                not np.isrealobj(time_tuple[1]) or
-                not np.isscalar(time_tuple[1]) or
+                not is_real_array(time_tuple[1]) or
                 not all(x is not None for x in time_tuple[1]) or
                 not all(x >= 0 for x in time_tuple[1])):
             raise ScaperError(
@@ -510,12 +499,13 @@ def _validate_duration(duration_tuple):
 
     # Ensure the values are valid for duration
     if duration_tuple[0] == "const":
-        if not np.isrealobj(duration_tuple[1]) or duration_tuple[1] <= 0:
+        if (not is_real_number(duration_tuple[1]) or
+                duration_tuple[1] <= 0):
             raise ScaperError(
                 'Duration must be a real number greater than zero.')
     elif duration_tuple[0] == "choose":
         if (not duration_tuple[1] or
-                not np.isrealobj(duration_tuple[1]) or
+                not is_real_array(duration_tuple[1]) or
                 not all(x > 0 for x in duration_tuple[1])):
             raise ScaperError(
                 'Duration list must be a non-empty list of positive real '
@@ -559,11 +549,12 @@ def _validate_snr(snr_tuple):
 
     # Ensure the values are valid for SNR
     if snr_tuple[0] == "const":
-        if not np.isrealobj(snr_tuple[1]):
+        if not is_real_number(snr_tuple[1]):
             raise ScaperError(
                 'SNR must be a real number.')
     elif snr_tuple[0] == "choose":
-        if not snr_tuple[1] or not np.isrealobj(snr_tuple[1]):
+        if (not snr_tuple[1] or
+                not is_real_array(snr_tuple[1])):
             raise ScaperError(
                 'SNR list must be a non-empty list of real numbers.')
 
@@ -594,12 +585,12 @@ def _validate_pitch_shift(pitch_shift_tuple):
 
         # Ensure the values are valid for pitch shift
         if pitch_shift_tuple[0] == "const":
-            if not np.isrealobj(pitch_shift_tuple[1]):
+            if not is_real_number(pitch_shift_tuple[1]):
                 raise ScaperError(
                     'Pitch shift must be a real number.')
         elif pitch_shift_tuple[0] == "choose":
             if (not pitch_shift_tuple[1] or
-                    not np.isrealobj(pitch_shift_tuple[1])):
+                    not is_real_array(pitch_shift_tuple[1])):
                 raise ScaperError(
                     'Pitch shift list must be a non-empty list of real '
                     'numbers.')
@@ -632,13 +623,13 @@ def _validate_time_stretch(time_stretch_tuple):
 
         # Ensure the values are valid for time stretch
         if time_stretch_tuple[0] == "const":
-            if (not np.isrealobj(time_stretch_tuple[1]) or
+            if (not is_real_number(time_stretch_tuple[1]) or
                     time_stretch_tuple[1] <= 0):
                 raise ScaperError(
                     'Time stretch must be a real number greater than zero.')
         elif time_stretch_tuple[0] == "choose":
             if (not time_stretch_tuple[1] or
-                    not np.isrealobj(time_stretch_tuple[1]) or
+                    not is_real_array(time_stretch_tuple[1]) or
                     not all(x > 0 for x in time_stretch_tuple[1])):
                 raise ScaperError(
                     'Time stretch list must be a non-empty list of positive '
