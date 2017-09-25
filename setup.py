@@ -5,7 +5,7 @@ with open('README.md') as file:
 
 setup(
     name='scaper',
-    version='0.1.0',
+    version='0.0.1',
     description='A library for soundscape synthesis and augmentation',
     author='Justin Salamon & Duncan MacConnell',
     author_email='justin.salamon@gmail.com',
@@ -17,7 +17,7 @@ setup(
     keywords='audio sound soundscape environmental dsp mixing',
     license='BSD-3-Clause',
     install_requires=[
-        'sox==1.1.2',
+        'sox',
         'jams==0.2.2',
         'pandas==0.19.2'
     ],
