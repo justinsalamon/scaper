@@ -243,3 +243,20 @@ def test_validate_snr():
     for bsv in bad_snr_values:
         __test_bad_snr_tuple(('choose', [bsv]))
 
+
+def test_validate_pitch_shift():
+
+    def __test_bad_ps_tuple(ps_tuple):
+        pytest.raises(ScaperError, scaper.core._validate_pitch_shift, ps_tuple)
+
+    # bad consts
+    bad_ps_values = [None, 1j, 'yes', [], [5]]
+    for bv in bad_ps_values:
+        __test_bad_ps_tuple(('const', bv))
+
+    # empty list for choose
+    __test_bad_ps_tuple(('choose', []))
+
+    # bad consts in list for choose
+    for bv in bad_ps_values:
+        __test_bad_ps_tuple(('choose', [bv]))
