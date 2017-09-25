@@ -7,6 +7,7 @@ from scaper.core import EventSpec
 # import tempfile
 from backports import tempfile
 import os
+import numpy as np
 
 
 # FIXTURES
@@ -290,3 +291,19 @@ def test_validate_time_stretch():
     pytest.warns(
         ScaperWarning, scaper.core._validate_time_stretch, ('normal', 5, 1))
 
+
+def test_validate_event():
+
+    bad_allowed_labels = [0, 'yes', 1j, np.array([1, 2, 3])]
+
+    for bal in bad_allowed_labels:
+        pytest.raises(ScaperError, scaper.core._validate_event,
+                      label=('choose', []),
+                      source_file=('choose', []),
+                      source_time=('const', 0),
+                      event_time=('const', 0),
+                      event_duration=('const', 1),
+                      snr=('const', 0),
+                      allowed_labels=bal,
+                      pitch_shift=None,
+                      time_stretch=None)
