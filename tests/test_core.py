@@ -75,6 +75,74 @@ def test_scaper_add_background():
     assert sc.bg_spec == [bg_event_expected]
 
 
+def test_get_value_from_dist():
+
+    # const
+    x = scaper.core._get_value_from_dist(('const', 1))
+    assert x == 1
+
+    # choose
+    for _ in range(10):
+        x = scaper.core._get_value_from_dist(('choose', [1, 2, 3]))
+        assert x in [1, 2, 3]
+
+    # uniform
+    for _ in range(10):
+        x = scaper.core._get_value_from_dist(('choose', [1, 2, 3]))
+        assert x in [1, 2, 3]
+
+    # normal
+    for _ in range(10):
+        x = scaper.core._get_value_from_dist(('normal', 5, 1))
+        assert scaper.util.is_real_number(x)
+
+    # truncnorm
+    for _ in range(10):
+        x = scaper.core._get_value_from_dist(('truncnorm', 5, 10, 0, 10))
+        assert scaper.util.is_real_number(x)
+        assert 0 <= x <= 10
+
+    # COPY TESTS FROM test_validate_distribution (to ensure validation applied)
+    def __test_bad_tuple_list(tuple_list):
+        for t in tuple_list:
+            if isinstance(t, tuple):
+                print(t, len(t))
+            else:
+                print(t)
+            pytest.raises(ScaperError, scaper.core._get_value_from_dist, t)
+
+    # not tuple = error
+    nontuples = [[], 5, 'yes']
+    __test_bad_tuple_list(nontuples)
+
+    # tuple must be at least length 2
+    shortuples = [tuple(), tuple(['const'])]
+    __test_bad_tuple_list(shortuples)
+
+    # unsupported distribution tuple name
+    badnames = [('invalid', 1), ('constant', 1, 2, 3)]
+    __test_bad_tuple_list(badnames)
+
+    # supported dist tuples, but bad arugments
+    badargs = [('const', 1, 2),
+               ('choose', 1), ('choose', [], 1),
+               ('uniform', 1), ('uniform', 1, 2, 3), ('uniform', 2, 1),
+               ('uniform', 'one', 2), ('uniform', 1, 'two'),
+               ('uniform', 0, 1j), ('uniform', 1j, 2),
+               ('normal', 1),
+               ('normal', 1, 2, 3), ('normal', 1, -1),
+               ('normal', 0, 1j), ('normal', 1j, 1), ('normal', 'one', 2),
+               ('normal', 1, 'two'),
+               ('truncnorm', 1), ('truncnorm', 1, 2, 3),
+               ('truncnorm', 1, -1, 0, 1),
+               ('truncnorm', 0, 1j, 0, 1), ('truncnorm', 1j, 1, 0, 1),
+               ('truncnorm', 'one', 2, 0, 1), ('truncnorm', 1, 'two', 0, 1),
+               ('truncnorm', 1, 2, 'three', 5),
+               ('truncnorm', 1, 2, 3, 'four'),
+               ('truncnorm', 0, 2, 2, 0)]
+    __test_bad_tuple_list(badargs)
+
+
 def test_validate_distribution():
 
     def __test_bad_tuple_list(tuple_list):
