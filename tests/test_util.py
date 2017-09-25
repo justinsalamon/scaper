@@ -282,6 +282,10 @@ def test_is_real_array():
     non_reals = [None, 1j, 'yes']
     yes_reals = [-1e12, -1, -1.0, 0, 1, 1.0, 1e12]
 
+    # non-list non-array types must return false
+    for x in non_reals + yes_reals:
+        assert not is_real_array(x)
+
     # test array
     for nr in non_reals:
         assert not is_real_array([nr])
