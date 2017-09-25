@@ -640,7 +640,7 @@ def _validate_time_stretch(time_stretch_tuple):
                     'A "uniform" distribution tuple for time stretch must have '
                     'min_value > 0')
         elif time_stretch_tuple[0] == "normal":
-            time_stretch_tuple.warn(
+            warnings.warn(
                 'A "normal" distribution tuple for time stretch can result in '
                 'non-positives values, in which case the distribution will be '
                 're-sampled until a positive value is returned: this can '
