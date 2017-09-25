@@ -260,3 +260,33 @@ def test_validate_pitch_shift():
     # bad consts in list for choose
     for bv in bad_ps_values:
         __test_bad_ps_tuple(('choose', [bv]))
+
+
+def test_validate_time_stretch():
+
+    def __test_bad_ts_tuple(ts_tuple):
+        pytest.raises(ScaperError, scaper.core._validate_time_stretch,
+                      ts_tuple)
+
+    # bad consts
+    bad_ps_values = [None, 1j, 'yes', [], [5], -5, 0]
+    for bv in bad_ps_values:
+        __test_bad_ts_tuple(('const', bv))
+
+    # empty list for choose
+    __test_bad_ts_tuple(('choose', []))
+
+    # bad consts in list for choose
+    for bv in bad_ps_values:
+        __test_bad_ts_tuple(('choose', [bv]))
+
+    # bad start time in distributions
+    __test_bad_ts_tuple(('uniform', 0, 1))
+    __test_bad_ts_tuple(('uniform', -5, 1))
+    __test_bad_ts_tuple(('truncnorm', 5, 1, 0, 10))
+    __test_bad_ts_tuple(('truncnorm', 5, 1, -5, 10))
+
+    # Using normal dist must raise warning since can give neg or 0 values
+    pytest.warns(
+        ScaperWarning, scaper.core._validate_time_stretch, ('normal', 5, 1))
+
