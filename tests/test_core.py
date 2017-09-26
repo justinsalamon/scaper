@@ -2,12 +2,15 @@
 import scaper
 from scaper.scaper_exceptions import ScaperError
 from scaper.scaper_warnings import ScaperWarning
+from scaper.util import _close_temp_files
 import pytest
 from scaper.core import EventSpec
-# import tempfile
-from backports import tempfile
+import tempfile
+# from backports import tempfile
+import backports.tempfile
 import os
 import numpy as np
+import soundfile
 
 
 # FIXTURES
@@ -18,6 +21,83 @@ BG_PATH = 'tests/data/audio/background'
 # fg and bg labels for testing
 FB_LABELS = ['car_horn', 'human_voice', 'siren']
 BG_LABELS = ['park', 'restaurant', 'street']
+
+
+def test_trim():
+
+    # Things we want to test:
+    # 1. Jam trimmed correctly (mainly handled by jams.slice)
+    # 2. value dict updated correctly (event_time, event_duration, source_time)
+    # 3. scaper sandbox updated correctly (n_events, poly, gini, duration)
+    # 4. audio trimmed correctly
+
+    tmpfiles = []
+    with _close_temp_files(tmpfiles):
+
+        # Create all necessary temp files
+        orig_wav_file = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
+        orig_jam_file = tempfile.NamedTemporaryFile(suffix='.jams', delete=True)
+
+        trim_wav_file = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
+        trim_jam_file = tempfile.NamedTemporaryFile(suffix='.jams', delete=True)
+
+        trimstrict_wav_file = tempfile.NamedTemporaryFile(
+            suffix='.wav', delete=True)
+        trimstrict_jam_file = tempfile.NamedTemporaryFile(
+            suffix='.jams', delete=True)
+
+        tmpfiles.append(orig_wav_file)
+        tmpfiles.append(orig_jam_file)
+        tmpfiles.append(trim_wav_file)
+        tmpfiles.append(trim_jam_file)
+        tmpfiles.append(trimstrict_wav_file)
+        tmpfiles.append(trimstrict_jam_file)
+
+        # --- Create soundscape and save to tempfiles --- #
+        sc = scaper.Scaper(10, FG_PATH, BG_PATH)
+        sc.protected_labels = []
+        sc.ref_db = -50
+        sc.add_background(label=('const', 'park'),
+                          source_file=('choose', []),
+                          source_time=('const', 0))
+        # Add 5 events
+        start_times = [0, 2, 4, 6, 8]
+        for event_time in start_times:
+            sc.add_event(label=('const', 'siren'),
+                         source_file=('choose', []),
+                         source_time=('const', 0),
+                         event_time=('const', event_time),
+                         event_duration=('const', 2),
+                         snr=('const', 10),
+                         pitch_shift=None,
+                         time_stretch=None)
+        sc.generate(orig_wav_file.name, orig_jam_file.name)
+
+        # --- Trim soundscape using scaper.trim with strict=False --- #
+        scaper.trim(orig_wav_file.name, orig_jam_file.name,
+                    trim_wav_file.name, trim_jam_file.name,
+                    3, 7, strict=False, no_audio=False)
+
+        # --- Validate output --- #
+        # validate JAMS
+
+        # validate audio
+        orig_wav, sr = soundfile.read(orig_wav_file.name)
+        trim_wav, sr = soundfile.read(trim_wav_file.name)
+        assert np.allclose(trim_wav, orig_wav[3*sr:7*sr])
+
+        # --- Trim soundscape using scaper.trim with strict=True --- #
+        scaper.trim(orig_wav_file.name, orig_jam_file.name,
+                    trimstrict_wav_file.name, trimstrict_jam_file.name,
+                    3, 7, strict=True, no_audio=False)
+
+        # --- Validate output --- #
+        # validate JAMS
+
+        # validate audio
+        orig_wav, sr = soundfile.read(orig_wav_file.name)
+        trimstrict_wav, sr = soundfile.read(trimstrict_wav_file.name)
+        assert np.allclose(trimstrict_wav, orig_wav[3 * sr:7 * sr])
 
 
 def test_scaper_init():
@@ -208,7 +288,7 @@ def test_validate_source_file():
 
     # file must exist
     # create temp folder so we have path to file we know doesn't exist
-    with tempfile.TemporaryDirectory() as tmpdir:
+    with backports.tempfile.TemporaryDirectory() as tmpdir:
         nonfile = os.path.join(tmpdir, 'notafile')
         pytest.raises(ScaperError, scaper.core._validate_source_file,
                       ('const', nonfile), ('const', 'siren'))
@@ -223,7 +303,7 @@ def test_validate_source_file():
 
     # if choose, all files in list of files must exist
     sourcefile = 'tests/data/audio/foreground/siren/69-Siren-1.wav'
-    with tempfile.TemporaryDirectory() as tmpdir:
+    with backports.tempfile.TemporaryDirectory() as tmpdir:
         nonfile = os.path.join(tmpdir, 'notafile')
         source_file_list = [sourcefile, nonfile]
         pytest.raises(ScaperError, scaper.core._validate_source_file,
