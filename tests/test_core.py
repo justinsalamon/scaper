@@ -11,6 +11,7 @@ import backports.tempfile
 import os
 import numpy as np
 import soundfile
+import jams
 
 
 # FIXTURES
@@ -65,7 +66,7 @@ def test_trim():
         for event_time in start_times:
             sc.add_event(label=('const', 'siren'),
                          source_file=('choose', []),
-                         source_time=('const', 0),
+                         source_time=('const', 5),
                          event_time=('const', event_time),
                          event_duration=('const', 1),
                          snr=('const', 10),
@@ -80,11 +81,38 @@ def test_trim():
 
         # --- Validate output --- #
         # validate JAMS
+        trimjam = jams.load(trim_jam_file.name)
+        trimann = trimjam.annotations.search(namespace='sound_event')[0]
+        for idx, event in trimann.data.iterrows():
+            if event.value['role'] == 'background':
+                assert (event.time.total_seconds() == 0 and
+                        event.duration.total_seconds() == 4 and
+                        event.value['event_time'] == 0 and
+                        event.value['event_duration'] == 4 and
+                        event.value['source_time'] == 3)
+            else:
+                if event.time.total_seconds() == 0:
+                    assert (event.duration.total_seconds() == 0.5 and
+                            event.value['event_time'] == 0 and
+                            event.value['event_duration'] == 0.5 and
+                            event.value['source_time'] == 5.5)
+                elif event.time.total_seconds() == 1.5:
+                    assert (event.duration.total_seconds() == 1 and
+                            event.value['event_time'] == 1.5 and
+                            event.value['event_duration'] == 1 and
+                            event.value['source_time'] == 5)
+                elif event.time.total_seconds() == 3.5:
+                    assert (event.duration.total_seconds() == 0.5 and
+                            event.value['event_time'] == 3.5 and
+                            event.value['event_duration'] == 0.5 and
+                            event.value['source_time'] == 5)
+                else:
+                    assert False
 
         # validate audio
         orig_wav, sr = soundfile.read(orig_wav_file.name)
         trim_wav, sr = soundfile.read(trim_wav_file.name)
-        assert np.allclose(trim_wav, orig_wav[3*sr:7*sr])
+        assert np.allclose(trim_wav, orig_wav[3*sr:7*sr], atol=1e-8, rtol=1e-8)
 
 
 def test_scaper_init():
