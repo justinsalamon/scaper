@@ -61,13 +61,13 @@ def test_trim():
                           source_file=('choose', []),
                           source_time=('const', 0))
         # Add 5 events
-        start_times = [0, 2, 4, 6, 8]
+        start_times = [0.5, 2.5, 4.5, 6.5, 8.5]
         for event_time in start_times:
             sc.add_event(label=('const', 'siren'),
                          source_file=('choose', []),
                          source_time=('const', 0),
                          event_time=('const', event_time),
-                         event_duration=('const', 2),
+                         event_duration=('const', 1),
                          snr=('const', 10),
                          pitch_shift=None,
                          time_stretch=None)
@@ -76,7 +76,7 @@ def test_trim():
         # --- Trim soundscape using scaper.trim with strict=False --- #
         scaper.trim(orig_wav_file.name, orig_jam_file.name,
                     trim_wav_file.name, trim_jam_file.name,
-                    3, 7, strict=False, no_audio=False)
+                    3, 7, no_audio=False)
 
         # --- Validate output --- #
         # validate JAMS
@@ -85,19 +85,6 @@ def test_trim():
         orig_wav, sr = soundfile.read(orig_wav_file.name)
         trim_wav, sr = soundfile.read(trim_wav_file.name)
         assert np.allclose(trim_wav, orig_wav[3*sr:7*sr])
-
-        # --- Trim soundscape using scaper.trim with strict=True --- #
-        scaper.trim(orig_wav_file.name, orig_jam_file.name,
-                    trimstrict_wav_file.name, trimstrict_jam_file.name,
-                    3, 7, strict=True, no_audio=False)
-
-        # --- Validate output --- #
-        # validate JAMS
-
-        # validate audio
-        orig_wav, sr = soundfile.read(orig_wav_file.name)
-        trimstrict_wav, sr = soundfile.read(trimstrict_wav_file.name)
-        assert np.allclose(trimstrict_wav, orig_wav[3 * sr:7 * sr])
 
 
 def test_scaper_init():
