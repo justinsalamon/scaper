@@ -140,7 +140,7 @@ def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
 
 
 def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
-         end_time, strict=False, no_audio=False):
+         end_time, no_audio=False):
     '''
     Trim and audio file and corresponding Scaper JAMS file and save to disk.
 
@@ -165,13 +165,6 @@ def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
         Start time for trimmed audio/jams
     end_time : float
         End time for trimmed audio/jams
-    strict : bool
-        Passed to `jams.slice()`, when `False` (default) observations that lie
-        at the boundaries of the slicing range (see `Annotation.slice` for
-        details), will have their time and/or duration adjusted such that only
-        the part of the observation that lies within the slice range is kept.
-        When `True` such observations are discarded and not included in the
-        sliced annotation.
     no_audio : bool
         If true, operates on the jams only. Audio input and output paths
         don't have to point to valid files.
@@ -179,7 +172,7 @@ def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
     '''
     # First trim jams (might raise an error)
     jam = jams.load(jams_infile)
-    jam_sliced = jam.slice(start_time, end_time, strict=strict)
+    jam_sliced = jam.slice(start_time, end_time, strict=False)
 
     # Special work for annotations of the scaper 'sound_event' namespace
     for ann in jam_sliced.annotations:
