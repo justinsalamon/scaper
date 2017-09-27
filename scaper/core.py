@@ -181,8 +181,16 @@ def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
             # Adjust the event_time and event_duration of every event (in the
             # value field).
             # Also use this loop to count number of foreground events
+            # We also need to adjust the source_time for the background event
+            # and for any foreground events that get trimmed on the left (i.e.
+            # at the start of the event).
             n_events = 0
             for idx, line in ann.data.iterrows():
+                # If event trimmed (at start), we need to adjust source_time
+                if line.value['event_time'] < start_time:
+                    line.value['source_time'] += (
+                        start_time - line.value['event_time'])
+                # Adjust event start time and duration
                 line.value['event_time'] = line.time.total_seconds()
                 line.value['event_duration'] = line.duration.total_seconds()
                 if line.value['role'] == 'foreground':
