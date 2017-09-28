@@ -62,7 +62,8 @@ def test_generate_from_jams():
         # generate, then generate from the jams and compare audio files
         # repeat 5 time
         for _ in range(5):
-            sc.generate(orig_wav_file.name, orig_jam_file.name)
+            sc.generate(orig_wav_file.name, orig_jam_file.name,
+                        disable_instantiation_warnings=True)
             scaper.generate_from_jams(orig_jam_file.name, gen_wav_file.name)
 
             # validate audio
@@ -72,7 +73,8 @@ def test_generate_from_jams():
 
         # Now add in trimming!
         for _ in range(5):
-            sc.generate(orig_wav_file.name, orig_jam_file.name)
+            sc.generate(orig_wav_file.name, orig_jam_file.name,
+                        disable_instantiation_warnings=True)
             scaper.trim(orig_wav_file.name, orig_jam_file.name,
                         orig_wav_file.name, orig_jam_file.name,
                         np.random.uniform(0, 5), np.random.uniform(5, 10))
@@ -85,7 +87,8 @@ def test_generate_from_jams():
 
         # Double trimming
         for _ in range(2):
-            sc.generate(orig_wav_file.name, orig_jam_file.name)
+            sc.generate(orig_wav_file.name, orig_jam_file.name,
+                        disable_instantiation_warnings=True)
             scaper.trim(orig_wav_file.name, orig_jam_file.name,
                         orig_wav_file.name, orig_jam_file.name,
                         np.random.uniform(0, 2), np.random.uniform(8, 10))
@@ -96,7 +99,8 @@ def test_generate_from_jams():
 
         # Tripple trimming
         for _ in range(2):
-            sc.generate(orig_wav_file.name, orig_jam_file.name)
+            sc.generate(orig_wav_file.name, orig_jam_file.name,
+                        disable_instantiation_warnings=True)
             scaper.trim(orig_wav_file.name, orig_jam_file.name,
                         orig_wav_file.name, orig_jam_file.name,
                         np.random.uniform(0, 2), np.random.uniform(8, 10))
@@ -162,7 +166,8 @@ def test_trim():
                          snr=('const', 10),
                          pitch_shift=None,
                          time_stretch=None)
-        sc.generate(orig_wav_file.name, orig_jam_file.name)
+        sc.generate(orig_wav_file.name, orig_jam_file.name,
+                    disable_instantiation_warnings=True)
 
         # --- Trim soundscape using scaper.trim with strict=False --- #
         scaper.trim(orig_wav_file.name, orig_jam_file.name,
