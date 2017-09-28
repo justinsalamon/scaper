@@ -673,6 +673,50 @@ def test_scaper_instantiate_event():
     assert scaper.util.is_real_number(instantiated_event.pitch_shift)
     assert 0.8 <= instantiated_event.time_stretch <= 1.2
 
+    # when a label needs to be replaced because it's used already
+    fg_event8 = fg_event._replace(label=('choose', []))
+    # repeat several times to increase chance of hitting the line we need to
+    # test
+    for _ in range(20):
+        instantiated_event = sc._instantiate_event(
+            fg_event8, isbackground=False, allow_repeated_label=False,
+            allow_repeated_source=True, used_labels=['siren', 'human_voice'],
+            disable_instantiation_warnings=True)
+        assert instantiated_event.label == 'car_horn'
+
+    # when a source file needs to be replaced because it's used already
+    fg_event9 = fg_event._replace(label=('const', 'human_voice'))
+    # repeat several times to increase chance of hitting the line we need to
+    # test
+    for _ in range(20):
+        instantiated_event = sc._instantiate_event(
+            fg_event9, isbackground=False, allow_repeated_label=True,
+            allow_repeated_source=False,
+            used_labels=[],
+            used_source_files=(
+                ['tests/data/audio/foreground/human_voice/'
+                 '42-Human-Vocal-Voice-all-aboard_edit.wav',
+                 'tests/data/audio/foreground/human_voice/'
+                 '42-Human-Vocal-Voice-taxi-1_edit.wav']),
+            disable_instantiation_warnings=True)
+        assert instantiated_event.source_file == (
+            'tests/data/audio/foreground/human_voice/'
+            '42-Human-Vocal-Voice-taxi-2_edit.wav')
+
+    # Protected labels must have original source duration and source time 0
+    sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH,
+                       protected_labels='human_voice')
+    fg_event10 = fg_event._replace(
+        label=('const', 'human_voice'),
+        source_file=('const', 'tests/data/audio/foreground/human_voice/'
+                              '42-Human-Vocal-Voice-taxi-2_edit.wav'),
+        source_time=('const', 0.3),
+        event_duration=('const', 0.4))
+    instantiated_event = sc._instantiate_event(
+        fg_event10, disable_instantiation_warnings=True)
+    assert instantiated_event.source_time == 0
+    assert instantiated_event.event_duration == 0.806236
+
     # repeated label when not allowed throws error
     sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
     pytest.raises(ScaperError, sc._instantiate_event, fg_event,
@@ -697,7 +741,8 @@ def test_scaper_instantiate_event():
 
     # event duration longer than soundscape duration: warning
     fg_event3 = fg_event._replace(event_time=('const', 0),
-                                  event_duration=('const', 15))
+                                  event_duration=('const', 15),
+                                  time_stretch=None)
     pytest.warns(ScaperWarning, sc._instantiate_event, fg_event3)
 
     # stretched event duration longer than soundscape duration: warning
@@ -714,7 +759,8 @@ def test_scaper_instantiate_event():
 
     # event_time + event_duration > soundscape duration: warning
     fg_event6 = fg_event._replace(event_time=('const', 8),
-                                  event_duration=('const', 5))
+                                  event_duration=('const', 5),
+                                  time_stretch=None)
     pytest.warns(ScaperWarning, sc._instantiate_event, fg_event6)
 
     # event_time + stretched event_duration > soundscape duration: warning
