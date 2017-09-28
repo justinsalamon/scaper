@@ -852,6 +852,9 @@ class Scaper(object):
         event_time = ("const", 0)
         event_duration = ("const", self.duration)
         snr = ("const", 0)
+        role = 'background'
+        pitch_shift = None
+        time_stretch = None
 
         # Validate parameter format and values
         _validate_event(label, source_file, source_time, event_time,
@@ -864,9 +867,9 @@ class Scaper(object):
                              event_time=event_time,
                              event_duration=event_duration,
                              snr=snr,
-                             role='background',
-                             pitch_shift=None,
-                             time_stretch=None)
+                             role=role,
+                             pitch_shift=pitch_shift,
+                             time_stretch=time_stretch)
 
         # Add event to background spec
         self.bg_spec.append(bg_event)
@@ -1315,14 +1318,11 @@ class Scaper(object):
                 used_source_files=bg_source_files,
                 disable_instantiation_warnings=disable_instantiation_warnings)
 
-            if value.time_stretch is not None:
-                event_duration_stretched = (
-                    value.event_duration * value.time_stretch)
-            else:
-                event_duration_stretched = value.event_duration
-
+            # Note: add_background doesn't allow to set a time_stretch, i.e.
+            # it's hardcoded to time_stretch=None, so we don't need to check
+            # if value.time_stretch is not None, since it always will be.
             ann.append(time=value.event_time,
-                       duration=event_duration_stretched,
+                       duration=value.event_duration,
                        value=value._asdict(),
                        confidence=1.0)
 
