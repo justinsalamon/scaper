@@ -249,61 +249,6 @@ def test_trim():
         assert np.allclose(trim_wav, orig_wav[3*sr:7*sr], atol=1e-8, rtol=1e-8)
 
 
-def test_scaper_init():
-    '''
-    Test creation of Scaper object.
-    '''
-
-    # bad duration
-    sc = pytest.raises(ScaperError, scaper.Scaper, -5, FG_PATH, BG_PATH)
-
-    # all args valid
-    sc = scaper.Scaper(10.0, FG_PATH, BG_PATH)
-    assert sc.fg_path == FG_PATH
-    assert sc.bg_path == BG_PATH
-
-    # bad fg path
-    sc = pytest.raises(ScaperError, scaper.Scaper, 10.0,
-                       'tests/data/audio/wrong',
-                       BG_PATH)
-
-    # bad bg path
-    sc = pytest.raises(ScaperError, scaper.Scaper, 10.0,
-                       FG_PATH,
-                       'tests/data/audio/wrong')
-
-    # ensure fg_labels and bg_labels populated properly
-    sc = scaper.Scaper(10.0, FG_PATH, BG_PATH)
-    assert sorted(sc.fg_labels) == sorted(FB_LABELS)
-    assert sorted(sc.bg_labels) == sorted(BG_LABELS)
-
-
-def test_scaper_add_background():
-    '''
-    Test Scaper.add_background function
-
-    '''
-    sc = scaper.Scaper(10.0, FG_PATH, BG_PATH)
-
-    # Set concrete background label
-    # label, source_file, source_time
-    sc.add_background(("const", "park"), ("choose", []), ("const", 0))
-
-    # Check that event has been added to the background spec, and that the
-    # values that are set automatically by this method (event_time,
-    # event_duration, snr and role) are correctly set to their expected values.
-    bg_event_expected = EventSpec(label=("const", "park"),
-                                  source_file=("choose", []),
-                                  source_time=("const", 0),
-                                  event_time=("const", 0),
-                                  event_duration=("const", sc.duration),
-                                  snr=("const", 0),
-                                  role='background',
-                                  pitch_shift=None,
-                                  time_stretch=None)
-    assert sc.bg_spec == [bg_event_expected]
-
-
 def test_get_value_from_dist():
 
     # const
@@ -604,3 +549,88 @@ def test_validate_event():
                       allowed_labels=bal,
                       pitch_shift=None,
                       time_stretch=None)
+
+
+def test_scaper_init():
+    '''
+    Test creation of Scaper object.
+    '''
+
+    # bad duration
+    sc = pytest.raises(ScaperError, scaper.Scaper, -5, FG_PATH, BG_PATH)
+
+    # all args valid
+    sc = scaper.Scaper(10.0, FG_PATH, BG_PATH)
+    assert sc.fg_path == FG_PATH
+    assert sc.bg_path == BG_PATH
+
+    # bad fg path
+    sc = pytest.raises(ScaperError, scaper.Scaper, 10.0,
+                       'tests/data/audio/wrong',
+                       BG_PATH)
+
+    # bad bg path
+    sc = pytest.raises(ScaperError, scaper.Scaper, 10.0,
+                       FG_PATH,
+                       'tests/data/audio/wrong')
+
+    # ensure fg_labels and bg_labels populated properly
+    sc = scaper.Scaper(10.0, FG_PATH, BG_PATH)
+    assert sorted(sc.fg_labels) == sorted(FB_LABELS)
+    assert sorted(sc.bg_labels) == sorted(BG_LABELS)
+
+
+def test_scaper_add_background():
+    '''
+    Test Scaper.add_background function
+
+    '''
+    sc = scaper.Scaper(10.0, FG_PATH, BG_PATH)
+
+    # Set concrete background label
+    # label, source_file, source_time
+    sc.add_background(("const", "park"), ("choose", []), ("const", 0))
+
+    # Check that event has been added to the background spec, and that the
+    # values that are set automatically by this method (event_time,
+    # event_duration, snr and role) are correctly set to their expected values.
+    bg_event_expected = EventSpec(label=("const", "park"),
+                                  source_file=("choose", []),
+                                  source_time=("const", 0),
+                                  event_time=("const", 0),
+                                  event_duration=("const", sc.duration),
+                                  snr=("const", 0),
+                                  role='background',
+                                  pitch_shift=None,
+                                  time_stretch=None)
+    assert sc.bg_spec == [bg_event_expected]
+
+
+def test_scaper_add_event():
+
+    sc = scaper.Scaper(10.0, FG_PATH, BG_PATH)
+
+    # Initially fg_spec should be empty
+    assert sc.fg_spec == []
+
+    # Add one event
+    sc.add_event(label=('const', 'siren'),
+                 source_file=('choose', []),
+                 source_time=('const', 0),
+                 event_time=('uniform', 0, 9),
+                 event_duration=('truncnorm', 2, 1, 1, 3),
+                 snr=('uniform', 10, 20),
+                 pitch_shift=('normal', 0, 1),
+                 time_stretch=('uniform', 0.8, 1.2))
+    # Now should be one event in fg_spec
+    assert len(sc.fg_spec) == 1
+    fg_event_expected = EventSpec(label=('const', 'siren'),
+                                  source_file=('choose', []),
+                                  source_time=('const', 0),
+                                  event_time=('uniform', 0, 9),
+                                  event_duration=('truncnorm', 2, 1, 1, 3),
+                                  snr=('uniform', 10, 20),
+                                  role='foreground',
+                                  pitch_shift=('normal', 0, 1),
+                                  time_stretch=('uniform', 0.8, 1.2))
+    assert sc.fg_spec[0] == fg_event_expected
