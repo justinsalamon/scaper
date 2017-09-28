@@ -1549,7 +1549,7 @@ class Scaper(object):
                     if reverb is not None:
                         tfm.reverb(reverberance=reverb * 100)
                     # TODO: do we want to normalize the final output?
-                    tfm.build(tmpfiles[0], audio_path)
+                    tfm.build(tmpfiles[0].name, audio_path)
                 else:
                     cmb = sox.Combiner()
                     if reverb is not None:
