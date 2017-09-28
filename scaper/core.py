@@ -1544,7 +1544,7 @@ class Scaper(object):
                     raise ScaperWarning(
                         "No events to synthesize (silent soundscape), no audio "
                         "saved to disk.")
-                if len(tmpfiles) == 1:
+                elif len(tmpfiles) == 1:
                     tfm = sox.Transformer()
                     if reverb is not None:
                         tfm.reverb(reverberance=reverb * 100)
