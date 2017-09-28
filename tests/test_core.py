@@ -24,6 +24,66 @@ FB_LABELS = ['car_horn', 'human_voice', 'siren']
 BG_LABELS = ['park', 'restaurant', 'street']
 
 
+def test_generate_from_jams():
+
+    tmpfiles = []
+    with _close_temp_files(tmpfiles):
+
+        # Create all necessary temp files
+        orig_wav_file = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
+        orig_jam_file = tempfile.NamedTemporaryFile(suffix='.jams', delete=True)
+
+        gen_wav_file = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
+        gen_jam_file = tempfile.NamedTemporaryFile(suffix='.jams', delete=True)
+
+        tmpfiles.append(orig_wav_file)
+        tmpfiles.append(orig_jam_file)
+        tmpfiles.append(gen_wav_file)
+        tmpfiles.append(gen_jam_file)
+
+        # --- Define scaper --- *
+        sc = scaper.Scaper(10, FG_PATH, BG_PATH)
+        sc.protected_labels = []
+        sc.ref_db = -50
+        sc.add_background(label=('choose', []),
+                          source_file=('choose', []),
+                          source_time=('const', 0))
+        # Add 5 events
+        for _ in range(5):
+            sc.add_event(label=('choose', []),
+                         source_file=('choose', []),
+                         source_time=('const', 0),
+                         event_time=('uniform', 0, 9),
+                         event_duration=('choose', [1, 2, 3]),
+                         snr=('uniform', 10, 20),
+                         pitch_shift=('uniform', -1, 1),
+                         time_stretch=('uniform', 0.8, 1.2))
+
+        # generate, then generate from the jams and compare audio files
+        # repeat 5 time
+        for _ in range(5):
+            sc.generate(orig_wav_file.name, orig_jam_file.name)
+            scaper.generate_from_jams(orig_jam_file.name, gen_wav_file.name)
+
+            # validate audio
+            orig_wav, sr = soundfile.read(orig_wav_file.name)
+            gen_wav, sr = soundfile.read(gen_wav_file.name)
+            assert np.allclose(gen_wav, orig_wav, atol=1e-8, rtol=1e-8)
+
+        # Now add in trimming!
+        for _ in range(5):
+            sc.generate(orig_wav_file.name, orig_jam_file.name)
+            scaper.trim(orig_wav_file.name, orig_jam_file.name,
+                        orig_wav_file.name, orig_jam_file.name,
+                        np.random.uniform(0, 5), np.random.uniform(5, 10))
+            scaper.generate_from_jams(orig_jam_file.name, gen_wav_file.name)
+
+            # validate audio
+            orig_wav, sr = soundfile.read(orig_wav_file.name)
+            gen_wav, sr = soundfile.read(gen_wav_file.name)
+            assert np.allclose(gen_wav, orig_wav, atol=1e-8, rtol=1e-8)
+
+
 def test_trim():
 
     # Things we want to test:
