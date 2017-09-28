@@ -141,6 +141,10 @@ def test_generate_from_jams():
                         disable_instantiation_warnings=True)
             scaper.generate_from_jams(orig_jam_file.name, gen_wav_file.name,
                                       fg_path=ALT_FG_PATH, bg_path=ALT_BG_PATH)
+            # validate audio
+            orig_wav, sr = soundfile.read(orig_wav_file.name)
+            gen_wav, sr = soundfile.read(gen_wav_file.name)
+            assert np.allclose(gen_wav, orig_wav, atol=1e-8, rtol=1e-8)
 
 
 def test_trim():
