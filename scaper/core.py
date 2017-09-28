@@ -178,35 +178,11 @@ def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
     for ann in jam_sliced.annotations:
         if ann.namespace == 'sound_event':
 
-            # Adjust the event_time and event_duration of every event (in the
-            # value field).
-            # Also use this loop to count number of foreground events
-            # We also need to adjust the source_time for the background event
-            # and for any foreground events that get trimmed on the left (i.e.
-            # at the start of the event).
-            n_events = 0
-            for idx, line in ann.data.iterrows():
-                # If event trimmed (at start), we need to adjust source_time
-                # Must factor in time stretching
-                if line.value['event_time'] < start_time:
-                    if line.value['time_stretch'] is None:
-                        line.value['source_time'] += (
-                            start_time - line.value['event_time'])
-                    else:
-                        line.value['source_time'] += (
-                            (start_time - line.value['event_time']) /
-                            line.value['time_stretch'])
-                # Adjust event start time
-                line.value['event_time'] = line.time.total_seconds()
-                # Adjust duration, but careful might have been time-stretched!
-                if line.value['time_stretch'] is None:
-                    line.value['event_duration'] = line.duration.total_seconds()
-                else:
-                    line.value['event_duration'] = (
-                        float(line.duration.total_seconds()) /
-                        line.value['time_stretch'])
-                if line.value['role'] == 'foreground':
-                    n_events += 1
+            # DON'T MODIFY event's value dict! Keeps original instantiated
+            # values for reconstruction / reproducibility.
+            # Count number of FG events
+            n_events = np.sum(
+                [v['role'] == 'foreground' for v in ann.data.value])
 
             # Re-compute max polyphony
             poly = max_polyphony(ann)
