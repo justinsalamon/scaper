@@ -26,6 +26,21 @@ BG_LABELS = ['park', 'restaurant', 'street']
 
 def test_generate_from_jams():
 
+    # Test for invalid jams: no annotations
+    tmpfiles = []
+    with _close_temp_files(tmpfiles):
+        jam = jams.JAMS()
+        jam.file_metadata.duration = 10
+
+        jam_file = tempfile.NamedTemporaryFile(suffix='.jams', delete=True)
+        gen_file = tempfile.NamedTemporaryFile(suffix='.jams', delete=True)
+
+        jam.save(jam_file.name)
+
+        pytest.raises(ScaperError, scaper.generate_from_jams, jam_file.name,
+                      gen_file.name)
+
+    # Test for valid jams files
     tmpfiles = []
     with _close_temp_files(tmpfiles):
 
