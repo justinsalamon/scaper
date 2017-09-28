@@ -187,12 +187,24 @@ def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
             n_events = 0
             for idx, line in ann.data.iterrows():
                 # If event trimmed (at start), we need to adjust source_time
+                # Must factor in time stretching
                 if line.value['event_time'] < start_time:
-                    line.value['source_time'] += (
-                        start_time - line.value['event_time'])
-                # Adjust event start time and duration
+                    if line.value['time_stretch'] is None:
+                        line.value['source_time'] += (
+                            start_time - line.value['event_time'])
+                    else:
+                        line.value['source_time'] += (
+                            (start_time - line.value['event_time']) /
+                            line.value['time_stretch'])
+                # Adjust event start time
                 line.value['event_time'] = line.time.total_seconds()
-                line.value['event_duration'] = line.duration.total_seconds()
+                # Adjust duration, but careful might have been time-stretched!
+                if line.value['time_stretch'] is None:
+                    line.value['event_duration'] = line.duration.total_seconds()
+                else:
+                    line.value['event_duration'] = (
+                        float(line.duration.total_seconds()) /
+                        line.value['time_stretch'])
                 if line.value['role'] == 'foreground':
                     n_events += 1
 
