@@ -134,6 +134,22 @@ def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
     sc._generate_audio(audio_outfile, ann, reverb=reverb,
                        disable_sox_warnings=True)
 
+    # If there are slice (trim) operations, need to perform them!
+    if 'slice' in ann.sandbox.keys():
+        for sliceop in ann.sandbox['slice']:
+            # must use temp file in order to save to same file
+            tmpfiles = []
+            with _close_temp_files(tmpfiles):
+                # Create tmp file
+                tmpfiles.append(
+                    tempfile.NamedTemporaryFile(suffix='.wav', delete=True))
+                # Save trimmed result to temp file
+                tfm = sox.Transformer()
+                tfm.trim(sliceop['slice_start'], sliceop['slice_end'])
+                tfm.build(audio_outfile, tmpfiles[-1].name)
+                # Copy result back to original file
+                shutil.copyfile(tmpfiles[-1].name, audio_outfile)
+
     # Optionally save new jams file
     if jams_outfile is not None:
         jam.save(jams_outfile)
@@ -1499,11 +1515,25 @@ class Scaper(object):
                                 e.value['role']))
 
                 # Finally combine all the files and optionally apply reverb
-                cmb = sox.Combiner()
-                if reverb is not None:
-                    cmb.reverb(reverberance=reverb * 100)
-                # TODO: do we want to normalize the final output?
-                cmb.build([t.name for t in tmpfiles], audio_path, 'mix')
+                # If we have more than one tempfile (i.e.g background + at
+                # least one foreground event, we need a combiner. If there's
+                # only the background track, then we need a transformer!
+                if len(tmpfiles) == 0:
+                    raise ScaperWarning(
+                        "No events to synthesize (silent soundscape), no audio "
+                        "saved to disk.")
+                if len(tmpfiles) == 1:
+                    tfm = sox.Transformer()
+                    if reverb is not None:
+                        tfm.reverb(reverberance=reverb * 100)
+                    # TODO: do we want to normalize the final output?
+                    tfm.build(tmpfiles[0], audio_path)
+                else:
+                    cmb = sox.Combiner()
+                    if reverb is not None:
+                        cmb.reverb(reverberance=reverb * 100)
+                    # TODO: do we want to normalize the final output?
+                    cmb.build([t.name for t in tmpfiles], audio_path, 'mix')
 
     def generate(self, audio_path, jams_path, allow_repeated_label=True,
                  allow_repeated_source=True,
