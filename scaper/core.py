@@ -181,8 +181,10 @@ def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
             # DON'T MODIFY event's value dict! Keeps original instantiated
             # values for reconstruction / reproducibility.
             # Count number of FG events
-            n_events = np.sum(
-                [v['role'] == 'foreground' for v in ann.data.value])
+            n_events = 0
+            for idx, line in ann.data.iterrows():
+                if line.value['role'] == 'foreground':
+                    n_events += 1
 
             # Re-compute max polyphony
             poly = max_polyphony(ann)
