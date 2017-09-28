@@ -19,6 +19,9 @@ import jams
 FG_PATH = 'tests/data/audio/foreground'
 BG_PATH = 'tests/data/audio/background'
 
+ALT_FG_PATH = 'tests/data/audio_alt_path/foreground'
+ALT_BG_PATH = 'tests/data/audio_alt_path/background'
+
 # fg and bg labels for testing
 FB_LABELS = ['car_horn', 'human_voice', 'siren']
 BG_LABELS = ['park', 'restaurant', 'street']
@@ -131,6 +134,13 @@ def test_generate_from_jams():
             orig_wav, sr = soundfile.read(orig_wav_file.name)
             gen_wav, sr = soundfile.read(gen_wav_file.name)
             assert np.allclose(gen_wav, orig_wav, atol=1e-8, rtol=1e-8)
+
+        # Test with new FG and BG paths
+        for _ in range(5):
+            sc.generate(orig_wav_file.name, orig_jam_file.name,
+                        disable_instantiation_warnings=True)
+            scaper.generate_from_jams(orig_jam_file.name, gen_wav_file.name,
+                                      fg_path=ALT_FG_PATH, bg_path=ALT_BG_PATH)
 
 
 def test_trim():
