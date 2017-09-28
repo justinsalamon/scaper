@@ -987,7 +987,8 @@ class Scaper(object):
                            allow_repeated_label=True,
                            allow_repeated_source=True,
                            used_labels=[],
-                           used_source_files=[]):
+                           used_source_files=[],
+                           disable_instantiation_warnings=False):
         '''
         Instantiate an event specification.
 
@@ -1022,6 +1023,10 @@ class Scaper(object):
             the current soundscape instantiation. The source file selected for
             instantiating the event will be appended to this list unless its
             already in it.
+        disable_instantiation_warnings : bool
+            When True (default is False), warnings stemming from event
+            instantiation (primarily about automatic duration adjustments) are
+            disabled. Not recommended other than for testing purposes.
 
         Returns
         -------
@@ -1120,11 +1125,12 @@ class Scaper(object):
         if (event_duration > source_duration):
             old_duration = event_duration  # for warning
             event_duration = source_duration
-            warnings.warn(
-                "{:s} event duration ({:.2f}) is greater that source "
-                "duration ({:.2f}), changing to {:.2f}".format(
-                    label, old_duration, source_duration, event_duration),
-                ScaperWarning)
+            if not disable_instantiation_warnings:
+                warnings.warn(
+                    "{:s} event duration ({:.2f}) is greater that source "
+                    "duration ({:.2f}), changing to {:.2f}".format(
+                        label, old_duration, source_duration, event_duration),
+                    ScaperWarning)
 
         # Get time stretch value
         if event.time_stretch is None:
@@ -1144,21 +1150,27 @@ class Scaper(object):
             if (event_duration > self.duration):
                 old_duration = event_duration  # for warning
                 event_duration = self.duration
-                warnings.warn(
-                    "{:s} event duration ({:.2f}) is greater than the "
-                    "soundscape duration ({:.2f}), changing to {:.2f}".format(
-                        label, old_duration, self.duration, self.duration))
+                if not disable_instantiation_warnings:
+                    warnings.warn(
+                        "{:s} event duration ({:.2f}) is greater than the "
+                        "soundscape duration ({:.2f}), changing to "
+                        "{:.2f}".format(
+                            label, old_duration, self.duration, self.duration),
+                        ScaperWarning)
         else:
             if (event_duration_stretched > self.duration):
                 old_duration = event_duration  # for warning
                 event_duration = self.duration / float(time_stretch)
-                warnings.warn(
-                    "{:s} event duration ({:.2f}) with stretch factor {:.2f} "
-                    "gives {:.2f} which is greater than the soundscape "
-                    "duration ({:.2f}), changing to {:.2f}".format(
-                        label, old_duration, time_stretch,
-                        event_duration_stretched, self.duration,
-                        event_duration))
+                if not disable_instantiation_warnings:
+                    warnings.warn(
+                        "{:s} event duration ({:.2f}) with stretch factor "
+                        "{:.2f} gives {:.2f} which is greater than the "
+                        "soundscape duration ({:.2f}), changing to "
+                        "{:.2f}".format(
+                            label, old_duration, time_stretch,
+                            event_duration_stretched, self.duration,
+                            event_duration),
+                        ScaperWarning)
 
         # determine source time
         source_time = -np.Inf
@@ -1171,13 +1183,14 @@ class Scaper(object):
         if source_time + event_duration > source_duration:
             old_source_time = source_time
             source_time = source_duration - event_duration
-            warnings.warn(
-                '{:s} source time ({:.2f}) is too great given event '
-                'duration ({:.2f}) and source duration ({:.2f}), changed '
-                'to {:.2f}.'.format(
-                    label, old_source_time, event_duration,
-                    source_duration, source_time),
-                ScaperWarning)
+            if not disable_instantiation_warnings:
+                warnings.warn(
+                    '{:s} source time ({:.2f}) is too great given event '
+                    'duration ({:.2f}) and source duration ({:.2f}), changed '
+                    'to {:.2f}.'.format(
+                        label, old_source_time, event_duration,
+                        source_duration, source_time),
+                    ScaperWarning)
 
         # determine event time
         # for background events the event time is fixed to 0, but for
@@ -1194,24 +1207,26 @@ class Scaper(object):
             if event_time + event_duration > self.duration:
                 old_event_time = event_time
                 event_time = self.duration - event_duration
-                warnings.warn(
-                    '{:s} event time ({:.2f}) is too great given event '
-                    'duration ({:.2f}) and soundscape duration ({:.2f}), '
-                    'changed to {:.2f}.'.format(
-                        label, old_event_time, event_duration,
-                        self.duration, event_time),
-                    ScaperWarning)
+                if not disable_instantiation_warnings:
+                    warnings.warn(
+                        '{:s} event time ({:.2f}) is too great given event '
+                        'duration ({:.2f}) and soundscape duration ({:.2f}), '
+                        'changed to {:.2f}.'.format(
+                            label, old_event_time, event_duration,
+                            self.duration, event_time),
+                        ScaperWarning)
         else:
             if event_time + event_duration_stretched > self.duration:
                 old_event_time = event_time
                 event_time = self.duration - event_duration_stretched
-                warnings.warn(
-                    '{:s} event time ({:.2f}) is too great given stretched '
-                    'event duration ({:.2f}) and soundscape duration ({:.2f}), '
-                    'changed to {:.2f}.'.format(
-                        label, old_event_time, event_duration_stretched,
-                        self.duration, event_time),
-                    ScaperWarning)
+                if not disable_instantiation_warnings:
+                    warnings.warn(
+                        '{:s} event time ({:.2f}) is too great given '
+                        'stretched event duration ({:.2f}) and soundscape '
+                        'duration ({:.2f}), changed to {:.2f}.'.format(
+                            label, old_event_time, event_duration_stretched,
+                            self.duration, event_time),
+                        ScaperWarning)
 
         # determine snr
         snr = _get_value_from_dist(event.snr)
@@ -1240,7 +1255,8 @@ class Scaper(object):
         return instantiated_event
 
     def _instantiate(self, allow_repeated_label=True,
-                     allow_repeated_source=True, reverb=None):
+                     allow_repeated_source=True, reverb=None,
+                     disable_instantiation_warnings=False):
         '''
         Instantiate a specific soundscape in JAMS format based on the current
         specification.
@@ -1261,6 +1277,10 @@ class Scaper(object):
         reverb : float or None
             Has no effect on this function other than being documented in the
             instantiated annotation's sandbox. Passed by `Scaper.generate`.
+        disable_instantiation_warnings : bool
+            When True (default is False), warnings stemming from event
+            instantiation (primarily about automatic duration adjustments) are
+            disabled. Not recommended other than for testing purposes.
 
         Returns
         -------
@@ -1292,7 +1312,8 @@ class Scaper(object):
                 allow_repeated_label=allow_repeated_label,
                 allow_repeated_source=allow_repeated_source,
                 used_labels=bg_labels,
-                used_source_files=bg_source_files)
+                used_source_files=bg_source_files,
+                disable_instantiation_warnings=disable_instantiation_warnings)
 
             if value.time_stretch is not None:
                 event_duration_stretched = (
@@ -1315,7 +1336,8 @@ class Scaper(object):
                 allow_repeated_label=allow_repeated_label,
                 allow_repeated_source=allow_repeated_source,
                 used_labels=fg_labels,
-                used_source_files=fg_source_files)
+                used_source_files=fg_source_files,
+                disable_instantiation_warnings=disable_instantiation_warnings)
 
             if value.time_stretch is not None:
                 event_duration_stretched = (
@@ -1538,7 +1560,7 @@ class Scaper(object):
     def generate(self, audio_path, jams_path, allow_repeated_label=True,
                  allow_repeated_source=True,
                  reverb=None, disable_sox_warnings=True, no_audio=False,
-                 txt_path=None):
+                 txt_path=None, disable_instantiation_warnings=False):
         '''
         Generate a soundscape based on the current specification and save to
         disk as both an audio file and a JAMS file describing the soundscape.
@@ -1571,6 +1593,10 @@ class Scaper(object):
             If not None, in addition to the JAMS file output a simplified
             annotation in a space separated format [onset  offset  label],
             saved to the provided path (good for loading labels in audacity).
+        disable_instantiation_warnings : bool
+            When True (default is False), warnings stemming from event
+            instantiation (primarily about automatic duration adjustments) are
+            disabled. Not recommended other than for testing purposes.
 
         Raises
         ------
@@ -1594,7 +1620,8 @@ class Scaper(object):
         jam = self._instantiate(
             allow_repeated_label=allow_repeated_label,
             allow_repeated_source=allow_repeated_source,
-            reverb=reverb)
+            reverb=reverb,
+            disable_instantiation_warnings=disable_instantiation_warnings)
         ann = jam.annotations.search(namespace='sound_event')[0]
 
         # Generate the audio and save to disk
