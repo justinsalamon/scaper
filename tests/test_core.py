@@ -579,6 +579,13 @@ def test_scaper_init():
     assert sorted(sc.fg_labels) == sorted(FB_LABELS)
     assert sorted(sc.bg_labels) == sorted(BG_LABELS)
 
+    # ensure default values have been set
+    assert sc.sr == 44100
+    assert sc.ref_db == -12
+    assert sc.n_channels == 1
+    assert sc.fade_in_len == 0.01  # 10 ms
+    assert sc.fade_out_len == 0.01  # 10 ms
+
 
 def test_scaper_add_background():
     '''
