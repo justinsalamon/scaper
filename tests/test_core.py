@@ -641,3 +641,84 @@ def test_scaper_add_event():
                                   pitch_shift=('normal', 0, 1),
                                   time_stretch=('uniform', 0.8, 1.2))
     assert sc.fg_spec[0] == fg_event_expected
+
+
+def test_scaper_instantiate_event():
+
+    # GF EVENT TO WORK WITH
+    fg_event = EventSpec(label=('const', 'siren'),
+                         source_file=('choose', []),
+                         source_time=('const', 0),
+                         event_time=('uniform', 0, 9),
+                         event_duration=('truncnorm', 2, 1, 1, 3),
+                         snr=('uniform', 10, 20),
+                         role='foreground',
+                         pitch_shift=('normal', 0, 1),
+                         time_stretch=('uniform', 0.8, 1.2))
+
+    # test valid case
+    sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
+    instantiated_event = sc._instantiate_event(
+        fg_event, isbackground=False, allow_repeated_label=True,
+        allow_repeated_source=True, used_labels=[], used_source_files=[],
+        disable_instantiation_warnings=True)
+    assert instantiated_event.label == 'siren'
+    assert instantiated_event.source_file == (
+        'tests/data/audio/foreground/siren/69-Siren-1.wav')
+    assert instantiated_event.source_time == 0
+    assert 0 <= instantiated_event.event_time <= 9
+    assert 1 <= instantiated_event.event_duration <= 3
+    assert 10 <= instantiated_event.snr <= 20
+    assert instantiated_event.role == 'foreground'
+    assert scaper.util.is_real_number(instantiated_event.pitch_shift)
+    assert 0.8 <= instantiated_event.time_stretch <= 1.2
+
+    # repeated label when not allowed throws error
+    sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
+    pytest.raises(ScaperError, sc._instantiate_event, fg_event,
+                  isbackground=False,
+                  allow_repeated_label=False,
+                  allow_repeated_source=True,
+                  used_labels=['siren'])
+
+    # repeated source when not allowed throws error
+    pytest.raises(ScaperError, sc._instantiate_event, fg_event,
+                  isbackground=False,
+                  allow_repeated_label=True,
+                  allow_repeated_source=False,
+                  used_labels=['siren'],
+                  used_source_files=(
+                      ['tests/data/audio/foreground/siren/69-Siren-1.wav']))
+
+    # event duration longer than source duration: warning
+    fg_event2 = fg_event._replace(label=('const', 'car_horn'),
+                                  event_duration=('const', 5))
+    pytest.warns(ScaperWarning, sc._instantiate_event, fg_event2)
+
+    # event duration longer than soundscape duration: warning
+    fg_event3 = fg_event._replace(event_time=('const', 0),
+                                  event_duration=('const', 15))
+    pytest.warns(ScaperWarning, sc._instantiate_event, fg_event3)
+
+    # stretched event duration longer than soundscape duration: warning
+    fg_event4 = fg_event._replace(event_time=('const', 0),
+                                  event_duration=('const', 6),
+                                  time_stretch=('const', 2))
+    pytest.warns(ScaperWarning, sc._instantiate_event, fg_event4)
+
+    # source_time + event_duration > source_duration: warning
+    fg_event5 = fg_event._replace(event_time=('const', 0),
+                                  event_duration=('const', 8),
+                                  source_time=('const', 20))
+    pytest.warns(ScaperWarning, sc._instantiate_event, fg_event5)
+
+    # event_time + event_duration > soundscape duration: warning
+    fg_event6 = fg_event._replace(event_time=('const', 8),
+                                  event_duration=('const', 5))
+    pytest.warns(ScaperWarning, sc._instantiate_event, fg_event6)
+
+    # event_time + stretched event_duration > soundscape duration: warning
+    fg_event7 = fg_event._replace(event_time=('const', 5),
+                                  event_duration=('const', 4),
+                                  time_stretch=('const', 2))
+    pytest.warns(ScaperWarning, sc._instantiate_event, fg_event7)
