@@ -146,6 +146,13 @@ def test_generate_from_jams():
             gen_wav, sr = soundfile.read(gen_wav_file.name)
             assert np.allclose(gen_wav, orig_wav, atol=1e-8, rtol=1e-8)
 
+        # Ensure jam file saved correctly
+        scaper.generate_from_jams(orig_jam_file.name, gen_wav_file.name,
+                                  jams_outfile=gen_jam_file.name)
+        orig_jam = jams.load(orig_jam_file.name)
+        gen_jam = jams.load(gen_jam_file.name)
+        assert orig_jam == gen_jam
+
 
 def test_trim():
 
