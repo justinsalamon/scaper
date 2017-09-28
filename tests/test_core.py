@@ -84,95 +84,98 @@ BG_LABELS = ['park', 'restaurant', 'street']
 #             assert np.allclose(gen_wav, orig_wav, atol=1e-8, rtol=1e-8)
 #
 #
-# def test_trim():
-#
-#     # Things we want to test:
-#     # 1. Jam trimmed correctly (mainly handled by jams.slice)
-#     # 2. value dict updated correctly (event_time, event_duration, source_time)
-#     # 3. scaper sandbox updated correctly (n_events, poly, gini, duration)
-#     # 4. audio trimmed correctly
-#
-#     tmpfiles = []
-#     with _close_temp_files(tmpfiles):
-#
-#         # Create all necessary temp files
-#         orig_wav_file = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
-#         orig_jam_file = tempfile.NamedTemporaryFile(suffix='.jams', delete=True)
-#
-#         trim_wav_file = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
-#         trim_jam_file = tempfile.NamedTemporaryFile(suffix='.jams', delete=True)
-#
-#         trimstrict_wav_file = tempfile.NamedTemporaryFile(
-#             suffix='.wav', delete=True)
-#         trimstrict_jam_file = tempfile.NamedTemporaryFile(
-#             suffix='.jams', delete=True)
-#
-#         tmpfiles.append(orig_wav_file)
-#         tmpfiles.append(orig_jam_file)
-#         tmpfiles.append(trim_wav_file)
-#         tmpfiles.append(trim_jam_file)
-#         tmpfiles.append(trimstrict_wav_file)
-#         tmpfiles.append(trimstrict_jam_file)
-#
-#         # --- Create soundscape and save to tempfiles --- #
-#         sc = scaper.Scaper(10, FG_PATH, BG_PATH)
-#         sc.protected_labels = []
-#         sc.ref_db = -50
-#         sc.add_background(label=('const', 'park'),
-#                           source_file=('choose', []),
-#                           source_time=('const', 0))
-#         # Add 5 events
-#         start_times = [0.5, 2.5, 4.5, 6.5, 8.5]
-#         for event_time in start_times:
-#             sc.add_event(label=('const', 'siren'),
-#                          source_file=('choose', []),
-#                          source_time=('const', 5),
-#                          event_time=('const', event_time),
-#                          event_duration=('const', 1),
-#                          snr=('const', 10),
-#                          pitch_shift=None,
-#                          time_stretch=None)
-#         sc.generate(orig_wav_file.name, orig_jam_file.name)
-#
-#         # --- Trim soundscape using scaper.trim with strict=False --- #
-#         scaper.trim(orig_wav_file.name, orig_jam_file.name,
-#                     trim_wav_file.name, trim_jam_file.name,
-#                     3, 7, no_audio=False)
-#
-#         # --- Validate output --- #
-#         # validate JAMS
-#         trimjam = jams.load(trim_jam_file.name)
-#         trimann = trimjam.annotations.search(namespace='sound_event')[0]
-#         for idx, event in trimann.data.iterrows():
-#             if event.value['role'] == 'background':
-#                 assert (event.time.total_seconds() == 0 and
-#                         event.duration.total_seconds() == 4 and
-#                         event.value['event_time'] == 0 and
-#                         event.value['event_duration'] == 4 and
-#                         event.value['source_time'] == 3)
-#             else:
-#                 if event.time.total_seconds() == 0:
-#                     assert (event.duration.total_seconds() == 0.5 and
-#                             event.value['event_time'] == 0 and
-#                             event.value['event_duration'] == 0.5 and
-#                             event.value['source_time'] == 5.5)
-#                 elif event.time.total_seconds() == 1.5:
-#                     assert (event.duration.total_seconds() == 1 and
-#                             event.value['event_time'] == 1.5 and
-#                             event.value['event_duration'] == 1 and
-#                             event.value['source_time'] == 5)
-#                 elif event.time.total_seconds() == 3.5:
-#                     assert (event.duration.total_seconds() == 0.5 and
-#                             event.value['event_time'] == 3.5 and
-#                             event.value['event_duration'] == 0.5 and
-#                             event.value['source_time'] == 5)
-#                 else:
-#                     assert False
-#
-#         # validate audio
-#         orig_wav, sr = soundfile.read(orig_wav_file.name)
-#         trim_wav, sr = soundfile.read(trim_wav_file.name)
-#         assert np.allclose(trim_wav, orig_wav[3*sr:7*sr], atol=1e-8, rtol=1e-8)
+def test_trim():
+
+    # Things we want to test:
+    # 1. Jam trimmed correctly (mainly handled by jams.slice)
+    # 2. value dict updated correctly (event_time, event_duration, source_time)
+    # 3. scaper sandbox updated correctly (n_events, poly, gini, duration)
+    # 4. audio trimmed correctly
+
+    tmpfiles = []
+    with _close_temp_files(tmpfiles):
+
+        # Create all necessary temp files
+        orig_wav_file = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
+        orig_jam_file = tempfile.NamedTemporaryFile(suffix='.jams', delete=True)
+
+        trim_wav_file = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
+        trim_jam_file = tempfile.NamedTemporaryFile(suffix='.jams', delete=True)
+
+        trimstrict_wav_file = tempfile.NamedTemporaryFile(
+            suffix='.wav', delete=True)
+        trimstrict_jam_file = tempfile.NamedTemporaryFile(
+            suffix='.jams', delete=True)
+
+        tmpfiles.append(orig_wav_file)
+        tmpfiles.append(orig_jam_file)
+        tmpfiles.append(trim_wav_file)
+        tmpfiles.append(trim_jam_file)
+        tmpfiles.append(trimstrict_wav_file)
+        tmpfiles.append(trimstrict_jam_file)
+
+        # --- Create soundscape and save to tempfiles --- #
+        sc = scaper.Scaper(10, FG_PATH, BG_PATH)
+        sc.protected_labels = []
+        sc.ref_db = -50
+        sc.add_background(label=('const', 'park'),
+                          source_file=('choose', []),
+                          source_time=('const', 0))
+        # Add 5 events
+        start_times = [0.5, 2.5, 4.5, 6.5, 8.5]
+        for event_time in start_times:
+            sc.add_event(label=('const', 'siren'),
+                         source_file=('choose', []),
+                         source_time=('const', 5),
+                         event_time=('const', event_time),
+                         event_duration=('const', 1),
+                         snr=('const', 10),
+                         pitch_shift=None,
+                         time_stretch=None)
+        sc.generate(orig_wav_file.name, orig_jam_file.name)
+
+        # --- Trim soundscape using scaper.trim with strict=False --- #
+        scaper.trim(orig_wav_file.name, orig_jam_file.name,
+                    trim_wav_file.name, trim_jam_file.name,
+                    3, 7, no_audio=False)
+
+        # --- Validate output --- #
+        # validate JAMS
+        trimjam = jams.load(trim_jam_file.name)
+        trimann = trimjam.annotations.search(namespace='sound_event')[0]
+
+        # Time and duration of annotation observation must be changed, but
+        # values in the value dict must remained unchanged!
+        for idx, event in trimann.data.iterrows():
+            if event.value['role'] == 'background':
+                assert (event.time.total_seconds() == 0 and
+                        event.duration.total_seconds() == 4 and
+                        event.value['event_time'] == 0 and
+                        event.value['event_duration'] == 10 and
+                        event.value['source_time'] == 0)
+            else:
+                if event.time.total_seconds() == 0:
+                    assert (event.duration.total_seconds() == 0.5 and
+                            event.value['event_time'] == 2.5 and
+                            event.value['event_duration'] == 1 and
+                            event.value['source_time'] == 5)
+                elif event.time.total_seconds() == 1.5:
+                    assert (event.duration.total_seconds() == 1 and
+                            event.value['event_time'] == 4.5 and
+                            event.value['event_duration'] == 1 and
+                            event.value['source_time'] == 5)
+                elif event.time.total_seconds() == 3.5:
+                    assert (event.duration.total_seconds() == 0.5 and
+                            event.value['event_time'] == 6.5 and
+                            event.value['event_duration'] == 1 and
+                            event.value['source_time'] == 5)
+                else:
+                    assert False
+
+        # validate audio
+        orig_wav, sr = soundfile.read(orig_wav_file.name)
+        trim_wav, sr = soundfile.read(trim_wav_file.name)
+        assert np.allclose(trim_wav, orig_wav[3*sr:7*sr], atol=1e-8, rtol=1e-8)
 
 
 def test_scaper_init():
