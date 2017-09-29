@@ -75,7 +75,7 @@ class Mock(MagicMock):
 
 
 MOCK_MODULES = [
-    'sox', 'jams', 'scipy', 'numpy'
+    'sox', 'jams', 'scipy', 'numpy', 'pandas'
 ]
 
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
