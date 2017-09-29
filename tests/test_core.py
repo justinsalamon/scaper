@@ -22,6 +22,10 @@ BG_PATH = 'tests/data/audio/background'
 ALT_FG_PATH = 'tests/data/audio_alt_path/foreground'
 ALT_BG_PATH = 'tests/data/audio_alt_path/background'
 
+REG_WAV_PATH = 'tests/data/regression/soundscape_20170928.wav'
+REG_JAM_PATH = 'tests/data/regression/soundscape_20170928.jams'
+REG_TXT_PATH = 'tests/data/regression/soundscape_20170928.txt'
+
 # fg and bg labels for testing
 FB_LABELS = ['car_horn', 'human_voice', 'siren']
 BG_LABELS = ['park', 'restaurant', 'street']
@@ -824,7 +828,7 @@ def test_scaper_instantiate():
         time_stretch=('const', 1.2))
 
     jam = sc._instantiate(disable_instantiation_warnings=True)
-    regjam = jams.load('tests/data/regression/soundscape_20170928.jams')
+    regjam = jams.load(REG_JAM_PATH)
     # print(jam)
     # print(regression_jam)
 
@@ -886,59 +890,70 @@ def test_scaper_instantiate():
     (ann.data == regann.data).all().all()
 
 
-# def test_generate_audio():
-#
-#     # Regression test: same spec, same audio (not this will fail if we update
-#     # any of the audio processing techniques used (e.g. change time stretching
-#     # algorithm.
-#     sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
-#     sc.ref_db = -50
-#
-#     # background
-#     sc.add_background(
-#         label=('const', 'park'),
-#         source_file=(
-#             'const',
-#             'tests/data/audio/background/park/'
-#             '268903__yonts__city-park-tel-aviv-israel.wav'),
-#         source_time=('const', 0))
-#
-#     # foreground events
-#     sc.add_event(
-#         label=('const', 'siren'),
-#         source_file=('const',
-#                      'tests/data/audio/foreground/'
-#                      'siren/69-Siren-1.wav'),
-#         source_time=('const', 5),
-#         event_time=('const', 2),
-#         event_duration=('const', 5),
-#         snr=('const', 5),
-#         pitch_shift=None,
-#         time_stretch=None)
-#
-#     sc.add_event(
-#         label=('const', 'car_horn'),
-#         source_file=('const',
-#                      'tests/data/audio/foreground/'
-#                      'car_horn/17-CAR-Rolls-Royce-Horn.wav'),
-#         source_time=('const', 0),
-#         event_time=('const', 5),
-#         event_duration=('const', 2),
-#         snr=('const', 20),
-#         pitch_shift=('const', 1),
-#         time_stretch=None)
-#
-#     sc.add_event(
-#         label=('const', 'human_voice'),
-#         source_file=('const',
-#                      'tests/data/audio/foreground/'
-#                      'human_voice/42-Human-Vocal-Voice-taxi-2_edit.wav'),
-#         source_time=('const', 0),
-#         event_time=('const', 7),
-#         event_duration=('const', 2),
-#         snr=('const', 10),
-#         pitch_shift=None,
-#         time_stretch=('const', 1.2))
-#
-#     jam = sc._instantiate(disable_instantiation_warnings=True)
-#     sc._generate_audio(audiopath, ann)
+def test_generate_audio():
+
+    # Regression test: same spec, same audio (not this will fail if we update
+    # any of the audio processing techniques used (e.g. change time stretching
+    # algorithm.
+    sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
+    sc.ref_db = -50
+
+    # background
+    sc.add_background(
+        label=('const', 'park'),
+        source_file=(
+            'const',
+            'tests/data/audio/background/park/'
+            '268903__yonts__city-park-tel-aviv-israel.wav'),
+        source_time=('const', 0))
+
+    # foreground events
+    sc.add_event(
+        label=('const', 'siren'),
+        source_file=('const',
+                     'tests/data/audio/foreground/'
+                     'siren/69-Siren-1.wav'),
+        source_time=('const', 5),
+        event_time=('const', 2),
+        event_duration=('const', 5),
+        snr=('const', 5),
+        pitch_shift=None,
+        time_stretch=None)
+
+    sc.add_event(
+        label=('const', 'car_horn'),
+        source_file=('const',
+                     'tests/data/audio/foreground/'
+                     'car_horn/17-CAR-Rolls-Royce-Horn.wav'),
+        source_time=('const', 0),
+        event_time=('const', 5),
+        event_duration=('const', 2),
+        snr=('const', 20),
+        pitch_shift=('const', 1),
+        time_stretch=None)
+
+    sc.add_event(
+        label=('const', 'human_voice'),
+        source_file=('const',
+                     'tests/data/audio/foreground/'
+                     'human_voice/42-Human-Vocal-Voice-taxi-2_edit.wav'),
+        source_time=('const', 0),
+        event_time=('const', 7),
+        event_duration=('const', 2),
+        snr=('const', 10),
+        pitch_shift=None,
+        time_stretch=('const', 1.2))
+
+    tmpfiles = []
+    with _close_temp_files(tmpfiles):
+
+        wav_file = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
+        tmpfiles.append(wav_file)
+
+        jam = sc._instantiate(disable_instantiation_warnings=True)
+        sc._generate_audio(wav_file.name, jam.annotations[0])
+
+        # validate audio
+        wav, sr = soundfile.read(wav_file.name)
+        regwav, sr = soundfile.read(REG_WAV_PATH)
+        assert np.allclose(wav, regwav, atol=1e-8, rtol=1e-8)
