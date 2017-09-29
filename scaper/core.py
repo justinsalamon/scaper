@@ -1541,9 +1541,9 @@ class Scaper(object):
                 # least one foreground event, we need a combiner. If there's
                 # only the background track, then we need a transformer!
                 if len(tmpfiles) == 0:
-                    raise ScaperWarning(
+                    warnings.warn(
                         "No events to synthesize (silent soundscape), no audio "
-                        "saved to disk.")
+                        "saved to disk.", ScaperWarning)
                 elif len(tmpfiles) == 1:
                     tfm = sox.Transformer()
                     if reverb is not None:
