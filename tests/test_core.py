@@ -27,6 +27,10 @@ REG_WAV_PATH = 'tests/data/regression/soundscape_20170928.wav'
 REG_JAM_PATH = 'tests/data/regression/soundscape_20170928.jams'
 REG_TXT_PATH = 'tests/data/regression/soundscape_20170928.txt'
 
+REG_BGONLY_WAV_PATH = 'tests/data/regression/bgonly_soundscape_20170928.wav'
+REG_BGONLY_JAM_PATH = 'tests/data/regression/bgonly_soundscape_20170928.jams'
+REG_BGONLY_TXT_PATH = 'tests/data/regression/bgonly_soundscape_20170928.txt'
+
 # fg and bg labels for testing
 FB_LABELS = ['car_horn', 'human_voice', 'siren']
 BG_LABELS = ['park', 'restaurant', 'street']
@@ -958,6 +962,49 @@ def test_generate_audio():
         wav, sr = soundfile.read(wav_file.name)
         regwav, sr = soundfile.read(REG_WAV_PATH)
         assert np.allclose(wav, regwav, atol=1e-8, rtol=1e-8)
+
+        # Don't disable sox warnings (just to cover line)
+        sc._generate_audio(wav_file.name, jam.annotations[0],
+                           disable_sox_warnings=False)
+        # validate audio
+        wav, sr = soundfile.read(wav_file.name)
+        regwav, sr = soundfile.read(REG_WAV_PATH)
+        assert np.allclose(wav, regwav, atol=1e-8, rtol=1e-8)
+
+        # namespace must be sound_event
+        jam.annotations[0].namespace = 'tag_open'
+        pytest.raises(ScaperError, sc._generate_audio, wav_file.name,
+                      jam.annotations[0])
+
+        # unsupported event role must raise error
+        jam.annotations[0].namespace = 'sound_event'
+        jam.annotations[0].data.loc[3]['value']['role'] = 'ewok'
+        pytest.raises(ScaperError, sc._generate_audio, wav_file.name,
+                      jam.annotations[0])
+
+        # soundscape with no events will raise warning and won't generate audio
+        sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
+        sc.ref_db = -50
+        jam = sc._instantiate(disable_instantiation_warnings=True)
+        pytest.warns(ScaperWarning, sc._generate_audio, wav_file.name,
+                     jam.annotations[0])
+
+        # soundscape with only one event will use transformer (regression test)
+        sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
+        sc.ref_db = -20
+        # background
+        sc.add_background(
+            label=('const', 'park'),
+            source_file=('const',
+                         'tests/data/audio/background/park/'
+                         '268903__yonts__city-park-tel-aviv-israel.wav'),
+            source_time=('const', 0))
+        jam = sc._instantiate(disable_instantiation_warnings=True)
+        sc._generate_audio(wav_file.name, jam.annotations[0])
+        # validate audio
+        wav, sr = soundfile.read(wav_file.name)
+        # regwav, sr = soundfile.read(REG_BGONLY_WAV_PATH)
+        # assert np.allclose(wav, regwav, atol=1e-8, rtol=1e-8)
 
 
 def test_generate():
