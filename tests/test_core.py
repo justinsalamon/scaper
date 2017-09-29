@@ -12,6 +12,7 @@ import os
 import numpy as np
 import soundfile
 import jams
+import pandas as pd
 
 
 # FIXTURES
@@ -957,3 +958,83 @@ def test_generate_audio():
         wav, sr = soundfile.read(wav_file.name)
         regwav, sr = soundfile.read(REG_WAV_PATH)
         assert np.allclose(wav, regwav, atol=1e-8, rtol=1e-8)
+
+
+def test_generate():
+
+    # Final regression test on all files
+    sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
+    sc.ref_db = -50
+
+    # background
+    sc.add_background(
+        label=('const', 'park'),
+        source_file=(
+            'const',
+            'tests/data/audio/background/park/'
+            '268903__yonts__city-park-tel-aviv-israel.wav'),
+        source_time=('const', 0))
+
+    # foreground events
+    sc.add_event(
+        label=('const', 'siren'),
+        source_file=('const',
+                     'tests/data/audio/foreground/'
+                     'siren/69-Siren-1.wav'),
+        source_time=('const', 5),
+        event_time=('const', 2),
+        event_duration=('const', 5),
+        snr=('const', 5),
+        pitch_shift=None,
+        time_stretch=None)
+
+    sc.add_event(
+        label=('const', 'car_horn'),
+        source_file=('const',
+                     'tests/data/audio/foreground/'
+                     'car_horn/17-CAR-Rolls-Royce-Horn.wav'),
+        source_time=('const', 0),
+        event_time=('const', 5),
+        event_duration=('const', 2),
+        snr=('const', 20),
+        pitch_shift=('const', 1),
+        time_stretch=None)
+
+    sc.add_event(
+        label=('const', 'human_voice'),
+        source_file=('const',
+                     'tests/data/audio/foreground/'
+                     'human_voice/42-Human-Vocal-Voice-taxi-2_edit.wav'),
+        source_time=('const', 0),
+        event_time=('const', 7),
+        event_duration=('const', 2),
+        snr=('const', 10),
+        pitch_shift=None,
+        time_stretch=('const', 1.2))
+
+    tmpfiles = []
+    with _close_temp_files(tmpfiles):
+        wav_file = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
+        jam_file = tempfile.NamedTemporaryFile(suffix='.jams', delete=True)
+        txt_file = tempfile.NamedTemporaryFile(suffix='.txt', delete=True)
+        tmpfiles.append(wav_file)
+        tmpfiles.append(jam_file)
+        tmpfiles.append(txt_file)
+
+        sc.generate(wav_file.name, jam_file.name, txt_path=txt_file.name,
+                    disable_instantiation_warnings=True)
+
+        # validate audio
+        wav, sr = soundfile.read(wav_file.name)
+        regwav, sr = soundfile.read(REG_WAV_PATH)
+        assert np.allclose(wav, regwav, atol=1e-8, rtol=1e-8)
+
+        # validate jams
+        jam = jams.load(jam_file.name)
+        regjam = jams.load(REG_JAM_PATH)
+        assert jam == regjam
+
+        # validate txt
+        txt = pd.read_csv(txt_file.name, header=None, sep=' ')
+        regtxt = pd.read_csv(REG_TXT_PATH, header=None, sep=' ')
+        assert (txt == regtxt).all().all()
