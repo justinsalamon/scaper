@@ -4,6 +4,7 @@ A library for soundscape synthesis and augmentation
 
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![Build Status](https://travis-ci.org/justinsalamon/scaper.svg?branch=master)](https://travis-ci.org/justinsalamon/scaper)
+[![Coverage Status](https://coveralls.io/repos/github/justinsalamon/scaper/badge.svg?branch=master)](https://coveralls.io/github/justinsalamon/scaper?branch=master)
 
 For the motivation behind scaper, check out the scaper-paper:
 
