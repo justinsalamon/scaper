@@ -1317,7 +1317,7 @@ class Scaper(object):
 
         See Also
         --------
-        `Scaper.generate`
+        Scaper.generate
 
         '''
         jam = jams.JAMS()
@@ -1440,7 +1440,7 @@ class Scaper(object):
 
         See Also
         --------
-        `Scaper.generate`
+        Scaper.generate
 
         '''
         if ann.namespace != 'sound_event':
@@ -1629,8 +1629,8 @@ class Scaper(object):
 
         See Also
         --------
-        `Scaper._instantiate`
-        `Scaper._generate_audio`
+        Scaper._instantiate
+        Scaper._generate_audio
 
         '''
         # Check parameter validity
