@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 """Top-level module for scaper"""
 
-from .core import *
+from .core import Scaper
+from .core import generate_from_jams
+from .core import trim
 import jams
 from pkg_resources import resource_filename
 
