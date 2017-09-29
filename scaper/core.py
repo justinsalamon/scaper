@@ -667,8 +667,7 @@ def _validate_event(label, source_file, source_time, event_time,
                     event_duration, snr, allowed_labels, pitch_shift,
                     time_stretch):
     '''
-    Check that event parameter values are valid. See `Scaper.add_event`
-    for a detailed description of the expected format of each parameter.
+    Check that event parameter values are valid.
 
     Parameters
     ----------
@@ -685,7 +684,7 @@ def _validate_event(label, source_file, source_time, event_time,
 
     Raises
     ------
-    ScaperError
+    ScaperError :
         If any of the input parameters has an invalid format or value.
 
     See Also
