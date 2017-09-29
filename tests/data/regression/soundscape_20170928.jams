@@ -1,0 +1,251 @@
+{
+  "file_metadata": {
+    "release": "",
+    "artist": "",
+    "identifiers": {},
+    "jams_version": "0.2.2",
+    "duration": 10.0,
+    "title": ""
+  },
+  "sandbox": {},
+  "annotations": [
+    {
+      "time": 0,
+      "namespace": "sound_event",
+      "data": [
+        {
+          "time": 0.0,
+          "value": {
+            "pitch_shift": null,
+            "source_time": 0,
+            "event_time": 0,
+            "source_file": "tests/data/audio/background/park/268903__yonts__city-park-tel-aviv-israel.wav",
+            "time_stretch": null,
+            "snr": 0,
+            "label": "park",
+            "role": "background",
+            "event_duration": 10.0
+          },
+          "duration": 10.0,
+          "confidence": 1.0
+        },
+        {
+          "time": 2.0,
+          "value": {
+            "pitch_shift": null,
+            "source_time": 5,
+            "event_time": 2,
+            "source_file": "tests/data/audio/foreground/siren/69-Siren-1.wav",
+            "time_stretch": null,
+            "snr": 5,
+            "label": "siren",
+            "role": "foreground",
+            "event_duration": 5
+          },
+          "duration": 5.0,
+          "confidence": 1.0
+        },
+        {
+          "time": 5.0,
+          "value": {
+            "pitch_shift": 1,
+            "source_time": 0,
+            "event_time": 5,
+            "source_file": "tests/data/audio/foreground/car_horn/17-CAR-Rolls-Royce-Horn.wav",
+            "time_stretch": null,
+            "snr": 20,
+            "label": "car_horn",
+            "role": "foreground",
+            "event_duration": 0.687506
+          },
+          "duration": 0.6875060000000001,
+          "confidence": 1.0
+        },
+        {
+          "time": 7.0,
+          "value": {
+            "pitch_shift": null,
+            "source_time": 0,
+            "event_time": 7,
+            "source_file": "tests/data/audio/foreground/human_voice/42-Human-Vocal-Voice-taxi-2_edit.wav",
+            "time_stretch": 1.2,
+            "snr": 10,
+            "label": "human_voice",
+            "role": "foreground",
+            "event_duration": 0.806236
+          },
+          "duration": 0.9674830000000001,
+          "confidence": 1.0
+        }
+      ],
+      "annotation_metadata": {
+        "corpus": "",
+        "annotation_rules": "",
+        "curator": {
+          "email": "",
+          "name": ""
+        },
+        "annotator": {},
+        "data_source": "",
+        "version": "",
+        "validation": "",
+        "annotation_tools": ""
+      },
+      "duration": 10.0,
+      "sandbox": {
+        "scaper": {
+          "reverb": null,
+          "fg_spec": [
+            [
+              [
+                "const",
+                "siren"
+              ],
+              [
+                "const",
+                "tests/data/audio/foreground/siren/69-Siren-1.wav"
+              ],
+              [
+                "const",
+                5
+              ],
+              [
+                "const",
+                2
+              ],
+              [
+                "const",
+                5
+              ],
+              [
+                "const",
+                5
+              ],
+              "foreground",
+              null,
+              null
+            ],
+            [
+              [
+                "const",
+                "car_horn"
+              ],
+              [
+                "const",
+                "tests/data/audio/foreground/car_horn/17-CAR-Rolls-Royce-Horn.wav"
+              ],
+              [
+                "const",
+                0
+              ],
+              [
+                "const",
+                5
+              ],
+              [
+                "const",
+                2
+              ],
+              [
+                "const",
+                20
+              ],
+              "foreground",
+              [
+                "const",
+                1
+              ],
+              null
+            ],
+            [
+              [
+                "const",
+                "human_voice"
+              ],
+              [
+                "const",
+                "tests/data/audio/foreground/human_voice/42-Human-Vocal-Voice-taxi-2_edit.wav"
+              ],
+              [
+                "const",
+                0
+              ],
+              [
+                "const",
+                7
+              ],
+              [
+                "const",
+                2
+              ],
+              [
+                "const",
+                10
+              ],
+              "foreground",
+              null,
+              [
+                "const",
+                1.2
+              ]
+            ]
+          ],
+          "allow_repeated_label": true,
+          "bg_labels": [
+            "park",
+            "restaurant",
+            "street"
+          ],
+          "bg_spec": [
+            [
+              [
+                "const",
+                "park"
+              ],
+              [
+                "const",
+                "tests/data/audio/background/park/268903__yonts__city-park-tel-aviv-israel.wav"
+              ],
+              [
+                "const",
+                0
+              ],
+              [
+                "const",
+                0
+              ],
+              [
+                "const",
+                10.0
+              ],
+              [
+                "const",
+                0
+              ],
+              "background",
+              null,
+              null
+            ]
+          ],
+          "allow_repeated_source": true,
+          "fade_in_len": 0.01,
+          "fg_path": "tests/data/audio/foreground",
+          "duration": 10.0,
+          "protected_labels": [],
+          "fade_out_len": 0.01,
+          "polyphony_gini": 0.5422979845375607,
+          "ref_db": -50,
+          "fg_labels": [
+            "car_horn",
+            "human_voice",
+            "siren"
+          ],
+          "polyphony_max": 2,
+          "n_events": 3,
+          "n_channels": 1,
+          "bg_path": "tests/data/audio/background"
+        }
+      }
+    }
+  ]
+}
