@@ -24,6 +24,6 @@ Indices and tables
 API Reference
 =============
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    api
