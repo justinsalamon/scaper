@@ -22,7 +22,7 @@ import shutil
 import numpy as np
 from scipy.stats import truncnorm
 import jams
-from scaper import EventSpec
+from scaper.core import EventSpec
 from scaper import Scaper
 
 
