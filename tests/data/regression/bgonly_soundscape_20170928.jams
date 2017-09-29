@@ -46,7 +46,7 @@
       "duration": 10.0,
       "sandbox": {
         "scaper": {
-          "reverb": null,
+          "reverb": 0.2,
           "fg_spec": [],
           "allow_repeated_label": true,
           "bg_labels": [
