@@ -724,6 +724,31 @@ def _validate_event(label, source_file, source_time, event_time,
 
 
 class Scaper(object):
+    '''
+    Create a Scaper object.
+
+    Parameters
+    ----------
+    duration : float
+        Duration of the soundscape, in seconds.
+    fg_path : str
+        Path to foreground folder.
+    bg_path : str
+        Path to background folder.
+    protected_labels : list
+        Provide a list of protected foreground labels. When a foreground
+        label is in the protected list it means that when a sound event
+        matching the label gets added to a soundscape instantiation the
+        duration of the source audio file cannot be altered, and the
+        duration value that was provided in the specification will be
+        ignored.
+
+        Adding labels to the protected list is useful for sound events
+        whose semantic validity would be lost if the sound were trimmed
+        before the sound event ends, for example an animal vocalization
+        such as a dog bark.
+
+    '''
 
     def __init__(self, duration, fg_path, bg_path, protected_labels=[]):
         '''
