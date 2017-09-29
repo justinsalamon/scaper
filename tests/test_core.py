@@ -768,3 +768,177 @@ def test_scaper_instantiate_event():
                                   event_duration=('const', 4),
                                   time_stretch=('const', 2))
     pytest.warns(ScaperWarning, sc._instantiate_event, fg_event7)
+
+
+def test_scaper_instantiate():
+
+    # Here we just instantiate a known fixed spec and check if that jams
+    # we get back is as expected.
+    sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
+    sc.ref_db = -50
+
+    # background
+    sc.add_background(
+        label=('const', 'park'),
+        source_file=(
+            'const',
+            'tests/data/audio/background/park/'
+            '268903__yonts__city-park-tel-aviv-israel.wav'),
+        source_time=('const', 0))
+
+    # foreground events
+    sc.add_event(
+        label=('const', 'siren'),
+        source_file=('const',
+                     'tests/data/audio/foreground/'
+                     'siren/69-Siren-1.wav'),
+        source_time=('const', 5),
+        event_time=('const', 2),
+        event_duration=('const', 5),
+        snr=('const', 5),
+        pitch_shift=None,
+        time_stretch=None)
+
+    sc.add_event(
+        label=('const', 'car_horn'),
+        source_file=('const',
+                     'tests/data/audio/foreground/'
+                     'car_horn/17-CAR-Rolls-Royce-Horn.wav'),
+        source_time=('const', 0),
+        event_time=('const', 5),
+        event_duration=('const', 2),
+        snr=('const', 20),
+        pitch_shift=('const', 1),
+        time_stretch=None)
+
+    sc.add_event(
+        label=('const', 'human_voice'),
+        source_file=('const',
+                     'tests/data/audio/foreground/'
+                     'human_voice/42-Human-Vocal-Voice-taxi-2_edit.wav'),
+        source_time=('const', 0),
+        event_time=('const', 7),
+        event_duration=('const', 2),
+        snr=('const', 10),
+        pitch_shift=None,
+        time_stretch=('const', 1.2))
+
+    jam = sc._instantiate(disable_instantiation_warnings=True)
+    regjam = jams.load('tests/data/regression/soundscape_20170928.jams')
+    # print(jam)
+    # print(regression_jam)
+
+    # Note: can't compare directly, since:
+    # 1. scaper/and jams liberary versions may change
+    # 2. raw annotation sandbox stores specs as OrderedDict and tuples, whereas
+    # loaded ann (regann) simplifies those to dicts and lists
+    # assert jam == regression_jam
+
+    # Must compare each part "manually"
+    # 1. compare file metadata
+    for k, kreg in zip(jam.file_metadata.keys(), regjam.file_metadata.keys()):
+        assert k == kreg
+        if k != 'jams_version':
+            assert jam.file_metadata[k] == regjam.file_metadata[kreg]
+
+    # 2. compare jams sandboxes
+    assert jam.sandbox == regjam.sandbox
+
+    # 3. compare annotations
+    assert len(jam.annotations) == len(regjam.annotations) == 1
+    ann = jam.annotations[0]
+    regann = regjam.annotations[0]
+
+    # 3.1 compare annotation metadata
+    assert ann.annotation_metadata == regann.annotation_metadata
+
+    # 3.2 compare sandboxes
+    # Note: can't compare sandboxes directly, since in raw jam scaper sandbox
+    # stores event specs in EventSpec object (named tuple), whereas in loaded
+    # jam these will get converted to list of lists.
+    # assert ann.sandbox == regann.sandbox
+    assert len(ann.sandbox.keys()) == len(regann.sandbox.keys()) == 1
+    assert 'scaper' in ann.sandbox.keys()
+    assert 'scaper' in regann.sandbox.keys()
+
+    # everything but the specs can be compared directly:
+    for k, kreg in zip(sorted(ann.sandbox.scaper.keys()),
+                       sorted(regann.sandbox.scaper.keys())):
+        assert k == kreg
+        if k not in ['bg_spec', 'fg_spec']:
+            assert ann.sandbox.scaper[k] == regann.sandbox.scaper[kreg]
+
+    # to compare specs need to covert raw specs to list of lists
+    assert (
+        [[list(x) if type(x) == tuple else x for x in e] for e in
+         ann.sandbox.scaper['bg_spec']] == regann.sandbox.scaper['bg_spec'])
+
+    assert (
+        [[list(x) if type(x) == tuple else x for x in e] for e in
+         ann.sandbox.scaper['fg_spec']] == regann.sandbox.scaper['fg_spec'])
+
+    # 3.3. compare namespace, time and duration
+    assert ann.namespace == regann.namespace
+    assert ann.time == regann.time
+    assert ann.duration == regann.duration
+
+    # 3.4 compare data
+    (ann.data == regann.data).all().all()
+
+
+# def test_generate_audio():
+#
+#     # Regression test: same spec, same audio (not this will fail if we update
+#     # any of the audio processing techniques used (e.g. change time stretching
+#     # algorithm.
+#     sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
+#     sc.ref_db = -50
+#
+#     # background
+#     sc.add_background(
+#         label=('const', 'park'),
+#         source_file=(
+#             'const',
+#             'tests/data/audio/background/park/'
+#             '268903__yonts__city-park-tel-aviv-israel.wav'),
+#         source_time=('const', 0))
+#
+#     # foreground events
+#     sc.add_event(
+#         label=('const', 'siren'),
+#         source_file=('const',
+#                      'tests/data/audio/foreground/'
+#                      'siren/69-Siren-1.wav'),
+#         source_time=('const', 5),
+#         event_time=('const', 2),
+#         event_duration=('const', 5),
+#         snr=('const', 5),
+#         pitch_shift=None,
+#         time_stretch=None)
+#
+#     sc.add_event(
+#         label=('const', 'car_horn'),
+#         source_file=('const',
+#                      'tests/data/audio/foreground/'
+#                      'car_horn/17-CAR-Rolls-Royce-Horn.wav'),
+#         source_time=('const', 0),
+#         event_time=('const', 5),
+#         event_duration=('const', 2),
+#         snr=('const', 20),
+#         pitch_shift=('const', 1),
+#         time_stretch=None)
+#
+#     sc.add_event(
+#         label=('const', 'human_voice'),
+#         source_file=('const',
+#                      'tests/data/audio/foreground/'
+#                      'human_voice/42-Human-Vocal-Voice-taxi-2_edit.wav'),
+#         source_time=('const', 0),
+#         event_time=('const', 7),
+#         event_duration=('const', 2),
+#         snr=('const', 10),
+#         pitch_shift=None,
+#         time_stretch=('const', 1.2))
+#
+#     jam = sc._instantiate(disable_instantiation_warnings=True)
+#     sc._generate_audio(audiopath, ann)
