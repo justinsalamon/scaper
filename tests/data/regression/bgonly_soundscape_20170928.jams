@@ -1,0 +1,109 @@
+{
+  "file_metadata": {
+    "release": "",
+    "artist": "",
+    "identifiers": {},
+    "jams_version": "0.2.2",
+    "duration": 10.0,
+    "title": ""
+  },
+  "sandbox": {},
+  "annotations": [
+    {
+      "time": 0,
+      "namespace": "sound_event",
+      "data": [
+        {
+          "time": 0.0,
+          "value": {
+            "pitch_shift": null,
+            "source_time": 0,
+            "event_time": 0,
+            "source_file": "tests/data/audio/background/park/268903__yonts__city-park-tel-aviv-israel.wav",
+            "time_stretch": null,
+            "snr": 0,
+            "label": "park",
+            "role": "background",
+            "event_duration": 10.0
+          },
+          "duration": 10.0,
+          "confidence": 1.0
+        }
+      ],
+      "annotation_metadata": {
+        "corpus": "",
+        "annotation_rules": "",
+        "curator": {
+          "email": "",
+          "name": ""
+        },
+        "annotator": {},
+        "data_source": "",
+        "version": "",
+        "validation": "",
+        "annotation_tools": ""
+      },
+      "duration": 10.0,
+      "sandbox": {
+        "scaper": {
+          "reverb": 0.2,
+          "fg_spec": [],
+          "allow_repeated_label": true,
+          "bg_labels": [
+            "park",
+            "restaurant",
+            "street"
+          ],
+          "bg_spec": [
+            [
+              [
+                "const",
+                "park"
+              ],
+              [
+                "const",
+                "tests/data/audio/background/park/268903__yonts__city-park-tel-aviv-israel.wav"
+              ],
+              [
+                "const",
+                0
+              ],
+              [
+                "const",
+                0
+              ],
+              [
+                "const",
+                10.0
+              ],
+              [
+                "const",
+                0
+              ],
+              "background",
+              null,
+              null
+            ]
+          ],
+          "allow_repeated_source": true,
+          "fade_in_len": 0.01,
+          "fg_path": "tests/data/audio/foreground",
+          "duration": 10.0,
+          "protected_labels": [],
+          "fade_out_len": 0.01,
+          "polyphony_gini": 0,
+          "ref_db": -20,
+          "fg_labels": [
+            "car_horn",
+            "human_voice",
+            "siren"
+          ],
+          "polyphony_max": 0,
+          "n_events": 0,
+          "n_channels": 1,
+          "bg_path": "tests/data/audio/background"
+        }
+      }
+    }
+  ]
+}
