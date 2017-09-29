@@ -31,6 +31,10 @@ REG_BGONLY_WAV_PATH = 'tests/data/regression/bgonly_soundscape_20170928.wav'
 REG_BGONLY_JAM_PATH = 'tests/data/regression/bgonly_soundscape_20170928.jams'
 REG_BGONLY_TXT_PATH = 'tests/data/regression/bgonly_soundscape_20170928.txt'
 
+REG_REVERB_WAV_PATH = 'tests/data/regression/reverb_soundscape_20170928.wav'
+REG_REVERB_JAM_PATH = 'tests/data/regression/reverb_soundscape_20170928.jams'
+REG_REVERB_TXT_PATH = 'tests/data/regression/reverb_soundscape_20170928.txt'
+
 # fg and bg labels for testing
 FB_LABELS = ['car_horn', 'human_voice', 'siren']
 BG_LABELS = ['park', 'restaurant', 'street']
@@ -963,6 +967,13 @@ def test_generate_audio():
         regwav, sr = soundfile.read(REG_WAV_PATH)
         assert np.allclose(wav, regwav, atol=1e-8, rtol=1e-8)
 
+        # with reverb
+        sc._generate_audio(wav_file.name, jam.annotations[0], reverb=0.2)
+        # validate audio
+        wav, sr = soundfile.read(wav_file.name)
+        regwav, sr = soundfile.read(REG_REVERB_WAV_PATH)
+        assert np.allclose(wav, regwav, atol=1e-8, rtol=1e-8)
+
         # Don't disable sox warnings (just to cover line)
         sc._generate_audio(wav_file.name, jam.annotations[0],
                            disable_sox_warnings=False)
@@ -1000,11 +1011,11 @@ def test_generate_audio():
                          '268903__yonts__city-park-tel-aviv-israel.wav'),
             source_time=('const', 0))
         jam = sc._instantiate(disable_instantiation_warnings=True)
-        sc._generate_audio(wav_file.name, jam.annotations[0])
+        sc._generate_audio(wav_file.name, jam.annotations[0], reverb=0.2)
         # validate audio
         wav, sr = soundfile.read(wav_file.name)
-        # regwav, sr = soundfile.read(REG_BGONLY_WAV_PATH)
-        # assert np.allclose(wav, regwav, atol=1e-8, rtol=1e-8)
+        regwav, sr = soundfile.read(REG_BGONLY_WAV_PATH)
+        assert np.allclose(wav, regwav, atol=1e-8, rtol=1e-8)
 
 
 def test_generate():
@@ -1085,3 +1096,9 @@ def test_generate():
         txt = pd.read_csv(txt_file.name, header=None, sep=' ')
         regtxt = pd.read_csv(REG_TXT_PATH, header=None, sep=' ')
         assert (txt == regtxt).all().all()
+
+        # reverb value must be in (0, 1) range
+        for reverb in [-1, 2]:
+            pytest.raises(ScaperError, sc.generate, wav_file.name,
+                          jam_file.name, reverb=reverb,
+                          disable_instantiation_warnings=True)
