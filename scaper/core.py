@@ -817,7 +817,7 @@ class Scaper(object):
         soundscape ``Scaper.duration`` specified when initializing the Scaper
         object. If the source file is shorter than this duration then it will
         be concatenated to itself as many times as necessary to produce the
-        specified duration when calling `Scaper.generate`.
+        specified duration when calling Scaper.generate.
 
         Parameters
         ----------
