@@ -163,9 +163,9 @@ def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
     Given an input audio file and corresponding jams file, trim both the audio
     and all annotations in the jams file to the time range ``[start_time,
     end_time]`` and save the result to ``audio_outfile`` and ``jams_outfile``
-    respectively. This function uses `jams.slice()` for trimming the jams file
-    while ensuring the start times of the jam's annotations and observations
-    they contain match the trimmed audio file.
+    respectively. This function uses ``jams.slice()`` for trimming the jams
+    file while ensuring the start times of the jam's annotations and
+    observations they contain match the trimmed audio file.
 
     Parameters
     ----------
@@ -247,8 +247,8 @@ def _get_value_from_dist(dist_tuple):
     Parameters
     ----------
     dist_tuple : tuple
-        Distribution tuple to be validated. See `Scaper.add_event` for details
-        about the expected format for the distribution tuple.
+        Distribution tuple to be validated. See ``Scaper.add_event`` for
+        details about the expected format for the distribution tuple.
 
     Returns
     -------
@@ -257,6 +257,8 @@ def _get_value_from_dist(dist_tuple):
 
     See Also
     --------
+    Scaper.add_event :  Add a foreground sound event to the foreground
+    specification.
     _validate_distribution : Check whether a tuple specifying a parameter
     distribution has a valid format, if not raise an error.
 
@@ -817,7 +819,7 @@ class Scaper(object):
         soundscape ``Scaper.duration`` specified when initializing the Scaper
         object. If the source file is shorter than this duration then it will
         be concatenated to itself as many times as necessary to produce the
-        specified duration when calling Scaper.generate.
+        specified duration when calling ``Scaper.generate``.
 
         Parameters
         ----------
@@ -843,7 +845,7 @@ class Scaper(object):
             NOTE: the source time specified by this tuple should be equal to or
             smaller than ``<source file duration> - <soundscape duration>``.
             Larger values will be automatically changed to fulfill this
-            requirement when calling `Scaper.generate`.
+            requirement when calling ``Scaper.generate``.
 
         Notes
         -----
@@ -866,10 +868,10 @@ class Scaper(object):
               standard deviation ``stddev``.
 
         IMPORTANT: not all parameters support all distribution tuples. In
-        particular, ``label`` and ``source_file`` only support "const" and
-        "choose", whereas ``source_time`` supports all distribution tuples.
+        particular, ``label`` and ``source_file`` only support ``"const"`` and
+        ``"choose"``, whereas ``source_time`` supports all distribution tuples.
         As noted above, only ``label`` and ``source_file`` support providing an
-        empty ``valuelist`` with "choose".
+        empty ``valuelist`` with ``"choose"``.
 
         '''
         # These values are fixed for the background sound
@@ -927,7 +929,7 @@ class Scaper(object):
             NOTE: the source time specified by this tuple should be equal to or
             smaller than ``<source file duration> - event_duration``. Larger
             values will be automatically changed to fulfill this requirement
-            when calling `Scaper.generate`.
+            when calling ``Scaper.generate``.
         event_time : tuple
             Specifies the desired start time of the event in the soundscape.
             See Notes below for the expected format of this tuple and the
@@ -935,14 +937,14 @@ class Scaper(object):
             NOTE: The value specified by this tuple should be equal to or
             smaller than ``<soundscapes duration> - event_duration``, and
             larger values will be automatically changed to fulfill this
-            requirement when calling `Scaper.generate`.
+            requirement when calling ``Scaper.generate``.
         event_duration : tuple
             Specifies the desired duration of the event. See Notes below for
             the expected format of this tuple and the allowed values.
             NOTE: The value specified by this tuple should be equal to or
             smaller than the source file's duration, and larger values will be
             automatically changed to fulfill this requirement when calling
-            `Scaper.generate`.
+            ``Scaper.generate``.
         snr : tuple
             Specifies the desired signal to noise ratio (SNR) between the event
             and the background. See Notes below for the expected format of
@@ -976,10 +978,10 @@ class Scaper(object):
               standard deviation ``stddev``.
 
         IMPORTANT: not all parameters support all distribution tuples. In
-        particular, ``label`` and ``source_file`` only support "const" and
-        "choose", whereas the remaining parameters support all distribution
+        particular, ``label`` and ``source_file`` only support ``"const"`` and
+        ``"choose"``, whereas the remaining parameters support all distribution
         tuples. As noted above, only ``label`` and ``source_file`` support
-        providing an empty ``valuelist`` with "choose".
+        providing an empty ``valuelist`` with ``"choose"``.
 
         See Also
         --------
@@ -1303,7 +1305,7 @@ class Scaper(object):
             only be used once.
         reverb : float or None
             Has no effect on this function other than being documented in the
-            instantiated annotation's sandbox. Passed by `Scaper.generate`.
+            instantiated annotation's sandbox. Passed by ``Scaper.generate``.
         disable_instantiation_warnings : bool
             When True (default is False), warnings stemming from event
             instantiation (primarily about automatic duration adjustments) are
@@ -1431,7 +1433,7 @@ class Scaper(object):
             module at all.
         disable_sox_warnings : bool
             When True (default), warnings from the pysox module are suppressed
-            unless their level is 'CRITICAL'.
+            unless their level is ``'CRITICAL'``.
 
         Raises
         ------
@@ -1610,7 +1612,7 @@ class Scaper(object):
             module at all.
         disable_sox_warnings : bool
             When True (default), warnings from the pysox module are suppressed
-            unless their level is 'CRITICAL'.
+            unless their level is ``'CRITICAL'``.
         no_audio : bool
             If true only generates a JAMS file and no audio is saved to disk.
         txt_path: str or None
