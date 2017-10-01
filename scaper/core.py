@@ -33,6 +33,11 @@ EventSpec = namedtuple(
     'EventSpec',
     ['label', 'source_file', 'source_time', 'event_time', 'event_duration',
      'snr', 'role', 'pitch_shift', 'time_stretch'], verbose=False)
+'''
+Container for storing event specifications, either probabilistic (i.e. using
+distribution tuples to specify possible values) or instantiated (i.e. storing
+constants directly).
+'''
 
 
 def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
