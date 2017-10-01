@@ -20,6 +20,8 @@
 import os
 import sys
 import six
+import sphinx_rtd_theme
+from sphinx.ext.autodoc import between
 sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('..'))
 
@@ -148,7 +150,9 @@ todo_include_todos = False
 # a list of builtin themes.
 #
 # html_theme = 'alabaster'
-html_theme = 'classic'
+# html_theme = 'classic'
+html_theme = "sphinx_rtd_theme"
+html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -365,3 +369,21 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #
 # texinfo_no_detailmenu = False
+
+
+def no_namedtuple_attrib_docstring(app, what, name,
+                                   obj, options, lines):
+    is_namedtuple_docstring = (
+        len(lines) == 1 and
+        lines[0].startswith('Alias for field number')
+    )
+    if is_namedtuple_docstring:
+        # We don't return, so we need to purge in-place
+        del lines[:]
+
+
+def setup(app):
+    app.connect(
+        'autodoc-process-docstring',
+        no_namedtuple_attrib_docstring,
+    )
