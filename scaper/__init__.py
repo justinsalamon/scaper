@@ -6,8 +6,7 @@ from .core import generate_from_jams
 from .core import trim
 import jams
 from pkg_resources import resource_filename
-
-__version__ = '0.0.1'
+from .version import version as __version__
 
 # Add sound_event namesapce
 namespace_file = resource_filename(__name__, 'namespaces/sound_event.json')

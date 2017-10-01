@@ -1,11 +1,14 @@
 from setuptools import setup, find_packages
+import imp
 
 with open('README.md') as file:
     long_description = file.read()
 
+version = imp.load_source('scaper.version', 'scaper/version.py')
+
 setup(
     name='scaper',
-    version='0.0.1',
+    version=version.version,
     description='A library for soundscape synthesis and augmentation',
     author='Justin Salamon & Duncan MacConnell',
     author_email='justin.salamon@gmail.com',
