@@ -6,13 +6,13 @@ A library for soundscape synthesis and augmentation
 [![Build Status](https://travis-ci.org/justinsalamon/scaper.svg?branch=master)](https://travis-ci.org/justinsalamon/scaper)
 [![Coverage Status](https://coveralls.io/repos/github/justinsalamon/scaper/badge.svg?branch=master)](https://coveralls.io/github/justinsalamon/scaper?branch=master)
 
+[Read the documentation](http://scaper.readthedocs.io/).
+
 For a detailed description of scaper and its applications check out the scaper-paper:
 
 [Scaper: A library for soundscape synthesis and augmentation](http://www.justinsalamon.com/uploads/4/3/9/4/4394963/salamon_scaper_waspaa_2017.pdf)<br />
 J. Salamon, D. MacConnell, M. Cartwright, P. Li, and J. P. Bello<br />
 In IEEE Workshop on Applications of Signal Processing to Audio and Acoustics (WASPAA), New Paltz, NY, USA, Oct. 2017.
-
-[Read the documentation](http://scaper.readthedocs.io/).
 
 ## Installation
 
