@@ -27,6 +27,7 @@ def _close_temp_files(tmpfiles):
         List of temporary file handles
 
     '''
+
     yield
     for t in tmpfiles:
         t.close()
@@ -68,6 +69,7 @@ def _get_sorted_files(folder_path):
         ```folder_path```.
 
     '''
+
     # Ensure path points to valid folder
     _validate_folder_path(folder_path)
 
@@ -95,6 +97,7 @@ def _validate_folder_path(folder_path):
         If ```folder_path``` does not point to a valid folder.
 
     '''
+
     if not os.path.isdir(folder_path):
         raise ScaperError(
             'Folder path "{:s}" does not point to a valid folder'.format(
@@ -123,6 +126,7 @@ def _populate_label_list(folder_path, label_list):
     folder.
 
     '''
+
     # Make sure folder path is valid
     _validate_folder_path(folder_path)
 
@@ -157,6 +161,7 @@ def _trunc_norm(mu, sigma, trunc_min, trunc_max):
         by ```mu```, ```sigma```, ```trunc_min``` and ```trunc_max```.
 
     '''
+
     # By default truncnorm expects a (lower boundary) and b (upper boundary)
     # values for a standard normal distribution (mu=0, sigma=1), so we need
     # to recompute a and b given the user specified parameters.
@@ -179,6 +184,7 @@ def max_polyphony(ann):
     polyphony : int
         Maximum number of simultaneous events at any point in the annotation.
     '''
+
     # If there are no foreground events the polyphony is 0
     roles = [v['role'] for v in ann.data['value']]
     if 'foreground' not in roles:
@@ -242,6 +248,7 @@ def polyphony_gini(ann, hop_size=0.01):
         not sound_event.
 
     '''
+
     if not ann.duration:
         raise ScaperError('Annotation does not have a duration value set.')
 
@@ -300,6 +307,7 @@ def is_real_number(num):
         True if ```num``` is a real scalar, False otherwise.
 
     '''
+
     if (not np.isreal(num) or
             not np.isrealobj(num) or
             not np.isscalar(num)):
@@ -325,6 +333,7 @@ def is_real_array(array):
         otherwise.
 
     '''
+
     if not (type(array) is list or type(array) is np.ndarray):
         return False
     else:

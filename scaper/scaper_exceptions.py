@@ -7,4 +7,5 @@
 
 class ScaperError(Exception):
     '''The root Scaper exception class'''
+
     pass

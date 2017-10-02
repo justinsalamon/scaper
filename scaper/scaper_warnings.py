@@ -7,4 +7,5 @@
 
 class ScaperWarning(Warning):
     '''The root Scaper warning class'''
+
     pass
