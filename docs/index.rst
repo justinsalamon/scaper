@@ -24,6 +24,14 @@ Installation
     installation
 
 
+Getting started
+===============
+.. toctree::
+    :maxdepth: 1
+
+    quickstart
+
+
 Examples
 ========
 .. toctree::
@@ -41,8 +49,8 @@ API Reference
 
 Contribute
 ==========
-- `Issue Tracker <http://github.com/justinsalamon/scaper/issues>`_
-- `Source Code <http://github.com/justinsalamon/scaper>`_
+- `Issue tracker <http://github.com/justinsalamon/scaper/issues>`_
+- `Source code <http://github.com/justinsalamon/scaper>`_
 
 
 Changes
