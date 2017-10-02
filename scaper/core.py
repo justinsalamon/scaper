@@ -835,15 +835,15 @@ class Scaper(object):
             of the labels in the Scaper's background label list
             ``Scaper.bg_labels``. Furthermore, if ``source_file`` is
             specified using "const" (see Notes), then ``label`` must also be
-            specified using "const" and its ``value `` (see Notes) must
+            specified using "const" and its value (see Notes) must
             match the source file's parent folder's name.
         source_file : tuple
             Specifies the audio file to use as the source. See Notes below for
             the expected format of this tuple and the allowed values.
             NOTE: If ``source_file`` is specified using "const" (see Notes),
             then ``label`` must also be specified using "const" and its
-            ``value`` (see Notes) must match the source file's parent
-            folder's name.
+            value (see Notes) must match the source file's parent folder's
+            name.
         source_time : tuple
             Specifies the desired start time in the source file. See Notes
             below for the expected format of this tuple and the allowed values.
@@ -857,28 +857,29 @@ class Scaper(object):
         Each parameter of this function is set by passing a distribution
         tuple, whose first item is always the distribution name and subsequent
         items are distribution specific. The supported distribution tuples are:
-            * ``("const", value)`` : a constant, given by ``value``.
-            * ``("choose", valuelist)`` : choose a value from
-              ``valuelist`` at random (uniformly). The ``label`` and
-              ``source_file`` parameters also support providing an empty
-              ``valuelist`` i.e. ``("choose", [])``, in which case the
-              value will be chosen at random from all available labels or files
-              as determined automatically by Scaper by examining the file
-              structure of ``bg_path`` provided during initialization.
-            * ``("uniform", min_value, max_value)`` : sample a random
-              value from a uniform distribution between ``min_value``
-              and ``max_value``.
-            * ``("normal", mean, stddev)`` : sample a random value from a
-              normal distribution defined by its mean ``mean`` and
-              standard deviation ``stddev``.
+
+        * ``("const", value)`` : a constant, given by ``value``.
+        * ``("choose", valuelist)`` : choose a value from
+          ``valuelist`` at random (uniformly). The ``label`` and
+          ``source_file`` parameters also support providing an empty
+          ``valuelist`` i.e. ``("choose", [])``, in which case the
+          value will be chosen at random from all available labels or files
+          as determined automatically by Scaper by examining the file
+          structure of ``bg_path`` provided during initialization.
+        * ``("uniform", min_value, max_value)`` : sample a random
+          value from a uniform distribution between ``min_value``
+          and ``max_value``.
+        * ``("normal", mean, stddev)`` : sample a random value from a
+          normal distribution defined by its mean ``mean`` and
+          standard deviation ``stddev``.
 
         IMPORTANT: not all parameters support all distribution tuples. In
         particular, ``label`` and ``source_file`` only support ``"const"`` and
         ``"choose"``, whereas ``source_time`` supports all distribution tuples.
         As noted above, only ``label`` and ``source_file`` support providing an
         empty ``valuelist`` with ``"choose"``.
-
         '''
+
         # These values are fixed for the background sound
         event_time = ("const", 0)
         event_duration = ("const", self.duration)
@@ -966,21 +967,22 @@ class Scaper(object):
         Each parameter of this function is set by passing a distribution
         tuple, whose first item is always the distribution name and subsequent
         items are distribution specific. The supported distribution tuples are:
-            * ``("const", value)`` : a constant, given by ``value``.
-            * ``("choose", valuelist)`` : choose a value from
-              ``valuelist`` at random (uniformly). The ``label`` and
-              ``source_file`` parameters also support providing an empty
-              ``valuelist`` i.e. ``("choose", [])``, in which case the
-              value will be chosen at random from all available labels or
-              source files as determined automatically by Scaper by examining
-              the file structure of ``fg_path`` provided during
-              initialization.
-            * ``("uniform", min_value, max_value)`` : sample a random
-              value from a uniform distribution between ``min_value``
-              and ``max_value`` (including ``max_value``).
-            * ``("normal", mean, stddev)`` : sample a random value from a
-              normal distribution defined by its mean ``mean`` and
-              standard deviation ``stddev``.
+
+        * ``("const", value)`` : a constant, given by ``value``.
+        * ``("choose", valuelist)`` : choose a value from
+          ``valuelist`` at random (uniformly). The ``label`` and
+          ``source_file`` parameters also support providing an empty
+          ``valuelist`` i.e. ``("choose", [])``, in which case the
+          value will be chosen at random from all available labels or
+          source files as determined automatically by Scaper by examining
+          the file structure of ``fg_path`` provided during
+          initialization.
+        * ``("uniform", min_value, max_value)`` : sample a random
+          value from a uniform distribution between ``min_value``
+          and ``max_value`` (including ``max_value``).
+        * ``("normal", mean, stddev)`` : sample a random value from a
+          normal distribution defined by its mean ``mean`` and
+          standard deviation ``stddev``.
 
         IMPORTANT: not all parameters support all distribution tuples. In
         particular, ``label`` and ``source_file`` only support ``"const"`` and
