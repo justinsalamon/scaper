@@ -1,8 +1,6 @@
 from setuptools import setup, find_packages
 import imp
 
-with open('README.md') as file:
-    long_description = file.read()
 
 version = imp.load_source('scaper.version', 'scaper/version.py')
 
@@ -17,7 +15,7 @@ setup(
     packages=find_packages(),
     package_data={'': ['namespaces/sound_event.json']},
     include_package_data=True,
-    long_description=long_description,
+    long_description='A library for soundscape synthesis and augmentation',
     keywords='audio sound soundscape environmental dsp mixing',
     license='BSD-3-Clause',
     classifiers=[
