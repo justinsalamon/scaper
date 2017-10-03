@@ -14,7 +14,6 @@ setup(
     download_url='http://github.com/justinsalamon/scaper/releases',
     packages=['scaper'],
     package_data={'scaper': ['namespaces/sound_event.json']},
-    include_package_data=True,
     long_description='A library for soundscape synthesis and augmentation',
     keywords='audio sound soundscape environmental dsp mixing',
     license='BSD-3-Clause',
