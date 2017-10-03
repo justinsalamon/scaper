@@ -1,7 +1,7 @@
 .. _examples:
 
-Using scaper to synthesize soundscapes
-======================================
+Example: synthesizing 1000 soundscapes in one go
+================================================
 
 .. code-block:: python
     :linenos:
