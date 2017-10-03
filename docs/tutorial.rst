@@ -15,7 +15,7 @@ The first step is to create a ``Scaper`` object:
 
 
 .. code-block:: python
-    import scaper as sc
+    import scaper
     soundcsape_duration = 10.0
     foreground_folder = 'audio/foreground/'
     background_folder = 'audio/background/'
