@@ -13,8 +13,8 @@ Create a Scaper object
 ----------------------
 The first step is to create a ``Scaper`` object:
 
-
 .. code-block:: python
+
     import scaper
     soundscape_duration = 10.0
     foreground_folder = 'audio/foreground/'
@@ -84,6 +84,7 @@ Adding a background
 Next, we can optionally add a background track to our soundscape:
 
 .. code-block:: python
+
     sc.add_background(label=('const', 'park'),
                       source_file=('choose', []),
                       source_time=('const', 0))
@@ -133,6 +134,7 @@ Adding a foreground sound event
 Next, we can add foreground sound events. Let's add one to start with:
 
 .. code-block:: python
+
     sc.add_event(label=('const', 'siren'),
                  source_file=('choose', []),
                  source_time=('const', 0),
@@ -181,6 +183,7 @@ factor chosen uniformly between 0.8 and 1.2.
 Let us add two more events:
 
 .. code-block:: python
+
     for _ in range(2):
         sc.add_event(label=('choose', []),
                      source_file=('choose', []),
@@ -204,6 +207,7 @@ probabilistically defined list of sound events. To synthesize a soundscape,
 we call the ``generate()`` function:
 
 .. code-block:: python
+
     audiofile = 'soundscape.wav'
     jamsfile = 'soundscape.jams'
     txtfile = 'soundscape.txt'
