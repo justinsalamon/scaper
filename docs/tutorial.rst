@@ -15,8 +15,8 @@ The first step is to create a ``Scaper`` object:
 
 >>> import scaper
 >>> soundcsape_duration = 10.0
->>> foreground_folder = 'audio/soundbank/foreground/'
->>> background_folder = 'audio/soundbank/background/'
+>>> foreground_folder = 'audio/foreground/'
+>>> background_folder = 'audio/background/'
 >>> sc = scaper.Scaper(soundcsape_duration, foreground_folder, background_folder)
 >>> sc.ref_db = -20
 
