@@ -29,7 +29,7 @@ Getting started
 .. toctree::
     :maxdepth: 1
 
-    quickstart
+    tutorial
 
 
 Examples
