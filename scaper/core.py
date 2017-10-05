@@ -995,8 +995,8 @@ class Scaper(object):
         _validate_event : Check that event parameter values are valid.
 
         Scaper.generate : Generate a soundscape based on the current
-        specification and save to disk as both an audio file and a JAMS file
-        describing the soundscape.
+            specification and save to disk as both an audio file and a JAMS file
+            describing the soundscape.
 
         '''
 
@@ -1644,6 +1644,7 @@ class Scaper(object):
         See Also
         --------
         Scaper._instantiate
+
         Scaper._generate_audio
 
         '''
