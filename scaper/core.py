@@ -147,7 +147,7 @@ def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
             with _close_temp_files(tmpfiles):
                 # Create tmp file
                 tmpfiles.append(
-                    tempfile.NamedTemporaryFile(suffix='.wav', delete=True))
+                    tempfile.NamedTemporaryFile(suffix='.wav', delete=False))
                 # Save trimmed result to temp file
                 tfm = sox.Transformer()
                 tfm.trim(sliceop['slice_start'], sliceop['slice_end'])
@@ -235,7 +235,7 @@ def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
                 # Create tmp file
                 tmpfiles.append(
                     tempfile.NamedTemporaryFile(
-                        suffix='.wav', delete=True))
+                        suffix='.wav', delete=False))
                 # Save trimmed result to temp file
                 tfm.build(audio_infile, tmpfiles[-1].name)
                 # Copy result back to original file
@@ -1507,7 +1507,7 @@ class Scaper(object):
                         # Prepare tmp file for output
                         tmpfiles.append(
                             tempfile.NamedTemporaryFile(
-                                suffix='.wav', delete=True))
+                                suffix='.wav', delete=False))
 
                         cmb.build(
                             [e.value['source_file']] * ntiles,
@@ -1561,7 +1561,7 @@ class Scaper(object):
                         # Finally save result to a tmp file
                         tmpfiles.append(
                             tempfile.NamedTemporaryFile(
-                                suffix='.wav', delete=True))
+                                suffix='.wav', delete=False))
                         tfm.build(e.value['source_file'], tmpfiles[-1].name)
 
                     else:

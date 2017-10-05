@@ -30,7 +30,11 @@ def _close_temp_files(tmpfiles):
 
     yield
     for t in tmpfiles:
-        t.close()
+        try:
+            t.close()
+            os.unlink(t.name)
+        except:
+            pass
 
 
 @contextmanager
