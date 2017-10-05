@@ -37,6 +37,42 @@ EventSpec = namedtuple(
 Container for storing event specifications, either probabilistic (i.e. using
 distribution tuples to specify possible values) or instantiated (i.e. storing
 constants directly).
+
+.. py:attribute:: label
+
+    Label string or distribution tuple.
+
+.. py:attribute:: source_file
+
+    Path to source file (string) or distribution tuple.
+
+.. py:attribute:: source_time
+
+    Source file start time (in seconds) or distribution tuple.
+
+.. py:attribute:: event_time
+
+    Event start time (in seconds) or distribution tuple.
+
+.. py:attribute:: event_duration
+
+    Event duration (in seconds) or distribution tuple.
+
+.. py:attribute:: snr
+
+    Event signal-to-noise ratio (in dB) or distribution tuple.
+
+.. py:attribute:: role
+
+    Event role (string), can be ``foreground`` or ``background``.
+
+.. py:attribute:: pitch_shift
+
+    Event pitch shift (in semitones) or distribution tuple.
+
+.. py:attribute:: time_stretch
+
+    Event time stretch (float stretch factor) or distribution tuple.
 '''
 
 
