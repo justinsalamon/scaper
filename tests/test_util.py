@@ -46,12 +46,23 @@ def test_close_temp_files():
     deleted.
 
     '''
+    # With delete=True
     tmpfiles = []
-
     with _close_temp_files(tmpfiles):
         for _ in range(5):
             tmpfiles.append(
                 tempfile.NamedTemporaryFile(suffix='.wav', delete=True))
+
+    for tf in tmpfiles:
+        assert tf.file.closed
+        assert not os.path.isfile(tf.name)
+
+    # With delete=False
+    tmpfiles = []
+    with _close_temp_files(tmpfiles):
+        for _ in range(5):
+            tmpfiles.append(
+                tempfile.NamedTemporaryFile(suffix='.wav', delete=False))
 
     for tf in tmpfiles:
         assert tf.file.closed
