@@ -237,7 +237,7 @@ we call the ``generate()`` function:
     txtfile = 'soundscape.txt'
     sc.generate(audiofile, jamsfile,
                 allow_repeated_label=True,
-                allow_repeated_source=False,
+                allow_repeated_source=True,
                 reverb=0.1,
                 disable_sox_warnings=True,
                 no_audio=False,
