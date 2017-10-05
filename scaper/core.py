@@ -1593,7 +1593,8 @@ class Scaper(object):
     def generate(self, audio_path, jams_path, allow_repeated_label=True,
                  allow_repeated_source=True,
                  reverb=None, disable_sox_warnings=True, no_audio=False,
-                 txt_path=None, disable_instantiation_warnings=False):
+                 txt_path=None, txt_sep='\t',
+                 disable_instantiation_warnings=False):
         '''
         Generate a soundscape based on the current specification and save to
         disk as both an audio file and a JAMS file describing the soundscape.
@@ -1626,6 +1627,10 @@ class Scaper(object):
             If not None, in addition to the JAMS file output a simplified
             annotation in a space separated format [onset  offset  label],
             saved to the provided path (good for loading labels in audacity).
+        test_sep: str
+            The separator to use when saving a simplified annotation as a text
+            file (default is tab for compatibility with Audacity label files).
+            Only relevant if txt_path is not None.
         disable_instantiation_warnings : bool
             When True (default is False), warnings stemming from event
             instantiation (primarily about automatic duration adjustments) are
@@ -1681,4 +1686,4 @@ class Scaper(object):
             # sort events by onset time
             df = df.sort_values('onset')
             df.reset_index(inplace=True, drop=True)
-            df.to_csv(txt_path, index=False, header=False, sep=' ')
+            df.to_csv(txt_path, index=False, header=False, sep=txt_sep)

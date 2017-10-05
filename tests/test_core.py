@@ -1093,8 +1093,8 @@ def test_generate():
         assert jam == regjam
 
         # validate txt
-        txt = pd.read_csv(txt_file.name, header=None, sep=' ')
-        regtxt = pd.read_csv(REG_TXT_PATH, header=None, sep=' ')
+        txt = pd.read_csv(txt_file.name, header=None, sep='\t')
+        regtxt = pd.read_csv(REG_TXT_PATH, header=None, sep='\t')
         assert (txt == regtxt).all().all()
 
         # reverb value must be in (0, 1) range
