@@ -42,7 +42,7 @@ On windows you can use the provided installation binaries:
 
 ### Installing Scaper
 
-The simplest way to install scaper is by using `pip`, which will also install the required dependencies if needed. To install scaper using pip, simply run:
+The simplest way to install scaper is by using `pip`, which will also install the required python dependencies if needed. To install scaper using pip, simply run:
 
 ```
 pip install scaper
