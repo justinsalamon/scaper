@@ -60,6 +60,9 @@ Then enter the source folder and install using pip to handle python dependencies
 cd scaper
 pip install -e .
 ```
+## Tutorial
+
+To help you get started with scaper, please see this [step-by-step tutorial](http://scaper.readthedocs.io/en/latest/tutorial.html).
 
 ## Example
 
