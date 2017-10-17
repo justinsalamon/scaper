@@ -11,7 +11,7 @@ A library for soundscape synthesis and augmentation
 [![Documentation Status](https://readthedocs.org/projects/scaper/badge/?version=latest)](http://pysox.readthedocs.io/en/latest/?badge=latest)
 [![PyPI](https://img.shields.io/badge/python-2.7%2C%203.4%2C%203.5%2C%203.6-blue.svg)]()
 
-Please refer to the [documentation](http://scaper.readthedocs.io/) for detailes.
+Please refer to the [documentation](http://scaper.readthedocs.io/) for details.
 
 For the motivation behind scaper and its applications check out the scaper-paper:
 
