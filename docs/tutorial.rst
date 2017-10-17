@@ -39,7 +39,7 @@ foreground sounds include "speech", "car_honk", "siren", "dog_bark",
 "bird_song", "idling_engine", etc. Within each category folder, scaper expects
 WAV files of that category: background files should contain a single ambient
 recording, and foreground files should contain a single sound event. The
-filename of each audio files is not important as long as it ends with ``.wav``.
+filename of each audio file is not important as long as it ends with ``.wav``.
 
 Here's an example of a valid folder structure for the source material::
 
@@ -175,7 +175,7 @@ background event. The full set of parameters is:
   of the subfolders in our foreground folder (in our example "siren", "car_honk" or "human_voice").
 * ``source_file``: the path to the specific audio file to be used.
 * ``source_time``: the time in the source file from which to start the event.
-* ``event_time``: the start time of the event in the synthesized soundscap.
+* ``event_time``: the start time of the event in the synthesized soundscape.
 * ``event_duration``: the duration of the event in the synthesized soundscape.
 * ``snr``: the signal-to-noise ratio (in LUFS) compared to the background. In other words,
   how many dB above or below the background should this sound event be percieved.
