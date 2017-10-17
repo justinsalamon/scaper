@@ -8,7 +8,7 @@ A library for soundscape synthesis and augmentation
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![Build Status](https://travis-ci.org/justinsalamon/scaper.svg?branch=master)](https://travis-ci.org/justinsalamon/scaper)
 [![Coverage Status](https://coveralls.io/repos/github/justinsalamon/scaper/badge.svg?branch=master)](https://coveralls.io/github/justinsalamon/scaper?branch=master)
-[![Documentation Status](https://readthedocs.org/projects/scaper/badge/?version=latest)](http://pysox.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/scaper/badge/?version=latest)](http://scaper.readthedocs.io/en/latest/?badge=latest)
 [![PyPI](https://img.shields.io/badge/python-2.7%2C%203.4%2C%203.5%2C%203.6-blue.svg)]()
 
 Please refer to the [documentation](http://scaper.readthedocs.io/) for details.
