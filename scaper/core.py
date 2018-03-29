@@ -39,6 +39,8 @@ distribution tuples to specify possible values) or instantiated (i.e. storing
 constants directly).
 '''
 
+SavedFile = namedtuple('SavedFile', ['name'])
+
 
 def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
                        jams_outfile=None):
@@ -1218,7 +1220,8 @@ class Scaper(object):
         # takes precedences over start time).
         if source_time + event_duration > source_duration:
             old_source_time = source_time
-            source_time = source_duration - event_duration
+            new_source_time_tuple = (event.source_time[0], event.source_time[1], source_duration)
+            source_time = _get_value_from_dist(new_source_time_tuple)
             if not disable_instantiation_warnings:
                 warnings.warn(
                     '{:s} source time ({:.2f}) is too great given event '
@@ -1422,7 +1425,7 @@ class Scaper(object):
         # Return
         return jam
 
-    def _generate_audio(self, audio_path, ann, reverb=None,
+    def _generate_audio(self, audio_path, ann, save_sources=False, reverb=None,
                         disable_sox_warnings=True):
         '''
         Generate audio based on a sound_event annotation and save to disk.
@@ -1433,6 +1436,14 @@ class Scaper(object):
             Path for saving soundscape audio file.
         ann : jams.Annotation
             Annotation of the sound_event namespace.
+        save_sources : bool
+            When True (default is False), the sound sources making up the
+            soundscape get saved alongside the mixture. The source files
+            will be in the same directory as audio_path is, with the source label
+            (e.g. siren) appended to audio_path (before the extension). 
+            (e.g. if audio_path is 'test.wav', and the foreground source is a siren, then
+            'test_siren.wav' will be saved along side 'test.wav if save_sources is True).
+            TODO: When reverb is enabled, the sources are saved WITHOUT reverberation, at the moment.
         reverb : float or None
             Amount of reverb to apply to the generated soundscape between 0
             (no reverberation) and 1 (maximum reverberation). Use None
@@ -1462,6 +1473,8 @@ class Scaper(object):
             temp_logging_level = 'CRITICAL'  # only critical messages please
         else:
             temp_logging_level = logging.getLogger().level
+            
+        generated_audio_files = []
 
         with _set_temp_logging_level(temp_logging_level):
 
@@ -1558,10 +1571,17 @@ class Scaper(object):
                                                     e.value['time_stretch']))
                         tfm.pad(prepad, postpad)
 
-                        # Finally save result to a tmp file
-                        tmpfiles.append(
-                            tempfile.NamedTemporaryFile(
-                                suffix='.wav', delete=False))
+                        # Finally save results
+                        if save_sources:      
+                            #This SavedFile business is a weird hack, since a lot of the remaining code relies on tempfile
+                            #where a name attribute exists. I make a namedtuple that mimics that to get around it.
+                            #TODO is this conflicting with _close_temp_files?
+                            tmpfiles.append(SavedFile(audio_path[:-4] + '_source_' + e.value['label'] + '.wav'))
+                            generated_audio_files.append(tmpfiles[-1].name)
+                        else:
+                            tmpfiles.append(
+                              tempfile.NamedTemporaryFile(
+                              suffix='.wav', delete=False))
                         tfm.build(e.value['source_file'], tmpfiles[-1].name)
 
                     else:
@@ -1589,8 +1609,11 @@ class Scaper(object):
                         cmb.reverb(reverberance=reverb * 100)
                     # TODO: do we want to normalize the final output?
                     cmb.build([t.name for t in tmpfiles], audio_path, 'mix')
+                generated_audio_files.append(audio_path)
+                return generated_audio_files
 
-    def generate(self, audio_path, jams_path, allow_repeated_label=True,
+    def generate(self, audio_path, jams_path, save_sources=False, 
+                 allow_repeated_label=True,
                  allow_repeated_source=True,
                  reverb=None, disable_sox_warnings=True, no_audio=False,
                  txt_path=None, txt_sep='\t',
@@ -1605,6 +1628,14 @@ class Scaper(object):
             Path for saving soundscape audio
         jams_path : str
             Path for saving soundscape jams
+        save_sources : bool
+            When True (default is False), the sound sources making up the
+            soundscape get saved alongside the mixture. The source files
+            will be in the same directory as audio_path is, with the source label
+            (e.g. siren) appended to audio_path (before the extension). 
+            (e.g. if audio_path is 'test.wav', and the foreground source is a siren, then
+            'test_siren.wav' will be saved along side 'test.wav if save_sources is True).
+            TODO: When reverb is enabled, the sources are saved WITHOUT reverberation, at the moment.
         allow_repeated_label : bool
             When True (default) the same label can be used more than once
             in a soundscape instantiation. When False every label can
@@ -1665,7 +1696,7 @@ class Scaper(object):
 
         # Generate the audio and save to disk
         if not no_audio:
-            self._generate_audio(audio_path, ann, reverb=reverb,
+            generated_audio_files = self._generate_audio(audio_path, ann, save_sources=save_sources, reverb=reverb,
                                  disable_sox_warnings=disable_sox_warnings)
 
         # Finally save JAMS to disk too
@@ -1688,3 +1719,4 @@ class Scaper(object):
             df = df.sort_values('onset')
             df.reset_index(inplace=True, drop=True)
             df.to_csv(txt_path, index=False, header=False, sep=txt_sep)
+        return generated_audio_files
