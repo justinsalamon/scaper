@@ -796,6 +796,7 @@ class Scaper(object):
         self.n_channels = 1
         self.fade_in_len = 0.01  # 10 ms
         self.fade_out_len = 0.01  # 10 ms
+        self.min_silence_duration = None
 
         # Start with empty specifications
         self.fg_spec = []
@@ -1141,9 +1142,19 @@ class Scaper(object):
         # Update the used source files list
         if source_file not in used_source_files:
             used_source_files.append(source_file)
-
+            
         # Get the duration of the source audio file
         source_duration = sox.file_info.duration(source_file)
+            
+        # To get rid of silence, we do it once and then use the new duration to make sure we don't go out of bounds. 
+        # We do it again later when actually putting the soundscape together. This is probably stupid.
+        if self.min_silence_duration is not None:
+            tfm = sox.Transformer()
+            t = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
+            tfm.silence(min_silence_duration=self.min_silence_duration)
+            tfm.build(source_file, t.name)
+            source_duration = sox.file_info.duration(t.name)
+            _close_temp_files([t])
 
         # If the foreground event's label is in the protected list, use the
         # source file's duration without modification.
@@ -1216,7 +1227,8 @@ class Scaper(object):
             source_time = _get_value_from_dist(event.source_time)
 
         # Make sure source time + event duration is not greater than the
-        # source duration, if it is, adjust the source time (i.e. duration
+        # source duration, if it is, adjust the source time by drawing from the
+        # distribution again with correct start and end times (i.e. duration
         # takes precedences over start time).
         if source_time + event_duration > source_duration:
             old_source_time = source_time
@@ -1482,7 +1494,7 @@ class Scaper(object):
             tmpfiles = []
             with _close_temp_files(tmpfiles):
 
-                for event in ann.data.iterrows():
+                for event_index, event in enumerate(ann.data.iterrows()):
 
                     # first item is index, second is event dictionary
                     e = event[1]
@@ -1507,10 +1519,15 @@ class Scaper(object):
                         cmb.convert(samplerate=self.sr,
                                     n_channels=self.n_channels,
                                     bitdepth=None)
+                        
+                        if self.min_silence_duration is not None:
+                            cmb.silence(min_silence_duration=self.min_silence_duration)
                         # Then trim
                         cmb.trim(e.value['source_time'],
                                  e.value['source_time'] +
                                  e.value['event_duration'])
+                        
+                        
 
                         # After trimming, normalize background to reference DB.
                         bg_lufs = get_integrated_lufs(e.value['source_file'])
@@ -1533,6 +1550,8 @@ class Scaper(object):
                         tfm.convert(samplerate=self.sr,
                                     n_channels=self.n_channels,
                                     bitdepth=None)
+                        if self.min_silence_duration is not None:
+                            tfm.silence(min_silence_duration=self.min_silence_duration)
                         # Trim
                         tfm.trim(e.value['source_time'],
                                  e.value['source_time'] +
@@ -1576,7 +1595,7 @@ class Scaper(object):
                             #This SavedFile business is a weird hack, since a lot of the remaining code relies on tempfile
                             #where a name attribute exists. I make a namedtuple that mimics that to get around it.
                             #TODO is this conflicting with _close_temp_files?
-                            tmpfiles.append(SavedFile(audio_path[:-4] + '_source_' + e.value['label'] + '.wav'))
+                            tmpfiles.append(SavedFile(audio_path[:-4] + '_source_' + e.value['label'] + '_' + str(event_index) + '.wav'))
                             generated_audio_files.append(tmpfiles[-1].name)
                         else:
                             tmpfiles.append(
