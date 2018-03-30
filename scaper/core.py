@@ -1149,12 +1149,14 @@ class Scaper(object):
         # To get rid of silence, we do it once and then use the new duration to make sure we don't go out of bounds. 
         # We do it again later when actually putting the soundscape together. This is probably stupid.
         if self.min_silence_duration is not None:
-            tfm = sox.Transformer()
-            t = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
-            tfm.silence(min_silence_duration=self.min_silence_duration)
-            tfm.build(source_file, t.name)
-            source_duration = sox.file_info.duration(t.name)
-            _close_temp_files([t])
+            tmpfiles = []
+            with _close_temp_files(tmpfiles):
+                tmpfile = tempfile.NamedTemporaryFile(prefix="sox_tmp_", suffix='.wav', delete=True)
+                tfm = sox.Transformer()
+                tfm.silence(min_silence_duration=self.min_silence_duration)
+                tfm.build(source_file, tmpfile.name)
+                source_duration = sox.file_info.duration(tmpfile.name)
+                tmpfiles.append(tmpfile)
 
         # If the foreground event's label is in the protected list, use the
         # source file's duration without modification.
@@ -1522,6 +1524,7 @@ class Scaper(object):
                         
                         if self.min_silence_duration is not None:
                             cmb.silence(min_silence_duration=self.min_silence_duration)
+                            
                         # Then trim
                         cmb.trim(e.value['source_time'],
                                  e.value['source_time'] +
@@ -1533,6 +1536,9 @@ class Scaper(object):
                         bg_lufs = get_integrated_lufs(e.value['source_file'])
                         gain = self.ref_db - bg_lufs
                         cmb.gain(gain_db=gain, normalize=False)
+                        
+                        if reverb is not None:
+                            cmb.reverb(reverberance=reverb * 100)
 
                         # Prepare tmp file for output
                         tmpfiles.append(
@@ -1552,11 +1558,13 @@ class Scaper(object):
                                     bitdepth=None)
                         if self.min_silence_duration is not None:
                             tfm.silence(min_silence_duration=self.min_silence_duration)
+                        
                         # Trim
                         tfm.trim(e.value['source_time'],
                                  e.value['source_time'] +
                                  e.value['event_duration'])
-
+                        
+                        
                         # Pitch shift
                         if e.value['pitch_shift'] is not None:
                             tfm.pitch(e.value['pitch_shift'])
@@ -1569,12 +1577,16 @@ class Scaper(object):
                         # (avoid unnatural sound onsets/offsets)
                         tfm.fade(fade_in_len=self.fade_in_len,
                                  fade_out_len=self.fade_out_len)
+                        
 
                         # Normalize to specified SNR with respect to
                         # self.ref_db
                         fg_lufs = get_integrated_lufs(e.value['source_file'])
                         gain = self.ref_db + e.value['snr'] - fg_lufs
                         tfm.gain(gain_db=gain, normalize=False)
+                        
+                        if reverb is not None:
+                            tfm.reverb(reverberance=reverb * 100)
 
                         # Pad with silence before/after event to match the
                         # soundscape duration
@@ -1588,8 +1600,11 @@ class Scaper(object):
                                 0, self.duration - (e.value['event_time'] +
                                                     e.value['event_duration'] *
                                                     e.value['time_stretch']))
+                            
+                        
                         tfm.pad(prepad, postpad)
-
+                        
+                       
                         # Finally save results
                         if save_sources:      
                             #This SavedFile business is a weird hack, since a lot of the remaining code relies on tempfile
@@ -1602,6 +1617,8 @@ class Scaper(object):
                               tempfile.NamedTemporaryFile(
                               suffix='.wav', delete=False))
                         tfm.build(e.value['source_file'], tmpfiles[-1].name)
+                        for tmpfile in tmpfiles:
+                            print(sox.file_info.duration(tmpfile.name))
 
                     else:
                         raise ScaperError(
@@ -1618,14 +1635,11 @@ class Scaper(object):
                         "saved to disk.", ScaperWarning)
                 elif len(tmpfiles) == 1:
                     tfm = sox.Transformer()
-                    if reverb is not None:
-                        tfm.reverb(reverberance=reverb * 100)
+                    
                     # TODO: do we want to normalize the final output?
                     tfm.build(tmpfiles[0].name, audio_path)
                 else:
                     cmb = sox.Combiner()
-                    if reverb is not None:
-                        cmb.reverb(reverberance=reverb * 100)
                     # TODO: do we want to normalize the final output?
                     cmb.build([t.name for t in tmpfiles], audio_path, 'mix')
                 generated_audio_files.append(audio_path)
