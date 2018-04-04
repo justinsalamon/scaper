@@ -20,6 +20,9 @@
             },
             "snr": {
               "type": "number"
+            },
+            "saved_source_file": {
+              "type": "string"
             }
           }
         },

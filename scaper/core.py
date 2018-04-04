@@ -32,7 +32,7 @@ SUPPORTED_DIST = {"const": lambda x: x,
 EventSpec = namedtuple(
     'EventSpec',
     ['label', 'source_file', 'source_time', 'event_time', 'event_duration',
-     'snr', 'role', 'pitch_shift', 'time_stretch'], verbose=False)
+     'snr', 'role', 'pitch_shift', 'time_stretch', 'saved_source_file'], verbose=False)
 '''
 Container for storing event specifications, either probabilistic (i.e. using
 distribution tuples to specify possible values) or instantiated (i.e. storing
@@ -272,7 +272,8 @@ def _get_value_from_dist(dist_tuple):
     '''
     # Make sure it's a valid distribution tuple
     _validate_distribution(dist_tuple)
-    return SUPPORTED_DIST[dist_tuple[0]](*dist_tuple[1:])
+    value = SUPPORTED_DIST[dist_tuple[0]](*dist_tuple[1:])
+    return value
 
 
 def _validate_distribution(dist_tuple):
@@ -786,7 +787,7 @@ class Scaper(object):
         '''
         # Duration must be a positive real number
         if np.isrealobj(duration) and duration > 0:
-            self.duration = duration
+            self.duration = duration #add an extra tenth of a second for padding, then trim it off later. HACK.
         else:
             raise ScaperError('Duration must be a positive real value')
 
@@ -904,7 +905,8 @@ class Scaper(object):
                              snr=snr,
                              role=role,
                              pitch_shift=pitch_shift,
-                             time_stretch=time_stretch)
+                             time_stretch=time_stretch,
+                             saved_source_file="null")
 
         # Add event to background spec
         self.bg_spec.append(bg_event)
@@ -1017,7 +1019,8 @@ class Scaper(object):
                           snr=snr,
                           role='foreground',
                           pitch_shift=pitch_shift,
-                          time_stretch=time_stretch)
+                          time_stretch=time_stretch,
+                          saved_source_file="null")
 
         # Add event to foreground specification
         self.fg_spec.append(event)
@@ -1149,14 +1152,12 @@ class Scaper(object):
         # To get rid of silence, we do it once and then use the new duration to make sure we don't go out of bounds. 
         # We do it again later when actually putting the soundscape together. This is probably stupid.
         if self.min_silence_duration is not None:
-            tmpfiles = []
-            with _close_temp_files(tmpfiles):
-                tmpfile = tempfile.NamedTemporaryFile(prefix="sox_tmp_", suffix='.wav', delete=True)
-                tfm = sox.Transformer()
-                tfm.silence(min_silence_duration=self.min_silence_duration)
-                tfm.build(source_file, tmpfile.name)
-                source_duration = sox.file_info.duration(tmpfile.name)
-                tmpfiles.append(tmpfile)
+            with tempfile.NamedTemporaryFile(prefix="sox_tmp_", suffix='.wav') as tmpfile:
+              tfm = sox.Transformer()
+              tfm.silence(min_silence_duration=self.min_silence_duration)
+              tfm.build(source_file, tmpfile.name)
+              source_duration = sox.file_info.duration(tmpfile.name)
+
 
         # If the foreground event's label is in the protected list, use the
         # source file's duration without modification.
@@ -1234,7 +1235,7 @@ class Scaper(object):
         # takes precedences over start time).
         if source_time + event_duration > source_duration:
             old_source_time = source_time
-            new_source_time_tuple = (event.source_time[0], event.source_time[1], source_duration)
+            new_source_time_tuple = (event.source_time[0], event.source_time[1], max(0, source_duration - event_duration))
             source_time = _get_value_from_dist(new_source_time_tuple)
             if not disable_instantiation_warnings:
                 warnings.warn(
@@ -1293,7 +1294,7 @@ class Scaper(object):
             pitch_shift = _get_value_from_dist(event.pitch_shift)
         else:
             pitch_shift = None
-
+        
         # pack up instantiated values in an EventSpec
         instantiated_event = EventSpec(label=label,
                                        source_file=source_file,
@@ -1303,11 +1304,12 @@ class Scaper(object):
                                        snr=snr,
                                        role=role,
                                        pitch_shift=pitch_shift,
-                                       time_stretch=time_stretch)
+                                       time_stretch=time_stretch,
+                                       saved_source_file="null")
         # Return
         return instantiated_event
 
-    def _instantiate(self, allow_repeated_label=True,
+    def _instantiate(self, audio_path, save_sources=False, allow_repeated_label=True,
                      allow_repeated_source=True, reverb=None,
                      disable_instantiation_warnings=False):
         '''
@@ -1379,7 +1381,7 @@ class Scaper(object):
         # Add foreground events
         fg_labels = []
         fg_source_files = []
-        for event in self.fg_spec:
+        for i, event in enumerate(self.fg_spec):
             value = self._instantiate_event(
                 event,
                 isbackground=False,
@@ -1394,11 +1396,15 @@ class Scaper(object):
                     value.event_duration * value.time_stretch)
             else:
                 event_duration_stretched = value.event_duration
+                
+            if save_sources:
+                value = value._replace(saved_source_file=audio_path[:-4] + '_source_' + value.label + '_' + str(i) + '.wav')
+                
 
             ann.append(time=value.event_time,
                        duration=event_duration_stretched,
                        value=value._asdict(),
-                       confidence=1.0)
+                       confidence=1.0) 
 
         # Compute max polyphony
         poly = max_polyphony(ann)
@@ -1602,7 +1608,22 @@ class Scaper(object):
                                                     e.value['time_stretch']))
                             
                         
-                        tfm.pad(prepad, postpad)
+                        prepad = int(prepad*self.sr)
+                        postpad = int(postpad*self.sr)
+                        extra_pad = 100
+                        effect_args = ['pad', 
+                                       '{:d}s'.format(prepad + extra_pad), 
+                                       '{:d}s'.format(postpad + extra_pad)]
+                        
+                        tfm.effects.extend(effect_args)
+                        tfm.effects_log.append('pad')
+                        
+                        effect_args = ['trim', 
+                                       '{:d}s'.format(extra_pad), 
+                                       '{:d}s'.format(int(self.duration*self.sr))]
+                        
+                        tfm.effects.extend(effect_args)
+                        tfm.effects_log.append('trim')
                         
                        
                         # Finally save results
@@ -1610,15 +1631,13 @@ class Scaper(object):
                             #This SavedFile business is a weird hack, since a lot of the remaining code relies on tempfile
                             #where a name attribute exists. I make a namedtuple that mimics that to get around it.
                             #TODO is this conflicting with _close_temp_files?
-                            tmpfiles.append(SavedFile(audio_path[:-4] + '_source_' + e.value['label'] + '_' + str(event_index) + '.wav'))
+                            tmpfiles.append(SavedFile(e.value['saved_source_file']))
                             generated_audio_files.append(tmpfiles[-1].name)
                         else:
                             tmpfiles.append(
                               tempfile.NamedTemporaryFile(
                               suffix='.wav', delete=False))
                         tfm.build(e.value['source_file'], tmpfiles[-1].name)
-                        for tmpfile in tmpfiles:
-                            print(sox.file_info.duration(tmpfile.name))
 
                     else:
                         raise ScaperError(
@@ -1721,6 +1740,8 @@ class Scaper(object):
 
         # Create specific instance of a soundscape based on the spec
         jam = self._instantiate(
+            audio_path,
+            save_sources=save_sources,
             allow_repeated_label=allow_repeated_label,
             allow_repeated_source=allow_repeated_source,
             reverb=reverb,
