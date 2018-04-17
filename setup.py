@@ -33,7 +33,7 @@ setup(
             "Programming Language :: Python :: 3.6",
         ],
     install_requires=[
-        'sox>=1.3.0',
+        'sox>=1.3.3',
         'jams==0.2.2',
         'pandas==0.19.2'
     ],
