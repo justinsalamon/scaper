@@ -1154,6 +1154,9 @@ class Scaper(object):
         if self.min_silence_duration is not None:
             with tempfile.NamedTemporaryFile(prefix="sox_tmp_", suffix='.wav') as tmpfile:
               tfm = sox.Transformer()
+              tfm.convert(samplerate=self.sr,
+                                    n_channels=self.n_channels,
+                                    bitdepth=None)
               tfm.silence(min_silence_duration=self.min_silence_duration)
               tfm.build(source_file, tmpfile.name)
               source_duration = sox.file_info.duration(tmpfile.name)
@@ -1235,7 +1238,10 @@ class Scaper(object):
         # takes precedences over start time).
         if source_time + event_duration > source_duration:
             old_source_time = source_time
-            new_source_time_tuple = (event.source_time[0], event.source_time[1], max(0, source_duration - event_duration))
+            if source_time != 0:
+                new_source_time_tuple = (event.source_time[0], event.source_time[1], max(0, source_duration - event_duration))
+            else:
+                new_source_time_tuple = (event.source_time[0], event.source_time[1], source_duration)
             source_time = _get_value_from_dist(new_source_time_tuple)
             if not disable_instantiation_warnings:
                 warnings.warn(
