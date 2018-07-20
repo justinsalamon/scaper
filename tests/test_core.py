@@ -879,7 +879,12 @@ def test_scaper_instantiate():
                        sorted(regann.sandbox.scaper.keys())):
         assert k == kreg
         if k not in ['bg_spec', 'fg_spec']:
-            assert ann.sandbox.scaper[k] == regann.sandbox.scaper[kreg]
+            # Lists might not be ordered same way, must account for this
+            if type(ann.sandbox.scaper[k]) is list:
+                assert (sorted(ann.sandbox.scaper[k]) ==
+                        sorted(regann.sandbox.scaper[kreg]))
+            else:
+                assert ann.sandbox.scaper[k] == regann.sandbox.scaper[kreg]
 
     # to compare specs need to covert raw specs to list of lists
     assert (
