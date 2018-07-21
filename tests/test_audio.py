@@ -14,10 +14,12 @@ CARHORN_FILE = (
 HUMANVOICE_FILE = (
     'tests/data/audio/foreground/human_voice/'
     '42-Human-Vocal-Voice-all-aboard_edit.wav')
+DOGBARK_FILE = 'tests/data/lufs/dogbark.wav'
 
 SIREN_LUFS_I = -23.0
 CARHORN_LUFS_I = -13.3
 HUMANVOICE_LUFS_I = -20.0
+DOGBARK_LUFS_I = -11.0  # for x4 concatenated file
 
 SIREN_LUFS_DICT = {'I': -23.0, 'I Threshold': -33.1, 'LRA': 8.8,
                    'LRA High': -18.8, 'LRA Low': -27.6, 'LRA Threshold': -43.5}
@@ -25,17 +27,20 @@ CARHORN_LUFS_DICT = {'I': -13.3, 'I Threshold': -23.3, 'LRA': 0.0,
                      'LRA High': 0.0, 'LRA Low': 0.0, 'LRA Threshold': 0.0}
 HUMANVOICE_LUFS_DICT = {'I': -20.0, 'I Threshold': -30.0, 'LRA': 0.0,
                         'LRA High': 0.0, 'LRA Low': 0.0, 'LRA Threshold': 0.0}
+# for x4 concatenated file
+DOGBARK_LUFS_DICT = {'I': -11.0, 'I Threshold': -21.0, 'LRA': 0.0,
+                     'LRA High': 0.0, 'LRA Low': 0.0, 'LRA Threshold': 0.0}
 
 
 def test_get_integrated_lufs():
 
-    # should get error (from r1238stats) if can't return lufs
+    # should get error if can't return lufs
     fakefile = 'tests/data/audio/foreground/siren/fakefile.wav'
     pytest.raises(ScaperError, get_integrated_lufs, fakefile)
 
     # test correct functionality
-    audiofiles = [SIREN_FILE, CARHORN_FILE, HUMANVOICE_FILE]
-    lufsi = [SIREN_LUFS_I, CARHORN_LUFS_I, HUMANVOICE_LUFS_I]
+    audiofiles = [SIREN_FILE, CARHORN_FILE, HUMANVOICE_FILE, DOGBARK_FILE]
+    lufsi = [SIREN_LUFS_I, CARHORN_LUFS_I, HUMANVOICE_LUFS_I, DOGBARK_LUFS_I]
 
     for af, li in zip(audiofiles, lufsi):
 
