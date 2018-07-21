@@ -1554,31 +1554,49 @@ class Scaper(object):
                         tfm.fade(fade_in_len=self.fade_in_len,
                                  fade_out_len=self.fade_out_len)
 
-                        # Normalize to specified SNR with respect to
-                        # self.ref_db
-                        fg_lufs = get_integrated_lufs(e.value['source_file'])
-                        gain = self.ref_db + e.value['snr'] - fg_lufs
-                        tfm.gain(gain_db=gain, normalize=False)
+                        # PROCESS BEFORE COMPUTING LUFS
+                        tmpfiles_internal = []
+                        with _close_temp_files(tmpfiles_internal):
+                            # create internal tmpfile
+                            tmpfiles_internal.append(
+                                tempfile.NamedTemporaryFile(
+                                    suffix='.wav', delete=False))
+                            # synthesize edited foreground sound event
+                            tfm.build(e.value['source_file'],
+                                      tmpfiles_internal[-1].name)
 
-                        # Pad with silence before/after event to match the
-                        # soundscape duration
-                        prepad = e.value['event_time']
-                        if e.value['time_stretch'] is None:
-                            postpad = max(
-                                0, self.duration - (e.value['event_time'] +
-                                                    e.value['event_duration']))
-                        else:
-                            postpad = max(
-                                0, self.duration - (e.value['event_time'] +
-                                                    e.value['event_duration'] *
-                                                    e.value['time_stretch']))
-                        tfm.pad(prepad, postpad)
+                            # NOW compute LUFS
+                            fg_lufs = get_integrated_lufs(
+                                tmpfiles_internal[-1].name)
 
-                        # Finally save result to a tmp file
-                        tmpfiles.append(
-                            tempfile.NamedTemporaryFile(
-                                suffix='.wav', delete=False))
-                        tfm.build(e.value['source_file'], tmpfiles[-1].name)
+                            # Normalize to specified SNR with respect to
+                            # background
+                            tfm = sox.Transformer()
+                            gain = self.ref_db + e.value['snr'] - fg_lufs
+                            tfm.gain(gain_db=gain, normalize=False)
+
+                            # Pad with silence before/after event to match the
+                            # soundscape duration
+                            prepad = e.value['event_time']
+                            if e.value['time_stretch'] is None:
+                                postpad = max(
+                                    0, self.duration - (
+                                            e.value['event_time'] +
+                                            e.value['event_duration']))
+                            else:
+                                postpad = max(
+                                    0, self.duration - (
+                                            e.value['event_time'] +
+                                            e.value['event_duration'] *
+                                            e.value['time_stretch']))
+                            tfm.pad(prepad, postpad)
+
+                            # Finally save result to a tmp file
+                            tmpfiles.append(
+                                tempfile.NamedTemporaryFile(
+                                    suffix='.wav', delete=False))
+                            tfm.build(tmpfiles_internal[-1].name,
+                                      tmpfiles[-1].name)
 
                     else:
                         raise ScaperError(
