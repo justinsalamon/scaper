@@ -1499,19 +1499,35 @@ class Scaper(object):
                                  e.value['source_time'] +
                                  e.value['event_duration'])
 
-                        # After trimming, normalize background to reference DB.
-                        bg_lufs = get_integrated_lufs(e.value['source_file'])
-                        gain = self.ref_db - bg_lufs
-                        cmb.gain(gain_db=gain, normalize=False)
+                        # PROCESS BEFORE COMPUTING LUFS
+                        tmpfiles_internal = []
+                        with _close_temp_files(tmpfiles_internal):
+                            # create internal tmpfile
+                            tmpfiles_internal.append(
+                                tempfile.NamedTemporaryFile(
+                                    suffix='.wav', delete=False))
+                            # synthesize concatenated/trimmed background
+                            cmb.build(
+                                [e.value['source_file']] * ntiles,
+                                tmpfiles_internal[-1].name, 'concatenate')
+                            # NOW compute LUFS
+                            bg_lufs = get_integrated_lufs(
+                                tmpfiles_internal[-1].name)
 
-                        # Prepare tmp file for output
-                        tmpfiles.append(
-                            tempfile.NamedTemporaryFile(
-                                suffix='.wav', delete=False))
+                            # Normalize background to reference DB.
+                            gain = self.ref_db - bg_lufs
 
-                        cmb.build(
-                            [e.value['source_file']] * ntiles,
-                            tmpfiles[-1].name, 'concatenate')
+                            # Use transformer to adapt gain
+                            tfm = sox.Transformer()
+                            tfm.gain(gain_db=gain, normalize=False)
+
+                            # Prepare tmp file for output
+                            tmpfiles.append(
+                                tempfile.NamedTemporaryFile(
+                                    suffix='.wav', delete=False))
+
+                            tfm.build(tmpfiles_internal[-1].name,
+                                      tmpfiles[-1].name)
 
                     elif e.value['role'] == 'foreground':
                         # Create transformer
