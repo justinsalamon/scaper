@@ -899,7 +899,7 @@ def test_scaper_instantiate():
     (ann.data == regann.data).all().all()
 
 
-def test_generate_audio(atol=1e-5, rtol=1e-8):
+def test_generate_audio(atol=1e-4, rtol=1e-8):
 
     # Regression test: same spec, same audio (not this will fail if we update
     # any of the audio processing techniques used (e.g. change time stretching
@@ -1018,7 +1018,7 @@ def test_generate_audio(atol=1e-5, rtol=1e-8):
         assert np.allclose(wav, regwav, atol=atol, rtol=rtol)
 
 
-def test_generate(atol=1e-5, rtol=1e-8):
+def test_generate(atol=1e-4, rtol=1e-8):
 
     # Final regression test on all files
     sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
