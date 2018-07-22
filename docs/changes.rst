@@ -1,7 +1,14 @@
 .. _changes:
 
-Changes
--------
+Changelog
+---------
+
+v0.2.0
+~~~~~~
+- :pr:`28`: Improve LUFS calculation:
+
+    - Compute LUFS *after* initial processing (e.g. trimming, augmentation) of foreground and background events
+    - Self-concatenate short events (< 500 ms) to avoid ffmpeg constant of -70.0 LUFS
 
 v0.1.2
 ~~~~~~

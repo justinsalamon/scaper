@@ -6,8 +6,10 @@
 
    <br />
 
-Welcome to scaper's documentation!
-==================================
+Scaper
+======
+
+A library for soundscape synthesis and augmentation.
 
 For a detailed description of scaper and its applications check out the scaper-paper:
 
@@ -16,19 +18,12 @@ J. Salamon, D. MacConnell, M. Cartwright, P. Li, and J. P. Bello |br|
 In IEEE Workshop on Applications of Signal Processing to Audio and Acoustics (WASPAA), New Paltz, NY, USA, Oct. 2017.
 
 
-Installation
-============
-.. toctree::
-    :maxdepth: 1
-
-    installation
-
-
 Getting started
 ===============
 .. toctree::
     :maxdepth: 1
 
+    installation
     tutorial
 
 
@@ -56,7 +51,7 @@ Contribute
 Changes
 =======
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    changes
 

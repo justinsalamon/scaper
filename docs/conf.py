@@ -40,8 +40,12 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.coverage',
     'sphinx.ext.viewcode',
-    'numpydoc'
+    'numpydoc',
+    'sphinx_issues'
 ]
+
+# Link Github repo for referencing issues/PRs
+issues_github_path = 'justinsalamon/scaper'
 
 # Disable warnings about nonexisting document
 numpydoc_show_class_members = False
