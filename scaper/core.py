@@ -21,6 +21,7 @@ from .util import max_polyphony
 from .util import polyphony_gini
 from .util import is_real_number, is_real_array
 from .audio import get_integrated_lufs
+from .version import version as scaper_version
 
 SUPPORTED_DIST = {"const": lambda x: x,
                   "choose": lambda x: random.choice(x),
@@ -1411,7 +1412,8 @@ class Scaper(object):
             polyphony_gini=gini,
             allow_repeated_label=allow_repeated_label,
             allow_repeated_source=allow_repeated_source,
-            reverb=reverb)
+            reverb=reverb,
+            scaper_version=scaper_version)
 
         # Add annotation to jams
         jam.annotations.append(ann)
