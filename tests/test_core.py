@@ -874,11 +874,11 @@ def test_scaper_instantiate():
     assert 'scaper' in ann.sandbox.keys()
     assert 'scaper' in regann.sandbox.keys()
 
-    # everything but the specs can be compared directly:
+    # everything but the specs and version can be compared directly:
     for k, kreg in zip(sorted(ann.sandbox.scaper.keys()),
                        sorted(regann.sandbox.scaper.keys())):
         assert k == kreg
-        if k not in ['bg_spec', 'fg_spec']:
+        if k not in ['bg_spec', 'fg_spec', 'scaper_version']:
             assert ann.sandbox.scaper[k] == regann.sandbox.scaper[kreg]
 
     # to compare specs need to covert raw specs to list of lists
@@ -1090,6 +1090,9 @@ def test_generate(atol=1e-5, rtol=1e-8):
         # validate jams
         jam = jams.load(jam_file.name)
         regjam = jams.load(REG_JAM_PATH)
+        # version might change, rest should be the same
+        regjam.annotations[0].sandbox.scaper['scaper_version'] = \
+            scaper.__version__
         assert jam == regjam
 
         # validate txt
