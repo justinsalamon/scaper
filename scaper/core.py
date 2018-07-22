@@ -21,6 +21,7 @@ from .util import max_polyphony
 from .util import polyphony_gini
 from .util import is_real_number, is_real_array
 from .audio import get_integrated_lufs
+from .version import version as scaper_version
 
 SUPPORTED_DIST = {"const": lambda x: x,
                   "choose": lambda x: random.choice(x),
@@ -1411,7 +1412,8 @@ class Scaper(object):
             polyphony_gini=gini,
             allow_repeated_label=allow_repeated_label,
             allow_repeated_source=allow_repeated_source,
-            reverb=reverb)
+            reverb=reverb,
+            scaper_version=scaper_version)
 
         # Add annotation to jams
         jam.annotations.append(ann)
@@ -1499,19 +1501,35 @@ class Scaper(object):
                                  e.value['source_time'] +
                                  e.value['event_duration'])
 
-                        # After trimming, normalize background to reference DB.
-                        bg_lufs = get_integrated_lufs(e.value['source_file'])
-                        gain = self.ref_db - bg_lufs
-                        cmb.gain(gain_db=gain, normalize=False)
+                        # PROCESS BEFORE COMPUTING LUFS
+                        tmpfiles_internal = []
+                        with _close_temp_files(tmpfiles_internal):
+                            # create internal tmpfile
+                            tmpfiles_internal.append(
+                                tempfile.NamedTemporaryFile(
+                                    suffix='.wav', delete=False))
+                            # synthesize concatenated/trimmed background
+                            cmb.build(
+                                [e.value['source_file']] * ntiles,
+                                tmpfiles_internal[-1].name, 'concatenate')
+                            # NOW compute LUFS
+                            bg_lufs = get_integrated_lufs(
+                                tmpfiles_internal[-1].name)
 
-                        # Prepare tmp file for output
-                        tmpfiles.append(
-                            tempfile.NamedTemporaryFile(
-                                suffix='.wav', delete=False))
+                            # Normalize background to reference DB.
+                            gain = self.ref_db - bg_lufs
 
-                        cmb.build(
-                            [e.value['source_file']] * ntiles,
-                            tmpfiles[-1].name, 'concatenate')
+                            # Use transformer to adapt gain
+                            tfm = sox.Transformer()
+                            tfm.gain(gain_db=gain, normalize=False)
+
+                            # Prepare tmp file for output
+                            tmpfiles.append(
+                                tempfile.NamedTemporaryFile(
+                                    suffix='.wav', delete=False))
+
+                            tfm.build(tmpfiles_internal[-1].name,
+                                      tmpfiles[-1].name)
 
                     elif e.value['role'] == 'foreground':
                         # Create transformer
@@ -1538,31 +1556,49 @@ class Scaper(object):
                         tfm.fade(fade_in_len=self.fade_in_len,
                                  fade_out_len=self.fade_out_len)
 
-                        # Normalize to specified SNR with respect to
-                        # self.ref_db
-                        fg_lufs = get_integrated_lufs(e.value['source_file'])
-                        gain = self.ref_db + e.value['snr'] - fg_lufs
-                        tfm.gain(gain_db=gain, normalize=False)
+                        # PROCESS BEFORE COMPUTING LUFS
+                        tmpfiles_internal = []
+                        with _close_temp_files(tmpfiles_internal):
+                            # create internal tmpfile
+                            tmpfiles_internal.append(
+                                tempfile.NamedTemporaryFile(
+                                    suffix='.wav', delete=False))
+                            # synthesize edited foreground sound event
+                            tfm.build(e.value['source_file'],
+                                      tmpfiles_internal[-1].name)
 
-                        # Pad with silence before/after event to match the
-                        # soundscape duration
-                        prepad = e.value['event_time']
-                        if e.value['time_stretch'] is None:
-                            postpad = max(
-                                0, self.duration - (e.value['event_time'] +
-                                                    e.value['event_duration']))
-                        else:
-                            postpad = max(
-                                0, self.duration - (e.value['event_time'] +
-                                                    e.value['event_duration'] *
-                                                    e.value['time_stretch']))
-                        tfm.pad(prepad, postpad)
+                            # NOW compute LUFS
+                            fg_lufs = get_integrated_lufs(
+                                tmpfiles_internal[-1].name)
 
-                        # Finally save result to a tmp file
-                        tmpfiles.append(
-                            tempfile.NamedTemporaryFile(
-                                suffix='.wav', delete=False))
-                        tfm.build(e.value['source_file'], tmpfiles[-1].name)
+                            # Normalize to specified SNR with respect to
+                            # background
+                            tfm = sox.Transformer()
+                            gain = self.ref_db + e.value['snr'] - fg_lufs
+                            tfm.gain(gain_db=gain, normalize=False)
+
+                            # Pad with silence before/after event to match the
+                            # soundscape duration
+                            prepad = e.value['event_time']
+                            if e.value['time_stretch'] is None:
+                                postpad = max(
+                                    0, self.duration - (
+                                            e.value['event_time'] +
+                                            e.value['event_duration']))
+                            else:
+                                postpad = max(
+                                    0, self.duration - (
+                                            e.value['event_time'] +
+                                            e.value['event_duration'] *
+                                            e.value['time_stretch']))
+                            tfm.pad(prepad, postpad)
+
+                            # Finally save result to a tmp file
+                            tmpfiles.append(
+                                tempfile.NamedTemporaryFile(
+                                    suffix='.wav', delete=False))
+                            tfm.build(tmpfiles_internal[-1].name,
+                                      tmpfiles[-1].name)
 
                     else:
                         raise ScaperError(

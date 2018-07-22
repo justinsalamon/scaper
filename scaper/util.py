@@ -139,6 +139,8 @@ def _populate_label_list(folder_path, label_list):
         if (os.path.isdir(os.path.join(folder_path, fname)) and
                 fname[0] != '.'):
             label_list.append(fname)
+    # ensure consistent ordering of labels
+    label_list.sort()
 
 
 def _trunc_norm(mu, sigma, trunc_min, trunc_max):

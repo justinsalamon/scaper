@@ -1,59 +1,54 @@
 {
-  "file_metadata": {
-    "release": "",
-    "artist": "",
-    "identifiers": {},
-    "jams_version": "0.2.2",
-    "duration": 10.0,
-    "title": ""
-  },
   "sandbox": {},
+  "file_metadata": {
+    "identifiers": {},
+    "duration": 10.0,
+    "artist": "",
+    "jams_version": "0.2.2",
+    "title": "",
+    "release": ""
+  },
   "annotations": [
     {
-      "time": 0,
-      "namespace": "sound_event",
       "data": [
         {
-          "time": 0.0,
+          "duration": 10.0,
           "value": {
-            "pitch_shift": null,
-            "source_time": 0,
             "event_time": 0,
-            "source_file": "tests/data/audio/background/park/268903__yonts__city-park-tel-aviv-israel.wav",
             "time_stretch": null,
+            "source_time": 0,
+            "role": "background",
             "snr": 0,
             "label": "park",
-            "role": "background",
+            "pitch_shift": null,
+            "source_file": "tests/data/audio/background/park/268903__yonts__city-park-tel-aviv-israel.wav",
             "event_duration": 10.0
           },
-          "duration": 10.0,
-          "confidence": 1.0
+          "confidence": 1.0,
+          "time": 0.0
         }
       ],
       "annotation_metadata": {
-        "corpus": "",
-        "annotation_rules": "",
+        "annotation_tools": "",
+        "validation": "",
+        "data_source": "",
         "curator": {
           "email": "",
           "name": ""
         },
-        "annotator": {},
-        "data_source": "",
         "version": "",
-        "validation": "",
-        "annotation_tools": ""
+        "annotator": {},
+        "corpus": "",
+        "annotation_rules": ""
       },
+      "namespace": "sound_event",
       "duration": 10.0,
       "sandbox": {
         "scaper": {
-          "reverb": 0.2,
-          "fg_spec": [],
-          "allow_repeated_label": true,
-          "bg_labels": [
-            "park",
-            "restaurant",
-            "street"
-          ],
+          "bg_path": "tests/data/audio/background",
+          "ref_db": -20,
+          "polyphony_max": 0,
+          "allow_repeated_source": true,
           "bg_spec": [
             [
               [
@@ -85,25 +80,31 @@
               null
             ]
           ],
-          "allow_repeated_source": true,
-          "fade_in_len": 0.01,
           "fg_path": "tests/data/audio/foreground",
-          "duration": 10.0,
-          "protected_labels": [],
-          "fade_out_len": 0.01,
-          "polyphony_gini": 0,
-          "ref_db": -20,
+          "reverb": 0.2,
           "fg_labels": [
             "car_horn",
             "human_voice",
             "siren"
           ],
-          "polyphony_max": 0,
           "n_events": 0,
+          "fg_spec": [],
+          "polyphony_gini": 0,
+          "duration": 10.0,
+          "bg_labels": [
+            "park",
+            "restaurant",
+            "street"
+          ],
+          "fade_out_len": 0.01,
           "n_channels": 1,
-          "bg_path": "tests/data/audio/background"
+          "fade_in_len": 0.01,
+          "protected_labels": [],
+          "allow_repeated_label": true,
+          "scaper_version": "0.1.2"
         }
-      }
+      },
+      "time": 0
     }
   ]
 }
