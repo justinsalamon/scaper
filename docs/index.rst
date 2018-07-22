@@ -9,8 +9,9 @@
 Scaper
 ======
 
-A library for soundscape synthesis and augmentation.
+Scaper is a library for soundscape synthesis and augmentation.
 
+For a quick introduction to using scaper, please refer to the :doc:`tutorial`.
 For a detailed description of scaper and its applications check out the scaper-paper:
 
 `Scaper: A library for soundscape synthesis and augmentation <http://www.justinsalamon.com/uploads/4/3/9/4/4394963/salamon_scaper_waspaa_2017.pdf>`_ |br|
