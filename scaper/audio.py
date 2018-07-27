@@ -93,7 +93,7 @@ def get_integrated_lufs(filepath, min_duration=0.5):
         tmpfiles = []
         with _close_temp_files(tmpfiles):
             concat_file = tempfile.NamedTemporaryFile(suffix='.wav',
-                                                      delete=True)
+                                                      delete=False)
             tmpfiles.append(concat_file)
 
             cbn = sox.Combiner()
