@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 import imp
 
 
@@ -16,7 +16,6 @@ setup(
     url='https://github.com/justinsalamon/scaper',
     download_url='http://github.com/justinsalamon/scaper/releases',
     packages=['scaper'],
-    package_data={'scaper': ['namespaces/sound_event.json']},
     long_description=long_description,
     long_description_content_type='text/markdown',
     keywords='audio sound soundscape environmental dsp mixing',
