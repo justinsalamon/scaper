@@ -226,30 +226,30 @@ def test_trim(atol=1e-5, rtol=1e-8):
         # --- Validate output --- #
         # validate JAMS
         trimjam = jams.load(trim_jam_file.name)
-        trimann = trimjam.annotations.search(namespace='sound_event')[0]
+        trimann = trimjam.annotations.search(namespace='scaper')[0]
 
         # Time and duration of annotation observation must be changed, but
         # values in the value dict must remained unchanged!
-        for idx, event in trimann.data.iterrows():
+        for event in trimann.data:
             if event.value['role'] == 'background':
-                assert (event.time.total_seconds() == 0 and
-                        event.duration.total_seconds() == 4 and
+                assert (event.time == 0 and
+                        event.duration == 4 and
                         event.value['event_time'] == 0 and
                         event.value['event_duration'] == 10 and
                         event.value['source_time'] == 0)
             else:
-                if event.time.total_seconds() == 0:
-                    assert (event.duration.total_seconds() == 0.5 and
+                if event.time == 0:
+                    assert (event.duration == 0.5 and
                             event.value['event_time'] == 2.5 and
                             event.value['event_duration'] == 1 and
                             event.value['source_time'] == 5)
-                elif event.time.total_seconds() == 1.5:
-                    assert (event.duration.total_seconds() == 1 and
+                elif event.time == 1.5:
+                    assert (event.duration == 1 and
                             event.value['event_time'] == 4.5 and
                             event.value['event_duration'] == 1 and
                             event.value['source_time'] == 5)
-                elif event.time.total_seconds() == 3.5:
-                    assert (event.duration.total_seconds() == 0.5 and
+                elif event.time == 3.5:
+                    assert (event.duration == 0.5 and
                             event.value['event_time'] == 6.5 and
                             event.value['event_duration'] == 1 and
                             event.value['source_time'] == 5)
@@ -896,7 +896,7 @@ def test_scaper_instantiate():
     assert ann.duration == regann.duration
 
     # 3.4 compare data
-    (ann.data == regann.data).all().all()
+    assert ann.data == regann.data
 
 
 def test_generate_audio(atol=1e-4, rtol=1e-8):
@@ -982,14 +982,14 @@ def test_generate_audio(atol=1e-4, rtol=1e-8):
         regwav, sr = soundfile.read(REG_WAV_PATH)
         assert np.allclose(wav, regwav, atol=atol, rtol=rtol)
 
-        # namespace must be sound_event
+        # namespace must be scaper
         jam.annotations[0].namespace = 'tag_open'
         pytest.raises(ScaperError, sc._generate_audio, wav_file.name,
                       jam.annotations[0])
 
         # unsupported event role must raise error
-        jam.annotations[0].namespace = 'sound_event'
-        jam.annotations[0].data.loc[3]['value']['role'] = 'ewok'
+        jam.annotations[0].namespace = 'scaper'
+        jam.annotations[0].data[3].value['role'] = 'ewok'
         pytest.raises(ScaperError, sc._generate_audio, wav_file.name,
                       jam.annotations[0])
 
