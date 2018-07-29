@@ -6,7 +6,6 @@ from scaper.util import _close_temp_files
 import pytest
 from scaper.core import EventSpec
 import tempfile
-# from backports import tempfile
 import backports.tempfile
 import os
 import numpy as np
@@ -39,6 +38,96 @@ REG_REVERB_TXT_PATH = 'tests/data/regression/reverb_soundscape_20170928.txt'
 # fg and bg labels for testing
 FB_LABELS = ['car_horn', 'human_voice', 'siren']
 BG_LABELS = ['park', 'restaurant', 'street']
+
+
+def _compare_scaper_jams(jam, regjam):
+    """
+    Check whether two scaper jams objects are equal up to floating point
+    precision, ignoring jams_version and scaper_version.
+
+    Parameters
+    ----------
+    jam : JAMS
+        In memory jams object
+    regjam : JAMS
+        Regression jams (loaded from disk)
+
+    Raises
+    ------
+    AssertionError
+        If the comparison fails.
+
+    """
+    # Note: can't compare directly, since:
+    # 1. scaper/and jams liberary versions may change
+    # 2. raw annotation sandbox stores specs as OrderedDict and tuples, whereas
+    #    loaded ann (regann) simplifies those to dicts and lists
+    # 3. floats might be marginally different (need to use np.allclose())
+
+    # Must compare each part "manually"
+    # 1. compare file metadata
+    for k, kreg in zip(jam.file_metadata.keys(), regjam.file_metadata.keys()):
+        assert k == kreg
+        if k != 'jams_version':
+            assert jam.file_metadata[k] == regjam.file_metadata[kreg]
+
+    # 2. compare jams sandboxes
+    assert jam.sandbox == regjam.sandbox
+
+    # 3. compare annotations
+    assert len(jam.annotations) == len(regjam.annotations) == 1
+    ann = jam.annotations[0]
+    regann = regjam.annotations[0]
+
+    # 3.1 compare annotation metadata
+    assert ann.annotation_metadata == regann.annotation_metadata
+
+    # 3.2 compare sandboxes
+    # Note: can't compare sandboxes directly, since in raw jam scaper sandbox
+    # stores event specs in EventSpec object (named tuple), whereas in loaded
+    # jam these will get converted to list of lists.
+    # assert ann.sandbox == regann.sandbox
+    assert len(ann.sandbox.keys()) == len(regann.sandbox.keys()) == 1
+    assert 'scaper' in ann.sandbox.keys()
+    assert 'scaper' in regann.sandbox.keys()
+
+    # everything but the specs and version can be compared directly:
+    for k, kreg in zip(sorted(ann.sandbox.scaper.keys()),
+                       sorted(regann.sandbox.scaper.keys())):
+        assert k == kreg
+        if k not in ['bg_spec', 'fg_spec', 'scaper_version']:
+            assert ann.sandbox.scaper[k] == regann.sandbox.scaper[kreg]
+
+    # to compare specs need to covert raw specs to list of lists
+    assert (
+            [[list(x) if type(x) == tuple else x for x in e] for e in
+             ann.sandbox.scaper['bg_spec']] == regann.sandbox.scaper['bg_spec'])
+
+    assert (
+            [[list(x) if type(x) == tuple else x for x in e] for e in
+             ann.sandbox.scaper['fg_spec']] == regann.sandbox.scaper['fg_spec'])
+
+    # 3.3. compare namespace, time and duration
+    assert ann.namespace == regann.namespace
+    assert ann.time == regann.time
+    assert ann.duration == regann.duration
+
+    # 3.4 compare data
+    for obs, regobs in zip(ann.data, regann.data):
+        # compare time, duration and confidence
+        assert np.allclose(obs.time, regobs.time)
+        assert np.allclose(obs.duration, regobs.duration)
+        assert np.allclose(obs.confidence, regobs.confidence)
+
+        # compare value dictionaries
+        v, regv = obs.value, regobs.value
+        assert sorted(v.keys()) == sorted(regv.keys())
+        for k, regk in zip(sorted(v.keys()), sorted(regv.keys())):
+            assert k == regk
+            if isinstance(v[k], numbers.Number):
+                assert np.allclose(v[k], regv[regk])
+            else:
+                assert v[k] == regv[regk]
 
 
 def test_generate_from_jams(atol=1e-5, rtol=1e-8):
@@ -839,80 +928,7 @@ def test_scaper_instantiate():
 
     jam = sc._instantiate(disable_instantiation_warnings=True)
     regjam = jams.load(REG_JAM_PATH)
-    # print(jam)
-    # print(regression_jam)
-
-    # Note: can't compare directly, since:
-    # 1. scaper/and jams liberary versions may change
-    # 2. raw annotation sandbox stores specs as OrderedDict and tuples, whereas
-    # loaded ann (regann) simplifies those to dicts and lists
-    # assert jam == regression_jam
-
-    # Must compare each part "manually"
-    # 1. compare file metadata
-    for k, kreg in zip(jam.file_metadata.keys(), regjam.file_metadata.keys()):
-        assert k == kreg
-        if k != 'jams_version':
-            assert jam.file_metadata[k] == regjam.file_metadata[kreg]
-
-    # 2. compare jams sandboxes
-    assert jam.sandbox == regjam.sandbox
-
-    # 3. compare annotations
-    assert len(jam.annotations) == len(regjam.annotations) == 1
-    ann = jam.annotations[0]
-    regann = regjam.annotations[0]
-
-    # 3.1 compare annotation metadata
-    assert ann.annotation_metadata == regann.annotation_metadata
-
-    # 3.2 compare sandboxes
-    # Note: can't compare sandboxes directly, since in raw jam scaper sandbox
-    # stores event specs in EventSpec object (named tuple), whereas in loaded
-    # jam these will get converted to list of lists.
-    # assert ann.sandbox == regann.sandbox
-    assert len(ann.sandbox.keys()) == len(regann.sandbox.keys()) == 1
-    assert 'scaper' in ann.sandbox.keys()
-    assert 'scaper' in regann.sandbox.keys()
-
-    # everything but the specs and version can be compared directly:
-    for k, kreg in zip(sorted(ann.sandbox.scaper.keys()),
-                       sorted(regann.sandbox.scaper.keys())):
-        assert k == kreg
-        if k not in ['bg_spec', 'fg_spec', 'scaper_version']:
-            assert ann.sandbox.scaper[k] == regann.sandbox.scaper[kreg]
-
-    # to compare specs need to covert raw specs to list of lists
-    assert (
-        [[list(x) if type(x) == tuple else x for x in e] for e in
-         ann.sandbox.scaper['bg_spec']] == regann.sandbox.scaper['bg_spec'])
-
-    assert (
-        [[list(x) if type(x) == tuple else x for x in e] for e in
-         ann.sandbox.scaper['fg_spec']] == regann.sandbox.scaper['fg_spec'])
-
-    # 3.3. compare namespace, time and duration
-    assert ann.namespace == regann.namespace
-    assert ann.time == regann.time
-    assert ann.duration == regann.duration
-
-    # 3.4 compare data
-    for obs, regobs in zip(ann.data, regann.data):
-        # compare time, duration and confidence
-        assert np.allclose(obs.time, regobs.time)
-        assert np.allclose(obs.duration, regobs.duration)
-        assert np.allclose(obs.confidence, regobs.confidence)
-
-        # compare value dictionaries
-        v, regv = obs.value, regobs.value
-        assert sorted(v.keys()) == sorted(regv.keys())
-        for k, regk in zip(sorted(v.keys()), sorted(regv.keys())):
-            assert k == regk
-            if isinstance(v[k], numbers.Number):
-                assert np.allclose(v[k], regv[regk])
-            else:
-                assert v[k] == regv[regk]
-
+    _compare_scaper_jams(jam, regjam)
 
 
 def test_generate_audio(atol=1e-4, rtol=1e-8):
@@ -1106,10 +1122,7 @@ def test_generate(atol=1e-4, rtol=1e-8):
         # validate jams
         jam = jams.load(jam_file.name)
         regjam = jams.load(REG_JAM_PATH)
-        # version might change, rest should be the same
-        regjam.annotations[0].sandbox.scaper['scaper_version'] = \
-            scaper.__version__
-        assert jam == regjam
+        _compare_scaper_jams(jam, regjam)
 
         # validate txt
         txt = pd.read_csv(txt_file.name, header=None, sep='\t')
