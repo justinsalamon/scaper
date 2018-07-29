@@ -95,15 +95,15 @@ def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
     else:
         new_fg_path = os.path.expanduser(fg_path)
         # Update source files
-        for idx in ann.data.index:
-            if ann.data.loc[idx, 'value']['role'] == 'foreground':
-                sourcefile = ann.data.loc[idx, 'value']['source_file']
+        for obs in ann.data:
+            if obs.value['role'] == 'foreground':
+                sourcefile = obs.value['source_file']
                 sourcefilename = os.path.basename(sourcefile)
                 parent = os.path.dirname(sourcefile)
                 parentname = os.path.basename(parent)
                 newsourcefile = os.path.join(
                     new_fg_path, parentname, sourcefilename)
-                ann.data.loc[idx, 'value']['source_file'] = newsourcefile
+                obs.value['source_file'] = newsourcefile  # hacky
         # Update sandbox
         ann.sandbox.scaper['fg_path'] = new_fg_path
 
@@ -112,15 +112,15 @@ def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
     else:
         new_bg_path = os.path.expanduser(bg_path)
         # Update source files
-        for idx in ann.data.index:
-            if ann.data.loc[idx, 'value']['role'] == 'background':
-                sourcefile = ann.data.loc[idx, 'value']['source_file']
+        for obs in ann.data:
+            if obs.value['role'] == 'background':
+                sourcefile = obs.value['source_file']
                 sourcefilename = os.path.basename(sourcefile)
                 parent = os.path.dirname(sourcefile)
                 parentname = os.path.basename(parent)
                 newsourcefile = os.path.join(
                     new_bg_path, parentname, sourcefilename)
-                ann.data.loc[idx, 'value']['source_file'] = newsourcefile
+                obs.value['source_file'] = newsourcefile  # hacky
         # Update sandbox
         ann.sandbox.scaper['bg_path'] = new_bg_path
 
@@ -204,8 +204,8 @@ def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
             # values for reconstruction / reproducibility.
             # Count number of FG events
             n_events = 0
-            for idx, line in ann.data.iterrows():
-                if line.value['role'] == 'foreground':
+            for obs in ann.data:
+                if obs.value['role'] == 'foreground':
                     n_events += 1
 
             # Re-compute max polyphony
@@ -1471,11 +1471,7 @@ class Scaper(object):
             tmpfiles = []
             with _close_temp_files(tmpfiles):
 
-                for event in ann.data.iterrows():
-
-                    # first item is index, second is event dictionary
-                    e = event[1]
-
+                for e in ann.data:
                     if e.value['role'] == 'background':
                         # Concatenate background if necessary. Right now we
                         # always concatenate the background at least once,
@@ -1712,12 +1708,11 @@ class Scaper(object):
 
             df = pd.DataFrame(columns=['onset', 'offset', 'label'])
 
-            for idx, row in ann.data.iterrows():
-                if row.value['role'] == 'foreground':
-                    newrow = ([row.time.total_seconds(),
-                               row.time.total_seconds() +
-                               row.duration.total_seconds(),
-                               row.value['label']])
+            for obs in ann.data:
+                if obs.value['role'] == 'foreground':
+                    newrow = ([obs.time,
+                               obs.time + obs.duration,
+                               obs.value['label']])
                     df.loc[len(df)] = newrow
 
             # sort events by onset time
