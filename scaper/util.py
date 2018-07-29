@@ -238,7 +238,7 @@ def polyphony_gini(ann, hop_size=0.01):
     ----------
     ann : jams.Annotation
         Annotation for which to compute the normalized polyphony entropy. Must
-        be of the sound_event namespace.
+        be of the scaper namespace.
     hop_size : float
         The hop size for sampling the polyphony time series.
 
@@ -251,7 +251,7 @@ def polyphony_gini(ann, hop_size=0.01):
     ------
     ScaperError
         If the annotation does not have a duration value or if its namespace is
-        not sound_event.
+        not scaper.
 
     '''
 
@@ -260,7 +260,7 @@ def polyphony_gini(ann, hop_size=0.01):
 
     if ann.namespace != 'scaper':
         raise ScaperError(
-            'Annotation namespace must be sound_event, found {:s}.'.format(
+            'Annotation namespace must be scaper, found {:s}.'.format(
                 ann.namespace))
 
     # If there are no foreground events the gini coefficient is 0
