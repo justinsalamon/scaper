@@ -1331,7 +1331,7 @@ class Scaper(object):
 
         '''
         jam = jams.JAMS()
-        ann = jams.Annotation(namespace='sound_event')
+        ann = jams.Annotation(namespace='scaper')
 
         # Set annotation duration (might be changed later due to cropping)
         ann.duration = self.duration

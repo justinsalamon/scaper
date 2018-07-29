@@ -192,12 +192,12 @@ def max_polyphony(ann):
     '''
 
     # If there are no foreground events the polyphony is 0
-    roles = [v['role'] for v in ann.data['value']]
+    roles = [obs.value['role'] for obs in ann.data]
     if 'foreground' not in roles:
         return 0
     else:
         # Keep only foreground events
-        int_time, int_val = ann.data.to_interval_values()
+        int_time, int_val = ann.to_interval_values()
         int_time_clean = []
         for t, v in zip(int_time, int_val):
             if v['role'] == 'foreground':
@@ -258,13 +258,13 @@ def polyphony_gini(ann, hop_size=0.01):
     if not ann.duration:
         raise ScaperError('Annotation does not have a duration value set.')
 
-    if ann.namespace != 'sound_event':
+    if ann.namespace != 'scaper':
         raise ScaperError(
             'Annotation namespace must be sound_event, found {:s}.'.format(
                 ann.namespace))
 
     # If there are no foreground events the gini coefficient is 0
-    roles = [v['role'] for v in ann.data['value']]
+    roles = [obs.value['role'] for obs in ann.data]
     if 'foreground' not in roles:
         return 0
 
@@ -273,11 +273,12 @@ def polyphony_gini(ann, hop_size=0.01):
     times = np.linspace(0, (n_samples-1) * hop_size, n_samples)
     values = np.zeros_like(times)
 
-    for idx in ann.data.index:
-        if ann.data.loc[idx, 'value']['role'] == 'foreground':
-            start_time = ann.data.loc[idx, 'time'].total_seconds()
-            end_time = (
-                start_time + ann.data.loc[idx, 'duration'].total_seconds())
+    # for idx in ann.data.index:
+    for obs in ann.data:
+        # if ann.data.loc[idx, 'value']['role'] == 'foreground':
+        if obs.value['role'] == 'foreground':
+            start_time = obs.time
+            end_time = start_time + obs.duration
             start_idx = np.argmin(np.abs(times - start_time))
             end_idx = np.argmin(np.abs(times - end_time)) - 1
             values[start_idx:end_idx + 1] += 1

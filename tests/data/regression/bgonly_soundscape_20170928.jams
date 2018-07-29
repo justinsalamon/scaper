@@ -41,7 +41,7 @@
         "corpus": "",
         "annotation_rules": ""
       },
-      "namespace": "sound_event",
+      "namespace": "scaper",
       "duration": 10.0,
       "sandbox": {
         "scaper": {

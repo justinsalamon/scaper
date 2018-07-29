@@ -131,7 +131,7 @@ def test_trunc_norm():
     assert (x >= trunc_min).all() and (x <= trunc_max).all()
 
     # trickier check: values must approximate distribution's PDF
-    hist, bins = np.histogram(x, bins=np.arange(0, 10.1, 0.2), normed=True)
+    hist, bins = np.histogram(x, bins=np.arange(0, 10.1, 0.2), density=True)
     xticks = bins[:-1] + 0.1
     a, b = (trunc_min - mu) / float(sigma), (trunc_max - mu) / float(sigma)
     trunc_closed = truncnorm.pdf(xticks, a, b, mu, sigma)
@@ -145,7 +145,7 @@ def test_max_polyphony():
     '''
     def __create_annotation_with_overlapping_events(n_events):
 
-        ann = jams.Annotation(namespace='sound_event')
+        ann = jams.Annotation(namespace='scaper')
         ann.duration = n_events / 2. + 10
 
         for ind in range(n_events):
@@ -168,7 +168,7 @@ def test_max_polyphony():
 
     def __create_annotation_without_overlapping_events(n_events):
 
-        ann = jams.Annotation(namespace='sound_event')
+        ann = jams.Annotation(namespace='scaper')
         ann.duration = n_events * 10
 
         for ind in range(n_events):
@@ -207,12 +207,12 @@ def test_polyphony_gini():
     Test computation of polyphony gini
     '''
 
-    # Annotation must have namespace sound_event, otherwise raise error
+    # Annotation must have namespace scaper, otherwise raise error
     ann = jams.Annotation('tag_open', duration=10)
     gini = pytest.raises(ScaperError, polyphony_gini, ann)
 
     # Annotation without duration set should raise error
-    ann = jams.Annotation('sound_event', duration=None)
+    ann = jams.Annotation('scaper', duration=None)
     gini = pytest.raises(ScaperError, polyphony_gini, ann)
 
     # Annotation with no foreground events returns a gini of 0
