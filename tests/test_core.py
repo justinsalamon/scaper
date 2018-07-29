@@ -6,13 +6,13 @@ from scaper.util import _close_temp_files
 import pytest
 from scaper.core import EventSpec
 import tempfile
-# from backports import tempfile
 import backports.tempfile
 import os
 import numpy as np
 import soundfile
 import jams
-import pandas as pd
+import csv
+import numbers
 
 
 # FIXTURES
@@ -38,6 +38,96 @@ REG_REVERB_TXT_PATH = 'tests/data/regression/reverb_soundscape_20170928.txt'
 # fg and bg labels for testing
 FB_LABELS = ['car_horn', 'human_voice', 'siren']
 BG_LABELS = ['park', 'restaurant', 'street']
+
+
+def _compare_scaper_jams(jam, regjam):
+    """
+    Check whether two scaper jams objects are equal up to floating point
+    precision, ignoring jams_version and scaper_version.
+
+    Parameters
+    ----------
+    jam : JAMS
+        In memory jams object
+    regjam : JAMS
+        Regression jams (loaded from disk)
+
+    Raises
+    ------
+    AssertionError
+        If the comparison fails.
+
+    """
+    # Note: can't compare directly, since:
+    # 1. scaper/and jams liberary versions may change
+    # 2. raw annotation sandbox stores specs as OrderedDict and tuples, whereas
+    #    loaded ann (regann) simplifies those to dicts and lists
+    # 3. floats might be marginally different (need to use np.allclose())
+
+    # Must compare each part "manually"
+    # 1. compare file metadata
+    for k, kreg in zip(jam.file_metadata.keys(), regjam.file_metadata.keys()):
+        assert k == kreg
+        if k != 'jams_version':
+            assert jam.file_metadata[k] == regjam.file_metadata[kreg]
+
+    # 2. compare jams sandboxes
+    assert jam.sandbox == regjam.sandbox
+
+    # 3. compare annotations
+    assert len(jam.annotations) == len(regjam.annotations) == 1
+    ann = jam.annotations[0]
+    regann = regjam.annotations[0]
+
+    # 3.1 compare annotation metadata
+    assert ann.annotation_metadata == regann.annotation_metadata
+
+    # 3.2 compare sandboxes
+    # Note: can't compare sandboxes directly, since in raw jam scaper sandbox
+    # stores event specs in EventSpec object (named tuple), whereas in loaded
+    # jam these will get converted to list of lists.
+    # assert ann.sandbox == regann.sandbox
+    assert len(ann.sandbox.keys()) == len(regann.sandbox.keys()) == 1
+    assert 'scaper' in ann.sandbox.keys()
+    assert 'scaper' in regann.sandbox.keys()
+
+    # everything but the specs and version can be compared directly:
+    for k, kreg in zip(sorted(ann.sandbox.scaper.keys()),
+                       sorted(regann.sandbox.scaper.keys())):
+        assert k == kreg
+        if k not in ['bg_spec', 'fg_spec', 'scaper_version']:
+            assert ann.sandbox.scaper[k] == regann.sandbox.scaper[kreg]
+
+    # to compare specs need to covert raw specs to list of lists
+    assert (
+            [[list(x) if type(x) == tuple else x for x in e] for e in
+             ann.sandbox.scaper['bg_spec']] == regann.sandbox.scaper['bg_spec'])
+
+    assert (
+            [[list(x) if type(x) == tuple else x for x in e] for e in
+             ann.sandbox.scaper['fg_spec']] == regann.sandbox.scaper['fg_spec'])
+
+    # 3.3. compare namespace, time and duration
+    assert ann.namespace == regann.namespace
+    assert ann.time == regann.time
+    assert ann.duration == regann.duration
+
+    # 3.4 compare data
+    for obs, regobs in zip(ann.data, regann.data):
+        # compare time, duration and confidence
+        assert np.allclose(obs.time, regobs.time)
+        assert np.allclose(obs.duration, regobs.duration)
+        assert np.allclose(obs.confidence, regobs.confidence)
+
+        # compare value dictionaries
+        v, regv = obs.value, regobs.value
+        assert sorted(v.keys()) == sorted(regv.keys())
+        for k, regk in zip(sorted(v.keys()), sorted(regv.keys())):
+            assert k == regk
+            if isinstance(v[k], numbers.Number):
+                assert np.allclose(v[k], regv[regk])
+            else:
+                assert v[k] == regv[regk]
 
 
 def test_generate_from_jams(atol=1e-5, rtol=1e-8):
@@ -226,30 +316,30 @@ def test_trim(atol=1e-5, rtol=1e-8):
         # --- Validate output --- #
         # validate JAMS
         trimjam = jams.load(trim_jam_file.name)
-        trimann = trimjam.annotations.search(namespace='sound_event')[0]
+        trimann = trimjam.annotations.search(namespace='scaper')[0]
 
         # Time and duration of annotation observation must be changed, but
         # values in the value dict must remained unchanged!
-        for idx, event in trimann.data.iterrows():
+        for event in trimann.data:
             if event.value['role'] == 'background':
-                assert (event.time.total_seconds() == 0 and
-                        event.duration.total_seconds() == 4 and
+                assert (event.time == 0 and
+                        event.duration == 4 and
                         event.value['event_time'] == 0 and
                         event.value['event_duration'] == 10 and
                         event.value['source_time'] == 0)
             else:
-                if event.time.total_seconds() == 0:
-                    assert (event.duration.total_seconds() == 0.5 and
+                if event.time == 0:
+                    assert (event.duration == 0.5 and
                             event.value['event_time'] == 2.5 and
                             event.value['event_duration'] == 1 and
                             event.value['source_time'] == 5)
-                elif event.time.total_seconds() == 1.5:
-                    assert (event.duration.total_seconds() == 1 and
+                elif event.time == 1.5:
+                    assert (event.duration == 1 and
                             event.value['event_time'] == 4.5 and
                             event.value['event_duration'] == 1 and
                             event.value['source_time'] == 5)
-                elif event.time.total_seconds() == 3.5:
-                    assert (event.duration.total_seconds() == 0.5 and
+                elif event.time == 3.5:
+                    assert (event.duration == 0.5 and
                             event.value['event_time'] == 6.5 and
                             event.value['event_duration'] == 1 and
                             event.value['source_time'] == 5)
@@ -838,65 +928,7 @@ def test_scaper_instantiate():
 
     jam = sc._instantiate(disable_instantiation_warnings=True)
     regjam = jams.load(REG_JAM_PATH)
-    # print(jam)
-    # print(regression_jam)
-
-    # Note: can't compare directly, since:
-    # 1. scaper/and jams liberary versions may change
-    # 2. raw annotation sandbox stores specs as OrderedDict and tuples, whereas
-    # loaded ann (regann) simplifies those to dicts and lists
-    # assert jam == regression_jam
-
-    # Must compare each part "manually"
-    # 1. compare file metadata
-    for k, kreg in zip(jam.file_metadata.keys(), regjam.file_metadata.keys()):
-        assert k == kreg
-        if k != 'jams_version':
-            assert jam.file_metadata[k] == regjam.file_metadata[kreg]
-
-    # 2. compare jams sandboxes
-    assert jam.sandbox == regjam.sandbox
-
-    # 3. compare annotations
-    assert len(jam.annotations) == len(regjam.annotations) == 1
-    ann = jam.annotations[0]
-    regann = regjam.annotations[0]
-
-    # 3.1 compare annotation metadata
-    assert ann.annotation_metadata == regann.annotation_metadata
-
-    # 3.2 compare sandboxes
-    # Note: can't compare sandboxes directly, since in raw jam scaper sandbox
-    # stores event specs in EventSpec object (named tuple), whereas in loaded
-    # jam these will get converted to list of lists.
-    # assert ann.sandbox == regann.sandbox
-    assert len(ann.sandbox.keys()) == len(regann.sandbox.keys()) == 1
-    assert 'scaper' in ann.sandbox.keys()
-    assert 'scaper' in regann.sandbox.keys()
-
-    # everything but the specs and version can be compared directly:
-    for k, kreg in zip(sorted(ann.sandbox.scaper.keys()),
-                       sorted(regann.sandbox.scaper.keys())):
-        assert k == kreg
-        if k not in ['bg_spec', 'fg_spec', 'scaper_version']:
-            assert ann.sandbox.scaper[k] == regann.sandbox.scaper[kreg]
-
-    # to compare specs need to covert raw specs to list of lists
-    assert (
-        [[list(x) if type(x) == tuple else x for x in e] for e in
-         ann.sandbox.scaper['bg_spec']] == regann.sandbox.scaper['bg_spec'])
-
-    assert (
-        [[list(x) if type(x) == tuple else x for x in e] for e in
-         ann.sandbox.scaper['fg_spec']] == regann.sandbox.scaper['fg_spec'])
-
-    # 3.3. compare namespace, time and duration
-    assert ann.namespace == regann.namespace
-    assert ann.time == regann.time
-    assert ann.duration == regann.duration
-
-    # 3.4 compare data
-    (ann.data == regann.data).all().all()
+    _compare_scaper_jams(jam, regjam)
 
 
 def test_generate_audio(atol=1e-4, rtol=1e-8):
@@ -982,14 +1014,14 @@ def test_generate_audio(atol=1e-4, rtol=1e-8):
         regwav, sr = soundfile.read(REG_WAV_PATH)
         assert np.allclose(wav, regwav, atol=atol, rtol=rtol)
 
-        # namespace must be sound_event
+        # namespace must be scaper
         jam.annotations[0].namespace = 'tag_open'
         pytest.raises(ScaperError, sc._generate_audio, wav_file.name,
                       jam.annotations[0])
 
         # unsupported event role must raise error
-        jam.annotations[0].namespace = 'sound_event'
-        jam.annotations[0].data.loc[3]['value']['role'] = 'ewok'
+        jam.annotations[0].namespace = 'scaper'
+        jam.annotations[0].data[3].value['role'] = 'ewok'
         pytest.raises(ScaperError, sc._generate_audio, wav_file.name,
                       jam.annotations[0])
 
@@ -1090,15 +1122,31 @@ def test_generate(atol=1e-4, rtol=1e-8):
         # validate jams
         jam = jams.load(jam_file.name)
         regjam = jams.load(REG_JAM_PATH)
-        # version might change, rest should be the same
-        regjam.annotations[0].sandbox.scaper['scaper_version'] = \
-            scaper.__version__
-        assert jam == regjam
+        _compare_scaper_jams(jam, regjam)
 
         # validate txt
-        txt = pd.read_csv(txt_file.name, header=None, sep='\t')
-        regtxt = pd.read_csv(REG_TXT_PATH, header=None, sep='\t')
-        assert (txt == regtxt).all().all()
+        # read in both files
+        txt_data = []
+        with open(txt_file.name) as file:
+            reader = csv.reader(file, delimiter='\t')
+            for row in reader:
+                txt_data.append(row)
+        txt_data = np.asarray(txt_data)
+
+        regtxt_data = []
+        with open(REG_TXT_PATH) as file:
+            reader = csv.reader(file, delimiter='\t')
+            for row in reader:
+                regtxt_data.append(row)
+        regtxt_data = np.asarray(regtxt_data)
+
+        # compare start and end times
+        assert np.allclose([float(x) for x in txt_data[:, 0]],
+                           [float(x) for x in regtxt_data[:, 0]])
+        assert np.allclose([float(x) for x in txt_data[:, 1]],
+                           [float(x) for x in regtxt_data[:, 1]])
+        # compare labels
+        assert (txt_data[:, 2] == regtxt_data[:, 2]).all()
 
         # reverb value must be in (0, 1) range
         for reverb in [-1, 2]:
