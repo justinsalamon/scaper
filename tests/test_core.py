@@ -11,7 +11,7 @@ import os
 import numpy as np
 import soundfile
 import jams
-import pandas as pd
+import csv
 import numbers
 
 
@@ -1125,13 +1125,28 @@ def test_generate(atol=1e-4, rtol=1e-8):
         _compare_scaper_jams(jam, regjam)
 
         # validate txt
-        txt = pd.read_csv(txt_file.name, header=None, sep='\t')
-        regtxt = pd.read_csv(REG_TXT_PATH, header=None, sep='\t')
+        # read in both files
+        txt_data = []
+        with open(txt_file.name) as file:
+            reader = csv.reader(file, delimiter='\t')
+            for row in reader:
+                txt_data.append(row)
+        txt_data = np.asarray(txt_data)
+
+        regtxt_data = []
+        with open(REG_TXT_PATH) as file:
+            reader = csv.reader(file, delimiter='\t')
+            for row in reader:
+                regtxt_data.append(row)
+        regtxt_data = np.asarray(regtxt_data)
+
         # compare start and end times
-        assert np.allclose(txt[0].values, regtxt[0].values)
-        assert np.allclose(txt[1].values, regtxt[1].values)
+        assert np.allclose([float(x) for x in txt_data[:, 0]],
+                           [float(x) for x in regtxt_data[:, 0]])
+        assert np.allclose([float(x) for x in txt_data[:, 1]],
+                           [float(x) for x in regtxt_data[:, 1]])
         # compare labels
-        assert (txt[2].values == regtxt[2].values).all()
+        assert (txt_data[:, 2] == regtxt_data[:, 2]).all()
 
         # reverb value must be in (0, 1) range
         for reverb in [-1, 2]:

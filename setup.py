@@ -38,8 +38,7 @@ setup(
         ],
     install_requires=[
         'sox>=1.3.3',
-        'jams>=0.3.0',
-        'pandas'
+        'jams>=0.3.2'
     ],
     extras_require={
         'docs': [

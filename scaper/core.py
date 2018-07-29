@@ -8,7 +8,7 @@ import logging
 import tempfile
 import numpy as np
 import shutil
-import pandas as pd
+import csv
 from .scaper_exceptions import ScaperError
 from .scaper_warnings import ScaperWarning
 from .util import _close_temp_files
@@ -1705,17 +1705,12 @@ class Scaper(object):
 
         # Optionally save to CSV as well
         if txt_path is not None:
-
-            df = pd.DataFrame(columns=['onset', 'offset', 'label'])
-
+            csv_data = []
             for obs in ann.data:
                 if obs.value['role'] == 'foreground':
-                    newrow = ([obs.time,
-                               obs.time + obs.duration,
-                               obs.value['label']])
-                    df.loc[len(df)] = newrow
+                    csv_data.append(
+                        [obs.time, obs.time+obs.duration, obs.value['label']])
 
-            # sort events by onset time
-            df = df.sort_values('onset')
-            df.reset_index(inplace=True, drop=True)
-            df.to_csv(txt_path, index=False, header=False, sep=txt_sep)
+            with open(txt_path, 'w') as csv_file:
+                writer = csv.writer(csv_file, delimiter=txt_sep)
+                writer.writerows(csv_data)
