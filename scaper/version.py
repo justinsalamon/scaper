@@ -2,5 +2,5 @@
 # -*- coding: utf-8 -*-
 """Version info"""
 
-short_version = '0.2'
-version = '0.2.1'
+short_version = '1.0rc0'
+version = '1.0.0rc0'
