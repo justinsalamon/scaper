@@ -1127,7 +1127,11 @@ def test_generate(atol=1e-4, rtol=1e-8):
         # validate txt
         txt = pd.read_csv(txt_file.name, header=None, sep='\t')
         regtxt = pd.read_csv(REG_TXT_PATH, header=None, sep='\t')
-        assert (txt == regtxt).all().all()
+        # compare start and end times
+        assert np.allclose(txt[0].values, regtxt[0].values)
+        assert np.allclose(txt[1].values, regtxt[1].values)
+        # compare labels
+        assert (txt[2].values == regtxt[2].values).all()
 
         # reverb value must be in (0, 1) range
         for reverb in [-1, 2]:
