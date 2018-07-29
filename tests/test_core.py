@@ -13,6 +13,7 @@ import numpy as np
 import soundfile
 import jams
 import pandas as pd
+import numbers
 
 
 # FIXTURES
@@ -896,7 +897,22 @@ def test_scaper_instantiate():
     assert ann.duration == regann.duration
 
     # 3.4 compare data
-    assert ann.data == regann.data
+    for obs, regobs in zip(ann.data, regann.data):
+        # compare time, duration and confidence
+        assert np.allclose(obs.time, regobs.time)
+        assert np.allclose(obs.duration, regobs.duration)
+        assert np.allclose(obs.confidence, regobs.confidence)
+
+        # compare value dictionaries
+        v, regv = obs.value, regobs.value
+        assert sorted(v.keys()) == sorted(regv.keys())
+        for k, regk in zip(sorted(v.keys()), sorted(regv.keys())):
+            assert k == regk
+            if isinstance(v[k], numbers.Number):
+                assert np.allclose(v[k], regv[regk])
+            else:
+                assert v[k] == regv[regk]
+
 
 
 def test_generate_audio(atol=1e-4, rtol=1e-8):
