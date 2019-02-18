@@ -59,7 +59,7 @@ def _compare_scaper_jams(jam, regjam):
 
     """
     # Note: can't compare directly, since:
-    # 1. scaper/and jams liberary versions may change
+    # 1. scaper/and jams library versions may change
     # 2. raw annotation sandbox stores specs as OrderedDict and tuples, whereas
     #    loaded ann (regann) simplifies those to dicts and lists
     # 3. floats might be marginally different (need to use np.allclose())
@@ -879,6 +879,7 @@ def test_scaper_instantiate():
     # we get back is as expected.
     sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
     sc.ref_db = -50
+    sc.sr = 22050
 
     # background
     sc.add_background(
@@ -929,6 +930,8 @@ def test_scaper_instantiate():
     jam = sc._instantiate(disable_instantiation_warnings=True)
     regjam = jams.load(REG_JAM_PATH)
     _compare_scaper_jams(jam, regjam)
+    ann = jam.search(namespace='scaper')[0]
+    assert ann.sandbox.scaper['sr'] == sc.sr
 
 
 def test_generate_audio(atol=1e-4, rtol=1e-8):
