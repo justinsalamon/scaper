@@ -3,6 +3,10 @@
 Changelog
 ---------
 
+v1.0.1
+~~~~~~
+- Added sample rate into jams instantiation
+
 v0.2.0
 ~~~~~~
 - :pr:`28`: Improve LUFS calculation:
