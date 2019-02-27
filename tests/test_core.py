@@ -66,10 +66,9 @@ def _compare_scaper_jams(jam, regjam):
 
     # Must compare each part "manually"
     # 1. compare file metadata
-    for k, kreg in zip(jam.file_metadata.keys(), regjam.file_metadata.keys()):
-        assert k == kreg
+    for k in set(jam.file_metadata.keys()) | set(regjam.file_metadata.keys()):
         if k != 'jams_version':
-            assert jam.file_metadata[k] == regjam.file_metadata[kreg]
+            assert jam.file_metadata[k] == regjam.file_metadata[k]
 
     # 2. compare jams sandboxes
     assert jam.sandbox == regjam.sandbox
@@ -92,23 +91,15 @@ def _compare_scaper_jams(jam, regjam):
     assert 'scaper' in regann.sandbox.keys()
 
     # everything but the specs and version can be compared directly:
-    ann_scaper_keys = set(ann.sandbox.scaper.keys())
-    regann_scaper_keys = set(regann.sandbox.scaper.keys())
-    assert ann_scaper_keys == regann_scaper_keys, (
-        'unmatched keys: {} found in new jams, {} found in old jams').format(
-            ann_scaper_keys - regann_scaper_keys, regann_scaper_keys - ann_scaper_keys)
-    
-    for k in ann_scaper_keys:
+    for k in set(ann.sandbox.scaper.keys()) | set(regann.sandbox.scaper.keys()):
         if k not in ['bg_spec', 'fg_spec', 'scaper_version']:
             assert ann.sandbox.scaper[k] == regann.sandbox.scaper[k]
 
     # to compare specs need to covert raw specs to list of lists
-    assert (
-            [[list(x) if type(x) == tuple else x for x in e] for e in
+    assert ([[list(x) if isinstance(x, tuple) else x for x in e] for e in
              ann.sandbox.scaper['bg_spec']] == regann.sandbox.scaper['bg_spec'])
 
-    assert (
-            [[list(x) if type(x) == tuple else x for x in e] for e in
+    assert ([[list(x) if isinstance(x, tuple) else x for x in e] for e in
              ann.sandbox.scaper['fg_spec']] == regann.sandbox.scaper['fg_spec'])
 
     # 3.3. compare namespace, time and duration
@@ -125,13 +116,11 @@ def _compare_scaper_jams(jam, regjam):
 
         # compare value dictionaries
         v, regv = obs.value, regobs.value
-        assert sorted(v.keys()) == sorted(regv.keys())
-        for k, regk in zip(sorted(v.keys()), sorted(regv.keys())):
-            assert k == regk
+        for k in set(v.keys()) | set(regv.keys()):
             if isinstance(v[k], numbers.Number):
-                assert np.allclose(v[k], regv[regk])
+                assert np.allclose(v[k], regv[k])
             else:
-                assert v[k] == regv[regk]
+                assert v[k] == regv[k]
 
 
 def test_generate_from_jams(atol=1e-5, rtol=1e-8):
@@ -883,7 +872,7 @@ def test_scaper_instantiate():
     # we get back is as expected.
     sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
     sc.ref_db = -50
-    sc.sr = 22050
+    sc.sr = 22050 
 
     # background
     sc.add_background(
@@ -934,8 +923,6 @@ def test_scaper_instantiate():
     jam = sc._instantiate(disable_instantiation_warnings=True)
     regjam = jams.load(REG_JAM_PATH)
     _compare_scaper_jams(jam, regjam)
-    ann = jam.search(namespace='scaper')[0]
-    assert ann.sandbox.scaper['sr'] == sc.sr
 
 
 def test_generate_audio(atol=1e-4, rtol=1e-8):
