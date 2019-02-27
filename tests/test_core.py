@@ -872,7 +872,7 @@ def test_scaper_instantiate():
     # we get back is as expected.
     sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
     sc.ref_db = -50
-    sc.sr = 22050 
+    sc.sr = 22050
 
     # background
     sc.add_background(
@@ -932,6 +932,7 @@ def test_generate_audio(atol=1e-4, rtol=1e-8):
     # algorithm.
     sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
     sc.ref_db = -50
+    sc.sr = 22050
 
     # background
     sc.add_background(
@@ -1049,6 +1050,7 @@ def test_generate(atol=1e-4, rtol=1e-8):
     # Final regression test on all files
     sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
     sc.ref_db = -50
+    sc.sr = 22050
 
     # background
     sc.add_background(
