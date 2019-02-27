@@ -92,11 +92,15 @@ def _compare_scaper_jams(jam, regjam):
     assert 'scaper' in regann.sandbox.keys()
 
     # everything but the specs and version can be compared directly:
-    for k, kreg in zip(sorted(ann.sandbox.scaper.keys()),
-                       sorted(regann.sandbox.scaper.keys())):
-        assert k == kreg
+    ann_scaper_keys = set(ann.sandbox.scaper.keys())
+    regann_scaper_keys = set(regann.sandbox.scaper.keys())
+    assert ann_scaper_keys == regann_scaper_keys, (
+        'unmatched keys: {} found in new jams, {} found in old jams').format(
+            ann_scaper_keys - regann_scaper_keys, regann_scaper_keys - ann_scaper_keys)
+    
+    for k in ann_scaper_keys:
         if k not in ['bg_spec', 'fg_spec', 'scaper_version']:
-            assert ann.sandbox.scaper[k] == regann.sandbox.scaper[kreg]
+            assert ann.sandbox.scaper[k] == regann.sandbox.scaper[k]
 
     # to compare specs need to covert raw specs to list of lists
     assert (
