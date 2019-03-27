@@ -5,7 +5,7 @@ Changelog
 
 v1.0.2
 ~~~~~~
-- Added sample rate into jams instantiation
+- Store sample rate in output JAMS inside the scaper sandbox
 
 v1.0.1
 ~~~~~~

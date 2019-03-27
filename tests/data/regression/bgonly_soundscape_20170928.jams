@@ -47,6 +47,7 @@
         "scaper": {
           "bg_path": "tests/data/audio/background",
           "ref_db": -20,
+          "sr": 44100,
           "polyphony_max": 0,
           "allow_repeated_source": true,
           "bg_spec": [
