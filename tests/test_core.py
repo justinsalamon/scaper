@@ -23,17 +23,18 @@ BG_PATH = 'tests/data/audio/background'
 ALT_FG_PATH = 'tests/data/audio_alt_path/foreground'
 ALT_BG_PATH = 'tests/data/audio_alt_path/background'
 
-REG_WAV_PATH = 'tests/data/regression/soundscape_20170928.wav'
-REG_JAM_PATH = 'tests/data/regression/soundscape_20170928.jams'
-REG_TXT_PATH = 'tests/data/regression/soundscape_20170928.txt'
+REG_WAV_PATH = 'tests/data/regression/soundscape_20190326_22050.wav'
+REG_JAM_PATH = 'tests/data/regression/soundscape_20190326_22050.jams'
+REG_TXT_PATH = 'tests/data/regression/soundscape_20190326_22050.txt'
 
-REG_BGONLY_WAV_PATH = 'tests/data/regression/bgonly_soundscape_20170928.wav'
-REG_BGONLY_JAM_PATH = 'tests/data/regression/bgonly_soundscape_20170928.jams'
-REG_BGONLY_TXT_PATH = 'tests/data/regression/bgonly_soundscape_20170928.txt'
+REG_BGONLY_WAV_PATH = 'tests/data/regression/bgonly_soundscape_20190326_22050.wav'
+REG_BGONLY_JAM_PATH = 'tests/data/regression/bgonly_soundscape_20190326_22050.jams'
+REG_BGONLY_TXT_PATH = 'tests/data/regression/bgonly_soundscape_20190326_22050.txt'
 
-REG_REVERB_WAV_PATH = 'tests/data/regression/reverb_soundscape_20170928.wav'
-REG_REVERB_JAM_PATH = 'tests/data/regression/reverb_soundscape_20170928.jams'
-REG_REVERB_TXT_PATH = 'tests/data/regression/reverb_soundscape_20170928.txt'
+REG_REVERB_WAV_PATH = 'tests/data/regression/reverb_soundscape_20190326_22050.wav'
+REG_REVERB_JAM_PATH = 'tests/data/regression/reverb_soundscape_20190326_22050.jams'
+REG_REVERB_TXT_PATH = 'tests/data/regression/reverb_soundscape_20190326_22050.txt'
+
 
 # fg and bg labels for testing
 FB_LABELS = ['car_horn', 'human_voice', 'siren']
