@@ -1565,6 +1565,10 @@ class Scaper(object):
                             # synthesize edited foreground sound event
                             tfm.build(e.value['source_file'],
                                       tmpfiles_internal[-1].name)
+                            # if time stretched get actual new duration
+                            if e.value['time_stretch'] is not None:
+                                fg_stretched_duration = sox.file_info.duration(
+                                    tmpfiles_internal[-1].name)
 
                             # NOW compute LUFS
                             fg_lufs = get_integrated_lufs(
@@ -1588,8 +1592,7 @@ class Scaper(object):
                                 postpad = max(
                                     0, self.duration - (
                                             e.value['event_time'] +
-                                            e.value['event_duration'] *
-                                            e.value['time_stretch']))
+                                            fg_stretched_duration))
                             tfm.pad(prepad, postpad)
 
                             # Finally save result to a tmp file

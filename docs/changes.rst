@@ -3,9 +3,24 @@
 Changelog
 ---------
 
-v1.0.1
+v1.0.2
 ~~~~~~
 - Added sample rate into jams instantiation
+
+v1.0.1
+~~~~~~
+- Fix bug where estimated duration of time stretched event is different to actual duration leading to incorrect silence padding and sometimes incorrect soundscape duration (in audio samples).
+
+v1.0.0
+~~~~~~
+- Major revision
+- Support jams>=0.3
+- Switch from the sound_event to the scaper namespace.
+- While the API remains compatible with previous versions, the change of underlying namespace breaks compatibility with jams files created using scaper for versions <1.0.0.
+
+v0.2.1
+~~~~~~
+- Fix bug related to creating temp files on Windows.
 
 v0.2.0
 ~~~~~~
