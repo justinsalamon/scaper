@@ -234,7 +234,7 @@
           "allow_repeated_label": true,
           "allow_repeated_source": true,
           "reverb": null,
-          "scaper_version": "1.0.1"
+          "scaper_version": "1.0.2"
         }
       },
       "time": 0,
