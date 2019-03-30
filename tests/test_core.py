@@ -1062,6 +1062,9 @@ def _test_generate_audio(SR, REG_WAV_PATH, REG_BGONLY_WAV_PATH, REG_REVERB_WAV_P
         # validate audio
         wav, sr = soundfile.read(wav_file.name)
         regwav, sr = soundfile.read(REG_BGONLY_WAV_PATH)
+        if '22050' in REG_BGONLY_WAV_PATH: # NOTE: just making sure it's the right bgonly file. will remove.
+            regwavvv, _ = soundfile.read('tests/data/regression/bgonly_soundscape_20190326_22050_makesurethefileisactuallytherightone.wav')
+            assert np.allclose(regwavvv, regwav, atol=atol, rtol=rtol)
         assert np.allclose(wav, regwav, atol=atol, rtol=rtol)
 
 
