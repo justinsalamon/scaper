@@ -1061,8 +1061,6 @@ def _test_generate_audio(SR, REG_WAV_PATH, REG_BGONLY_WAV_PATH, REG_REVERB_WAV_P
 
         reverb = 0.2
         jam = sc._instantiate(disable_instantiation_warnings=True, reverb=reverb)
-        regjam = jams.load(TEST_PATHS[SR]['REG_BGONLY'].jams)
-        _compare_scaper_jams(jam, regjam)
         sc._generate_audio(wav_file.name, jam.annotations[0], reverb=reverb)
         # validate audio
         wav, sr = soundfile.read(wav_file.name)
