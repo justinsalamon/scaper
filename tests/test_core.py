@@ -35,9 +35,9 @@ def _get_test_paths(name):
 
 TEST_PATHS = {
     22050: {
-        'REG': _get_test_paths('soundscape_20190326_22050'),
+        'REG': _get_test_paths('soundscape_20190401_22050'),
         'REG_BGONLY': _get_test_paths('bgonly_soundscape_20190326_22050'),
-        'REG_REVERB': _get_test_paths('reverb_soundscape_20190326_22050'),
+        'REG_REVERB': _get_test_paths('reverb_soundscape_20190401_22050'),
     },
     44100: {
         'REG': _get_test_paths('soundscape_20170928'),
@@ -47,8 +47,8 @@ TEST_PATHS = {
 }
 
 # fg and bg labels for testing
-FB_LABELS = ['car_horn', 'human_voice', 'siren']
-BG_LABELS = ['park', 'restaurant', 'street']
+FG_LABELS = ['car_horn', 'human_voice', 'siren']
+BG_LABELS = ['birds', 'park', 'restaurant', 'street']
 
 
 def _compare_scaper_jams(jam, regjam):
@@ -684,7 +684,7 @@ def test_scaper_init():
 
     # ensure fg_labels and bg_labels populated properly
     sc = scaper.Scaper(10.0, FG_PATH, BG_PATH)
-    assert sc.fg_labels == FB_LABELS
+    assert sc.fg_labels == FG_LABELS
     assert sc.bg_labels == BG_LABELS
 
     # ensure default values have been set
@@ -876,81 +876,10 @@ def test_scaper_instantiate_event():
     pytest.warns(ScaperWarning, sc._instantiate_event, fg_event7)
 
 
-def test_scaper_instantiate():
-    for sr in (44100, 22050):
-        REG_JAM_PATH = TEST_PATHS[sr]['REG'].jams
-        # Here we just instantiate a known fixed spec and check if that jams
-        # we get back is as expected.
-        sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
-        sc.ref_db = -50
-        sc.sr = sr
-
-        # background
-        sc.add_background(
-            label=('const', 'park'),
-            source_file=(
-                'const',
-                'tests/data/audio/background/park/'
-                '268903__yonts__city-park-tel-aviv-israel.wav'),
-            source_time=('const', 0))
-
-        # foreground events
-        sc.add_event(
-            label=('const', 'siren'),
-            source_file=('const',
-                         'tests/data/audio/foreground/'
-                         'siren/69-Siren-1.wav'),
-            source_time=('const', 5),
-            event_time=('const', 2),
-            event_duration=('const', 5),
-            snr=('const', 5),
-            pitch_shift=None,
-            time_stretch=None)
-
-        sc.add_event(
-            label=('const', 'car_horn'),
-            source_file=('const',
-                         'tests/data/audio/foreground/'
-                         'car_horn/17-CAR-Rolls-Royce-Horn.wav'),
-            source_time=('const', 0),
-            event_time=('const', 5),
-            event_duration=('const', 2),
-            snr=('const', 20),
-            pitch_shift=('const', 1),
-            time_stretch=None)
-
-        sc.add_event(
-            label=('const', 'human_voice'),
-            source_file=('const',
-                         'tests/data/audio/foreground/'
-                         'human_voice/42-Human-Vocal-Voice-taxi-2_edit.wav'),
-            source_time=('const', 0),
-            event_time=('const', 7),
-            event_duration=('const', 2),
-            snr=('const', 10),
-            pitch_shift=None,
-            time_stretch=('const', 1.2))
-
-        jam = sc._instantiate(disable_instantiation_warnings=True)
-        regjam = jams.load(REG_JAM_PATH)
-        _compare_scaper_jams(jam, regjam)
-
-
-def test_generate_audio():
-    for sr in (44100, 22050):
-        REG_WAV_PATH = TEST_PATHS[sr]['REG'].wav
-        REG_BGONLY_WAV_PATH = TEST_PATHS[sr]['REG_BGONLY'].wav
-        REG_REVERB_WAV_PATH = TEST_PATHS[sr]['REG_REVERB'].wav
-        _test_generate_audio(sr, REG_WAV_PATH, REG_BGONLY_WAV_PATH, REG_REVERB_WAV_PATH)
-
-
-def _test_generate_audio(SR, REG_WAV_PATH, REG_BGONLY_WAV_PATH, REG_REVERB_WAV_PATH, atol=1e-4, rtol=1e-8):
-    # Regression test: same spec, same audio (not this will fail if we update
-    # any of the audio processing techniques used (e.g. change time stretching
-    # algorithm.
+def _create_test_scaper(sr):
     sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
     sc.ref_db = -50
-    sc.sr = SR
+    sc.sr = sr
 
     # background
     sc.add_background(
@@ -960,6 +889,15 @@ def _test_generate_audio(SR, REG_WAV_PATH, REG_BGONLY_WAV_PATH, REG_REVERB_WAV_P
             'tests/data/audio/background/park/'
             '268903__yonts__city-park-tel-aviv-israel.wav'),
         source_time=('const', 0))
+
+    sc.add_background(
+        label=('const', 'birds'),
+        source_file=(
+            'const',
+            'tests/data/audio/background/birds/'
+            '142009__jop9798__birds-in-the-city-1.wav'),
+        source_time=('const', 0),
+        snr=('const', -10))
 
     # foreground events
     sc.add_event(
@@ -997,6 +935,34 @@ def _test_generate_audio(SR, REG_WAV_PATH, REG_BGONLY_WAV_PATH, REG_REVERB_WAV_P
         snr=('const', 10),
         pitch_shift=None,
         time_stretch=('const', 1.2))
+
+    return sc
+
+def test_scaper_instantiate():
+    for sr in (44100, 22050):
+        REG_JAM_PATH = TEST_PATHS[sr]['REG'].jams
+        # Here we just instantiate a known fixed spec and check if that jams
+        # we get back is as expected.
+        sc = _create_test_scaper(sr)
+
+        jam = sc._instantiate(disable_instantiation_warnings=True)
+        regjam = jams.load(REG_JAM_PATH)
+        _compare_scaper_jams(jam, regjam)
+
+
+def test_generate_audio():
+    for sr in (44100, 22050):
+        REG_WAV_PATH = TEST_PATHS[sr]['REG'].wav
+        REG_BGONLY_WAV_PATH = TEST_PATHS[sr]['REG_BGONLY'].wav
+        REG_REVERB_WAV_PATH = TEST_PATHS[sr]['REG_REVERB'].wav
+        _test_generate_audio(sr, REG_WAV_PATH, REG_BGONLY_WAV_PATH, REG_REVERB_WAV_PATH)
+
+
+def _test_generate_audio(SR, REG_WAV_PATH, REG_BGONLY_WAV_PATH, REG_REVERB_WAV_PATH, atol=1e-4, rtol=1e-8):
+    # Regression test: same spec, same audio (not this will fail if we update
+    # any of the audio processing techniques used (e.g. change time stretching
+    # algorithm.
+    sc = _create_test_scaper(SR)
 
     tmpfiles = []
     with _close_temp_files(tmpfiles):
@@ -1074,55 +1040,7 @@ def test_generate():
 
 def _test_generate(SR, REG_WAV_PATH, REG_JAM_PATH, REG_TXT_PATH, atol=1e-4, rtol=1e-8):
     # Final regression test on all files
-    sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
-    sc.ref_db = -50
-    sc.sr = SR
-
-    # background
-    sc.add_background(
-        label=('const', 'park'),
-        source_file=(
-            'const',
-            'tests/data/audio/background/park/'
-            '268903__yonts__city-park-tel-aviv-israel.wav'),
-        source_time=('const', 0))
-
-    # foreground events
-    sc.add_event(
-        label=('const', 'siren'),
-        source_file=('const',
-                     'tests/data/audio/foreground/'
-                     'siren/69-Siren-1.wav'),
-        source_time=('const', 5),
-        event_time=('const', 2),
-        event_duration=('const', 5),
-        snr=('const', 5),
-        pitch_shift=None,
-        time_stretch=None)
-
-    sc.add_event(
-        label=('const', 'car_horn'),
-        source_file=('const',
-                     'tests/data/audio/foreground/'
-                     'car_horn/17-CAR-Rolls-Royce-Horn.wav'),
-        source_time=('const', 0),
-        event_time=('const', 5),
-        event_duration=('const', 2),
-        snr=('const', 20),
-        pitch_shift=('const', 1),
-        time_stretch=None)
-
-    sc.add_event(
-        label=('const', 'human_voice'),
-        source_file=('const',
-                     'tests/data/audio/foreground/'
-                     'human_voice/42-Human-Vocal-Voice-taxi-2_edit.wav'),
-        source_time=('const', 0),
-        event_time=('const', 7),
-        event_duration=('const', 2),
-        snr=('const', 10),
-        pitch_shift=None,
-        time_stretch=('const', 1.2))
+    sc = _create_test_scaper(SR)
 
     tmpfiles = []
     with _close_temp_files(tmpfiles):
