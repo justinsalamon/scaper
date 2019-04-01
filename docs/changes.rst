@@ -3,6 +3,10 @@
 Changelog
 ---------
 
+v1.0.3
+~~~~~~
+- Add SNR parameter for background tracks to allow background track balancing
+
 v1.0.2
 ~~~~~~
 - Store sample rate in output JAMS inside the scaper sandbox
