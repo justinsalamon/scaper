@@ -1295,6 +1295,7 @@ class Scaper(object):
 
     def _instantiate(self, allow_repeated_label=True,
                      allow_repeated_source=True, reverb=None,
+                     save_sources=False, sources_dir=None,
                      disable_instantiation_warnings=False):
         '''
         Instantiate a specific soundscape in JAMS format based on the current
@@ -1341,6 +1342,9 @@ class Scaper(object):
         # INSTANTIATE BACKGROUND AND FOREGROUND EVENTS AND ADD TO ANNOTATION
         # NOTE: logic for instantiating bg and fg events is NOT the same.
 
+        if save_sources:
+            src_path_pattern = os.path.join(sources_dir, 'source_{}_{}.wav')
+
         # Add background sounds
         bg_labels = []
         bg_source_files = []
@@ -1354,6 +1358,9 @@ class Scaper(object):
                 used_source_files=bg_source_files,
                 disable_instantiation_warnings=disable_instantiation_warnings)
 
+            if save_sources:
+                value.source_file = src_path_pattern.format(i, value.label)
+
             # Note: add_background doesn't allow to set a time_stretch, i.e.
             # it's hardcoded to time_stretch=None, so we don't need to check
             # if value.time_stretch is not None, since it always will be.
@@ -1365,7 +1372,7 @@ class Scaper(object):
         # Add foreground events
         fg_labels = []
         fg_source_files = []
-        for event in self.fg_spec:
+        for i, event in enumerate(self.fg_spec):
             value = self._instantiate_event(
                 event,
                 isbackground=False,
@@ -1380,6 +1387,9 @@ class Scaper(object):
                     value.event_duration * value.time_stretch)
             else:
                 event_duration_stretched = value.event_duration
+
+            if save_sources:
+                value.source_file = src_path_pattern.format(i, value.label)
 
             ann.append(time=value.event_time,
                        duration=event_duration_stretched,
@@ -1428,6 +1438,7 @@ class Scaper(object):
         return jam
 
     def _generate_audio(self, audio_path, ann, reverb=None,
+                        save_sources=False,
                         disable_sox_warnings=True):
         '''
         Generate audio based on a scaper annotation and save to disk.
@@ -1628,10 +1639,23 @@ class Scaper(object):
                     # TODO: do we want to normalize the final output?
                     cmb.build([t.name for t in tmpfiles], audio_path, 'mix')
 
+                # save individual sources as separate audio files
+                if save_sources:
+                    for e, t in zip(ann.data, tmpfiles):
+                        source_file = e.value.get('source_file')
+                        if not source_file:
+                            continue
+
+                        tfm = sox.Transformer()
+                        if reverb is not None:
+                            tfm.reverb(reverberance=reverb * 100)
+                        # TODO: do we want to normalize the final output?
+                        tfm.build(t.name, source_file)
+
     def generate(self, audio_path, jams_path, allow_repeated_label=True,
                  allow_repeated_source=True,
                  reverb=None, disable_sox_warnings=True, no_audio=False,
-                 txt_path=None, txt_sep='\t',
+                 save_sources=False, sources_dir=None, txt_path=None, txt_sep='\t',
                  disable_instantiation_warnings=False):
         '''
         Generate a soundscape based on the current specification and save to
@@ -1693,17 +1717,24 @@ class Scaper(object):
                     'Invalid value for reverb: must be in range [0, 1] or '
                     'None.')
 
+        # create directory to store separated sources
+        if save_sources:
+            if sources_dir is None:
+                sources_dir = os.path.splitext(audio_path)[0] + '_sources'
+            os.makedirs(sources_dir, exist_ok=True)
+
         # Create specific instance of a soundscape based on the spec
         jam = self._instantiate(
             allow_repeated_label=allow_repeated_label,
             allow_repeated_source=allow_repeated_source,
-            reverb=reverb,
+            reverb=reverb, save_sources=save_sources, sources_dir=sources_dir,
             disable_instantiation_warnings=disable_instantiation_warnings)
         ann = jam.annotations.search(namespace='scaper')[0]
 
         # Generate the audio and save to disk
         if not no_audio:
             self._generate_audio(audio_path, ann, reverb=reverb,
+                                 save_sources=save_sources,
                                  disable_sox_warnings=disable_sox_warnings)
 
         # Finally save JAMS to disk too
