@@ -819,7 +819,7 @@ class Scaper(object):
         # Copy list of protected labels
         self.protected_labels = protected_labels[:]
 
-    def add_background(self, label, source_file, source_time):
+    def add_background(self, label, source_file, source_time, snr=("const", 0)):
         '''
         Add a background recording to the background specification.
 
@@ -854,6 +854,10 @@ class Scaper(object):
             smaller than ``<source file duration> - <soundscape duration>``.
             Larger values will be automatically changed to fulfill this
             requirement when calling ``Scaper.generate``.
+        snr : tuple
+            Specifies the desired signal to noise ratio (SNR) between the event
+            and the background. Defaults to ``('const', 0)`` See Notes below for
+            the expected format of this tuple and the allowed values.
 
         Notes
         -----
@@ -886,7 +890,6 @@ class Scaper(object):
         # These values are fixed for the background sound
         event_time = ("const", 0)
         event_duration = ("const", self.duration)
-        snr = ("const", 0)
         role = 'background'
         pitch_shift = None
         time_stretch = None
@@ -1022,7 +1025,7 @@ class Scaper(object):
         # Add event to foreground specification
         self.fg_spec.append(event)
 
-    def _instantiate_event(self, event, isbackground=False,
+    def _instantiate_event(self, event,
                            allow_repeated_label=True,
                            allow_repeated_source=True,
                            used_labels=[],
@@ -1041,9 +1044,6 @@ class Scaper(object):
         ----------
         event : EventSpec
             Event specification containing distribution tuples.
-        isbackground : bool
-            Flag indicating whether the event to instantiate is a background
-            event or not (False implies it is a foreground event).
         allow_repeated_label : bool
             When True (default) any label can be used, including a label that
             has already been used for another event. When False, only a label
@@ -1082,7 +1082,7 @@ class Scaper(object):
         '''
         # set paths and labels depending on whether its a foreground/background
         # event
-        if isbackground:
+        if event.role == 'background':
             file_path = self.bg_path
             allowed_labels = self.bg_labels
         else:
@@ -1347,7 +1347,6 @@ class Scaper(object):
         for event in self.bg_spec:
             value = self._instantiate_event(
                 event,
-                isbackground=True,
                 allow_repeated_label=allow_repeated_label,
                 allow_repeated_source=allow_repeated_source,
                 used_labels=bg_labels,
@@ -1368,7 +1367,6 @@ class Scaper(object):
         for event in self.fg_spec:
             value = self._instantiate_event(
                 event,
-                isbackground=False,
                 allow_repeated_label=allow_repeated_label,
                 allow_repeated_source=allow_repeated_source,
                 used_labels=fg_labels,
@@ -1516,7 +1514,7 @@ class Scaper(object):
                                 tmpfiles_internal[-1].name)
 
                             # Normalize background to reference DB.
-                            gain = self.ref_db - bg_lufs
+                            gain = self.ref_db + e.value['snr'] - bg_lufs
 
                             # Use transformer to adapt gain
                             tfm = sox.Transformer()
