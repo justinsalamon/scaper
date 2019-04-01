@@ -12,7 +12,7 @@ python:
 addons:
   apt:
     packages:
-    - sox
+    # - sox
     - libsndfile1
 
 before_install:
@@ -32,6 +32,7 @@ before_install:
     - conda create -q -n test-environment "python=$TRAVIS_PYTHON_VERSION" $deps
     - source activate test-environment
     - conda install -c conda-forge ffmpeg
+    - conda install -c conda-forge sox
     - pip install python-coveralls
     - pip install pytest-faulthandler
     - pip install pytest-cov

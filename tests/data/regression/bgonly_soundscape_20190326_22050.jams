@@ -1,55 +1,44 @@
 {
-  "sandbox": {},
-  "file_metadata": {
-    "identifiers": {},
-    "duration": 10.0,
-    "artist": "",
-    "jams_version": "0.2.2",
-    "title": "",
-    "release": ""
-  },
   "annotations": [
     {
-      "data": [
-        {
-          "duration": 10.0,
-          "value": {
-            "event_time": 0,
-            "time_stretch": null,
-            "source_time": 0,
-            "role": "background",
-            "snr": 0,
-            "label": "park",
-            "pitch_shift": null,
-            "source_file": "tests/data/audio/background/park/268903__yonts__city-park-tel-aviv-israel.wav",
-            "event_duration": 10.0
-          },
-          "confidence": 1.0,
-          "time": 0.0
-        }
-      ],
       "annotation_metadata": {
-        "annotation_tools": "",
-        "validation": "",
-        "data_source": "",
         "curator": {
-          "email": "",
-          "name": ""
+          "name": "",
+          "email": ""
         },
-        "version": "",
         "annotator": {},
+        "version": "",
         "corpus": "",
-        "annotation_rules": ""
+        "annotation_tools": "",
+        "annotation_rules": "",
+        "validation": "",
+        "data_source": ""
       },
       "namespace": "scaper",
-      "duration": 10.0,
+      "data": [
+        {
+          "time": 0.0,
+          "duration": 10.0,
+          "value": {
+            "label": "park",
+            "source_file": "tests/data/audio/background/park/268903__yonts__city-park-tel-aviv-israel.wav",
+            "source_time": 0,
+            "event_time": 0,
+            "event_duration": 10.0,
+            "snr": 0,
+            "role": "background",
+            "pitch_shift": null,
+            "time_stretch": null
+          },
+          "confidence": 1.0
+        }
+      ],
       "sandbox": {
         "scaper": {
+          "duration": 10.0,
+          "fg_path": "tests/data/audio/foreground",
           "bg_path": "tests/data/audio/background",
-          "ref_db": -20,
-          "sr": 44100,
-          "polyphony_max": 0,
-          "allow_repeated_source": true,
+          "fg_spec": [],
           "bg_spec": [
             [
               [
@@ -81,31 +70,42 @@
               null
             ]
           ],
-          "fg_path": "tests/data/audio/foreground",
-          "reverb": 0.2,
           "fg_labels": [
             "car_horn",
             "human_voice",
             "siren"
           ],
-          "n_events": 0,
-          "fg_spec": [],
-          "polyphony_gini": 0,
-          "duration": 10.0,
           "bg_labels": [
             "park",
             "restaurant",
             "street"
           ],
-          "fade_out_len": 0.01,
+          "protected_labels": [],
+          "sr": 22050,
+          "ref_db": -20,
           "n_channels": 1,
           "fade_in_len": 0.01,
-          "protected_labels": [],
+          "fade_out_len": 0.01,
+          "n_events": 0,
+          "polyphony_max": 0,
+          "polyphony_gini": 0,
           "allow_repeated_label": true,
-          "scaper_version": "0.1.2"
+          "allow_repeated_source": true,
+          "reverb": 0.2,
+          "scaper_version": "1.0.2"
         }
       },
-      "time": 0
+      "time": 0,
+      "duration": 10.0
     }
-  ]
+  ],
+  "file_metadata": {
+    "title": "",
+    "artist": "",
+    "release": "",
+    "duration": 10.0,
+    "identifiers": {},
+    "jams_version": "0.3.3"
+  },
+  "sandbox": {}
 }

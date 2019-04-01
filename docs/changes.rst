@@ -3,6 +3,10 @@
 Changelog
 ---------
 
+v1.0.2
+~~~~~~
+- Store sample rate in output JAMS inside the scaper sandbox
+
 v1.0.1
 ~~~~~~
 - Fix bug where estimated duration of time stretched event is different to actual duration leading to incorrect silence padding and sometimes incorrect soundscape duration (in audio samples).
