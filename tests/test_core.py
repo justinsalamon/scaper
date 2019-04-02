@@ -886,7 +886,7 @@ def test_scaper_instantiate_event():
     # 'truncnorm' source_time + event_duration > source_duration: warning
     fg_event5e = fg_event._replace(event_time=('const', 0),
                                   event_duration=('const', 8),
-                                  source_time=('truncnorm', 20, 2, 0, 20))
+                                  source_time=('truncnorm', 20, 2, 20, 20))
     pytest.warns(ScaperWarning, sc._instantiate_event, fg_event5e)
 
     # event_time + event_duration > soundscape duration: warning
