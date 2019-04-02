@@ -1,4 +1,4 @@
-
+import sox
 import scaper
 from scaper.scaper_exceptions import ScaperError
 from scaper.scaper_warnings import ScaperWarning
@@ -752,6 +752,44 @@ def test_scaper_add_event():
 
 
 def test_scaper_instantiate_event():
+    # test scaper default event values
+    duration = 10.0
+    sc = scaper.Scaper(duration, fg_path=FG_PATH, bg_path=BG_PATH)
+
+    # check background event defaults
+    sc.add_background()
+    bg_event = sc.bg_spec[0]
+    instantiated_event = sc._instantiate_event(
+        bg_event, allow_repeated_label=True,
+        allow_repeated_source=True, used_labels=[], used_source_files=[],
+        disable_instantiation_warnings=True)
+
+    # make sure a proper source file was selected
+    assert os.path.isfile(instantiated_event.source_file)
+
+    # Get the duration of the source audio file
+    source_duration = sox.file_info.duration(instantiated_event.source_file)
+    max_source_time = source_duration - instantiated_event.event_duration
+    assert instantiated_event.event_duration == duration
+    assert 0 <= instantiated_event.source_time <= max_source_time
+
+    # check foreground event defaults
+    sc.add_event()
+    fg_event = sc.fg_spec[0]
+    instantiated_event = sc._instantiate_event(
+        fg_event, allow_repeated_label=True,
+        allow_repeated_source=True, used_labels=[], used_source_files=[],
+        disable_instantiation_warnings=True)
+
+    # make sure a proper source file was selected
+    assert os.path.isfile(instantiated_event.source_file)
+
+    # Get the duration of the source audio file
+    source_duration = sox.file_info.duration(instantiated_event.source_file)
+    max_event_time = duration - instantiated_event.event_duration
+    assert 0 <= instantiated_event.event_duration <= source_duration
+    assert 0 <= instantiated_event.event_time <= max_event_time
+
 
     # GF EVENT TO WORK WITH
     fg_event = EventSpec(label=('const', 'siren'),
