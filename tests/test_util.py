@@ -68,6 +68,20 @@ def test_close_temp_files():
         assert tf.file.closed
         assert not os.path.isfile(tf.name)
 
+    # with an exception before exiting
+    try:
+        tmpfiles = []
+        with _close_temp_files(tmpfiles):
+            tmpfiles.append(
+                tempfile.NamedTemporaryFile(suffix='.wav', delete=True))
+            raise ScaperError
+    except ScaperError:
+        for tf in tmpfiles:
+            assert tf.file.closed
+            assert not os.path.isfile(tf.name)
+    else:
+        assert False, 'Exception was not reraised.'
+
 
 def test_set_temp_logging_level():
     '''

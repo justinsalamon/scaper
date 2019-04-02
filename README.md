@@ -165,3 +165,18 @@ for n in range(n_soundscapes):
                 no_audio=False,
                 txt_path=txtfile)
 ```
+
+## How to contribute
+
+If you would like to contribute a feature and/or bugfix to this repository, please follow the following steps:
+
+1. Create an issue describing the feature/fix.
+2. I will reply on the issue thread to determine whether the feature/fix can/should be added.
+3. Discuss design/implementation details in the issue thread and reach consensus.
+4. Once consensus is reached (and only then), start a pull request (PR). Further discsussion can continue in the PR thread.
+5. Implement feature/fix, ensuring all current unit tests pass and new tests are added to maintain 100% test coverage. Inline docstrings as well as the main docs files should also be updated accordingly.
+6. Request code review once the pull request is ready for review.
+7. Fix requested changes to the pull request if any. Repeat steps 5-7 until the PR is approved.
+8. once the PR is approved I will merge it into master (and most likely create a new release).
+
+IMPORTANT: please be sure to always discuss a proposed feature/fix in an issue before creating a pull request.

@@ -223,7 +223,7 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
                         np.random.uniform(0, 2), np.random.uniform(4, 6))
             scaper.generate_from_jams(orig_jam_file.name, gen_wav_file.name)
 
-        # Tripple trimming
+        # Triple trimming
         for _ in range(2):
             sc.generate(orig_wav_file.name, orig_jam_file.name,
                         disable_instantiation_warnings=True)
@@ -423,6 +423,60 @@ def test_get_value_from_dist():
                ('truncnorm', 1, 2, 3, 'four'),
                ('truncnorm', 0, 2, 2, 0)]
     __test_bad_tuple_list(badargs)
+
+
+def test_ensure_satisfiable_source_time_tuple():
+    # Documenting the expected behavior of _ensure_satisfiable_source_time_tuple
+    source_duration = 10
+    event_duration = 5
+
+    _test_dist = ('uniform', 4, 10)
+    _adjusted, warn = scaper.core._ensure_satisfiable_source_time_tuple(
+        _test_dist, source_duration, event_duration)
+    assert (warn)
+    assert np.allclose(_adjusted[1:], (4, 5))
+
+    _test_dist = ('truncnorm', 8, 1, 4, 10)
+    _adjusted, warn = scaper.core._ensure_satisfiable_source_time_tuple(
+        _test_dist, source_duration, event_duration)
+    assert (warn)
+    assert np.allclose(_adjusted[1:], (5, 1, 4, 5))
+
+    _test_dist = ('const', 6)
+    _adjusted, warn = scaper.core._ensure_satisfiable_source_time_tuple(
+        _test_dist, source_duration, event_duration)
+    assert (warn)
+    assert np.allclose(_adjusted[1:], (5))
+
+    _test_dist = ('uniform', 1, 10)
+    _adjusted, warn = scaper.core._ensure_satisfiable_source_time_tuple(
+        _test_dist, source_duration, event_duration)
+    assert (warn)
+    assert np.allclose(_adjusted[1:], (1, 5))
+
+    _test_dist = ('truncnorm', 4, 1, 1, 10)
+    _adjusted, warn = scaper.core._ensure_satisfiable_source_time_tuple(
+        _test_dist, source_duration, event_duration)
+    assert (warn)
+    assert np.allclose(_adjusted[1:], (4, 1, 1, 5))
+
+    _test_dist = ('uniform', 6, 10)
+    _adjusted, warn = scaper.core._ensure_satisfiable_source_time_tuple(
+        _test_dist, source_duration, event_duration)
+    assert (warn)
+    assert np.allclose(_adjusted[1], (5))
+
+    _test_dist = ('truncnorm', 8, 1, 6, 10)
+    _adjusted, warn = scaper.core._ensure_satisfiable_source_time_tuple(
+        _test_dist, source_duration, event_duration)
+    assert (warn)
+    assert np.allclose(_adjusted[1], (5))
+
+    _test_dist = ('choose', [0, 1, 2, 10, 12, 15, 20])
+    _adjusted, warn = scaper.core._ensure_satisfiable_source_time_tuple(
+        _test_dist, source_duration, event_duration)
+    assert (warn)
+    assert np.allclose(_adjusted[1], [0, 1, 2, 5, 5, 5, 5])
 
 
 def test_validate_distribution():
@@ -859,11 +913,54 @@ def test_scaper_instantiate_event():
                                   time_stretch=('const', 2))
     pytest.warns(ScaperWarning, sc._instantiate_event, fg_event4)
 
-    # source_time + event_duration > source_duration: warning
-    fg_event5 = fg_event._replace(event_time=('const', 0),
+    # 'const' source_time + event_duration > source_duration: warning
+    fg_event5a = fg_event._replace(event_time=('const', 0),
                                   event_duration=('const', 8),
                                   source_time=('const', 20))
-    pytest.warns(ScaperWarning, sc._instantiate_event, fg_event5)
+    pytest.warns(ScaperWarning, sc._instantiate_event, fg_event5a)
+
+    # 'choose' source_time + event_duration > source_duration: warning
+    fg_event5b = fg_event._replace(event_time=('const', 0),
+                                  event_duration=('const', 8),
+                                  source_time=('choose', [20, 20]))
+    pytest.warns(ScaperWarning, sc._instantiate_event, fg_event5b)
+
+    # 'uniform' source_time + event_duration > source_duration: warning
+    fg_event5c = fg_event._replace(event_time=('const', 0),
+                                  event_duration=('const', 8),
+                                  source_time=('uniform', 20, 25))
+    pytest.warns(ScaperWarning, sc._instantiate_event, fg_event5c)
+
+    # 'normal' source_time + event_duration > source_duration: warning
+    fg_event5d = fg_event._replace(event_time=('const', 0),
+                                  event_duration=('const', 8),
+                                  source_time=('normal', 20, 2))
+    pytest.warns(ScaperWarning, sc._instantiate_event, fg_event5d)
+
+    # 'truncnorm' source_time + event_duration > source_duration: warning
+    fg_event5e = fg_event._replace(event_time=('const', 0),
+                                  event_duration=('const', 8),
+                                  source_time=('truncnorm', 20, 2, 20, 20))
+    pytest.warns(ScaperWarning, sc._instantiate_event, fg_event5e)
+
+    # 'normal' random draw above mean with mean = source_duration - event_duration 
+    # source_time + event_duration > source_duration: warning
+    fg_event5f = fg_event._replace(event_time=('const', 0),
+                            event_duration=('const', 8),
+                            source_time=('normal', 18.25, 2))
+
+    def _repeat_instantiation(event):
+        # keep going till we hit a draw that covers when the draw exceeds 
+        # source_duration - event_duration (18.25). Use max_draws
+        # just in case so that testing is guaranteed to terminate. 
+        source_time = 0
+        num_draws = 0
+        max_draws = 1000
+        while source_time < 18.25 and num_draws < max_draws:
+            instantiated_event = sc._instantiate_event(event)
+            source_time = instantiated_event.source_time
+            num_draws += 1
+    pytest.warns(ScaperWarning, _repeat_instantiation, fg_event5f)
 
     # event_time + event_duration > soundscape duration: warning
     fg_event6 = fg_event._replace(event_time=('const', 8),

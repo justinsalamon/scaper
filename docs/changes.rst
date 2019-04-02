@@ -3,6 +3,10 @@
 Changelog
 ---------
 
+v1.0.3
+~~~~~~
+- Fix bug where temp files might not be closed if an error is raised
+
 v1.0.2
 ~~~~~~
 - Store sample rate in output JAMS inside the scaper sandbox
