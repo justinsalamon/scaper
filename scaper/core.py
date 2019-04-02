@@ -393,7 +393,7 @@ def _modify_source_time(source_time, source_duration, event_duration):
     elif source_time[0] == 'choose':
         for i, t in enumerate(source_time[1]):
             if t + event_duration > source_duration:
-                source_time[1][i] = source_duration - event_duration
+                source_time[1][i] = max(0, source_duration - event_duration)
     # If it's a uniform distribution, tuple must be of length 3, We change the 3rd
     # item to source_duration - event_duration so that we stay in bounds. If the min
     # out of bounds, we change that to be 0.
