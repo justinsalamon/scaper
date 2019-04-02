@@ -889,12 +889,24 @@ def test_scaper_instantiate_event():
                                   source_time=('truncnorm', 20, 2, 20, 20))
     pytest.warns(ScaperWarning, sc._instantiate_event, fg_event5e)
 
-    # 'truncnorm' random draw above mean with mean = source_duration - event_duration 
+    # 'normal' random draw above mean with mean = source_duration - event_duration 
     # source_time + event_duration > source_duration: warning
     fg_event5f = fg_event._replace(event_time=('const', 0),
-                                  event_duration=('const', 8),
-                                  source_time=('truncnorm', 18.25, 1, 18.24, 26.25))
-    pytest.warns(ScaperWarning, sc._instantiate_event, fg_event5f)
+                            event_duration=('const', 8),
+                            source_time=('normal', 18.25, 2))
+
+    def _repeat_instantiation(event):
+        # keep going till we hit a draw that covers when the draw exceeds 
+        # source_duration - event_duration (18.25). Use max_draws
+        # just in case so that testing is guaranteed to terminate. 
+        source_time = 0
+        num_draws = 0
+        max_draws = 1000
+        while source_time < 18.25 and num_draws < max_draws:
+            instantiated_event = sc._instantiate_event(event)
+            source_time = instantiated_event.source_time
+            num_draws += 1
+    pytest.warns(ScaperWarning, _repeat_instantiation, fg_event5f)
 
     # event_time + event_duration > soundscape duration: warning
     fg_event6 = fg_event._replace(event_time=('const', 8),
