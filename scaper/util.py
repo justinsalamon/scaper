@@ -148,7 +148,7 @@ def _populate_label_list(folder_path, label_list):
     # ensure consistent ordering of labels
     label_list.sort()
 
-
+# TODO: add a seed parameter here for seeding
 def _trunc_norm(mu, sigma, trunc_min, trunc_max):
     '''
     Return a random value sampled from a truncated normal distribution with

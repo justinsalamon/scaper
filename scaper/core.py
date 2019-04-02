@@ -24,6 +24,7 @@ from .util import is_real_number, is_real_array
 from .audio import get_integrated_lufs
 from .version import version as scaper_version
 
+# TODO: for seeding, turn these into more complex functions in util?
 SUPPORTED_DIST = {"const": lambda x: x,
                   "choose": lambda x: random.choice(x),
                   "uniform": random.uniform,
@@ -245,7 +246,7 @@ def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
                 # Copy result back to original file
                 shutil.copyfile(tmpfiles[-1].name, audio_outfile)
 
-
+# TODO: this should take a np.RandomSeed object (default to None)
 def _get_value_from_dist(dist_tuple):
     '''
     Sample a value from the provided distribution tuple.
@@ -812,7 +813,7 @@ def _validate_event(label, source_file, source_time, event_time,
     # Time stretch
     _validate_time_stretch(time_stretch)
 
-
+# TODO: add a seed parameter in init that defaults to None
 class Scaper(object):
     '''
     Create a Scaper object.
