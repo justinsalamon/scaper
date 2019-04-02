@@ -223,7 +223,7 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
                         np.random.uniform(0, 2), np.random.uniform(4, 6))
             scaper.generate_from_jams(orig_jam_file.name, gen_wav_file.name)
 
-        # Tripple trimming
+        # Triple trimming
         for _ in range(2):
             sc.generate(orig_wav_file.name, orig_jam_file.name,
                         disable_instantiation_warnings=True)
@@ -859,11 +859,35 @@ def test_scaper_instantiate_event():
                                   time_stretch=('const', 2))
     pytest.warns(ScaperWarning, sc._instantiate_event, fg_event4)
 
-    # source_time + event_duration > source_duration: warning
-    fg_event5 = fg_event._replace(event_time=('const', 0),
+    # 'const' source_time + event_duration > source_duration: warning
+    fg_event5a = fg_event._replace(event_time=('const', 0),
                                   event_duration=('const', 8),
                                   source_time=('const', 20))
-    pytest.warns(ScaperWarning, sc._instantiate_event, fg_event5)
+    pytest.warns(ScaperWarning, sc._instantiate_event, fg_event5a)
+
+    # 'choose' source_time + event_duration > source_duration: warning
+    fg_event5b = fg_event._replace(event_time=('const', 0),
+                                  event_duration=('const', 8),
+                                  source_time=('choose', [20, 20]))
+    pytest.warns(ScaperWarning, sc._instantiate_event, fg_event5b)
+
+    # 'uniform' source_time + event_duration > source_duration: warning
+    fg_event5c = fg_event._replace(event_time=('const', 0),
+                                  event_duration=('const', 8),
+                                  source_time=('uniform', 20, 25))
+    pytest.warns(ScaperWarning, sc._instantiate_event, fg_event5c)
+
+    # 'normal' source_time + event_duration > source_duration: warning
+    fg_event5d = fg_event._replace(event_time=('const', 0),
+                                  event_duration=('const', 8),
+                                  source_time=('normal', 20, 2))
+    pytest.warns(ScaperWarning, sc._instantiate_event, fg_event5d)
+
+    # 'truncnorm' source_time + event_duration > source_duration: warning
+    fg_event5e = fg_event._replace(event_time=('const', 0),
+                                  event_duration=('const', 8),
+                                  source_time=('truncnorm', 20, 2, 0, 20))
+    pytest.warns(ScaperWarning, sc._instantiate_event, fg_event5e)
 
     # event_time + event_duration > soundscape duration: warning
     fg_event6 = fg_event._replace(event_time=('const', 8),

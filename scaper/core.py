@@ -9,6 +9,7 @@ import tempfile
 import numpy as np
 import shutil
 import csv
+from copy import deepcopy
 from .scaper_exceptions import ScaperError
 from .scaper_warnings import ScaperWarning
 from .util import _close_temp_files
@@ -381,42 +382,46 @@ def _modify_source_time(source_time, source_duration, event_duration):
     specification.
     '''
     _validate_distribution(source_time)
+    old_source_time = deepcopy(source_time)
     source_time = list(source_time)
-    warn = False
 
     # If it's a constant distribution, just make sure it's within bounds.
     if source_time[0] == 'const':
         if source_time[1] + event_duration > source_duration:
             source_time[1] = max(0, source_duration - event_duration)
-            warn = True
     # If it's a choose, iterate through the list to make sure it's all in bounds.
     elif source_time[0] == 'choose':
         for i, t in enumerate(source_time[1]):
             if t + event_duration > source_duration:
                 source_time[1][i] = source_duration - event_duration
-                warn = True
     # If it's a uniform distribution, tuple must be of length 3, We change the 3rd
-    # item to source_duration - event_duration so that we stay in bounds.
+    # item to source_duration - event_duration so that we stay in bounds. If the min
+    # out of bounds, we change that to be 0.
     elif source_time[0] == 'uniform':
         if source_time[2] + event_duration > source_duration:
             source_time[2] = max(0, source_duration - event_duration)
-            warn = True
+        if source_time[1] + event_duration > source_duration:
+            source_time[1] = 0
     # If it's a normal distribution, we change the mean of the distribution to
     # source_duration - event_duration if source_duration - mean < event_duration.
     elif source_time[0] == 'normal':
         if source_time[1] + event_duration > source_duration:
             source_time[1] = max(0, source_duration - event_duration)
-            warn = True
     # If it's a truncated normal distribution, we change the mean as we did above for a
     # normal distribution, and change the max (5th item) to 
-    # source_duration - event_duration if it's bigger.
+    # source_duration - event_duration if it's bigger. If the min is out of bounds, we
+    # change it to 0, like in the uniform case.
     elif source_time[0] == 'truncnorm':
         if source_time[1] + event_duration > source_duration:
             source_time[1] = max(0, source_duration - event_duration)
-            warn = True
+        if source_time[3] + event_duration > source_duration:
+            source_time[3] = 0
         if source_time[4] + event_duration > source_duration:
             source_time[4] = max(0, source_duration - event_duration)
-            warn = True
+    
+    source_time = tuple(source_time)
+    # check if the source_time changed from the old_source_time to throw a warning.
+    warn = (source_time != old_source_time)
     return tuple(source_time), warn
 
 
@@ -1281,6 +1286,16 @@ class Scaper(object):
             modified_source_time, warn = _modify_source_time(
                 event.source_time, source_duration,  event_duration
             )
+            
+            # determine source time and also check again just in case (for normal dist).
+            # if it happens again, just use the old method.
+            source_time = -np.Inf
+            while source_time < 0:
+                source_time = _get_value_from_dist(modified_source_time)
+                if source_time + event_duration > source_duration:
+                    source_time = source_duration - event_duration
+                    warn = True
+
             if warn and not disable_instantiation_warnings:
                 warnings.warn(
                     '{:s} source time tuple went out of bounds for duration ({:.2f}) '
@@ -1288,10 +1303,6 @@ class Scaper(object):
                     'tuple to stay within bounds'.format(
                         label, event_duration, source_duration),
                     ScaperWarning)
-            # determine source time
-            source_time = -np.Inf
-            while source_time < 0:
-                source_time = _get_value_from_dist(modified_source_time)
         else:
             source_time = 0.0
 
