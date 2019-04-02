@@ -889,6 +889,13 @@ def test_scaper_instantiate_event():
                                   source_time=('truncnorm', 20, 2, 20, 20))
     pytest.warns(ScaperWarning, sc._instantiate_event, fg_event5e)
 
+    # 'truncnorm' random draw above mean with mean = source_duration - event_duration 
+    # source_time + event_duration > source_duration: warning
+    fg_event5f = fg_event._replace(event_time=('const', 0),
+                                  event_duration=('const', 8),
+                                  source_time=('truncnorm', 18.25, 1, 18.24, 26.25))
+    pytest.warns(ScaperWarning, sc._instantiate_event, fg_event5f)
+
     # event_time + event_duration > soundscape duration: warning
     fg_event6 = fg_event._replace(event_time=('const', 8),
                                   event_duration=('const', 5),
