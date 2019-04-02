@@ -33,7 +33,7 @@ SUPPORTED_DIST = {"const": lambda x: x,
 EventSpec = namedtuple(
     'EventSpec',
     ['label', 'source_file', 'source_time', 'event_time', 'event_duration',
-     'snr', 'role', 'pitch_shift', 'time_stretch'])
+     'snr', 'role', 'pitch_shift', 'time_stretch', 'separated_file'])
 '''
 Container for storing event specifications, either probabilistic (i.e. using
 distribution tuples to specify possible values) or instantiated (i.e. storing
@@ -904,7 +904,8 @@ class Scaper(object):
                              snr=snr,
                              role=role,
                              pitch_shift=pitch_shift,
-                             time_stretch=time_stretch)
+                             time_stretch=time_stretch,
+                             separated_file=None)
 
         # Add event to background spec
         self.bg_spec.append(bg_event)
@@ -1017,7 +1018,8 @@ class Scaper(object):
                           snr=snr,
                           role='foreground',
                           pitch_shift=pitch_shift,
-                          time_stretch=time_stretch)
+                          time_stretch=time_stretch,
+                          separated_file=None)
 
         # Add event to foreground specification
         self.fg_spec.append(event)
@@ -1027,6 +1029,7 @@ class Scaper(object):
                            allow_repeated_source=True,
                            used_labels=[],
                            used_source_files=[],
+                           separated_pattern=None,
                            disable_instantiation_warnings=False):
         '''
         Instantiate an event specification.
@@ -1274,6 +1277,12 @@ class Scaper(object):
         # is set internally, not by the user).
         role = event.role
 
+        # create the source separated file name
+        if separated_pattern is not None:
+            separated_file = separated_pattern.format(role=role, label=label)
+        else:
+            separated_file = None
+
         # determine pitch_shift
         if event.pitch_shift is not None:
             pitch_shift = _get_value_from_dist(event.pitch_shift)
@@ -1289,13 +1298,14 @@ class Scaper(object):
                                        snr=snr,
                                        role=role,
                                        pitch_shift=pitch_shift,
-                                       time_stretch=time_stretch)
+                                       time_stretch=time_stretch,
+                                       separated_file=separated_file)
         # Return
         return instantiated_event
 
     def _instantiate(self, allow_repeated_label=True,
                      allow_repeated_source=True, reverb=None,
-                     save_sources=False, sources_dir=None,
+                     save_separate=False, sep_dir=None,
                      disable_instantiation_warnings=False):
         '''
         Instantiate a specific soundscape in JAMS format based on the current
@@ -1342,13 +1352,18 @@ class Scaper(object):
         # INSTANTIATE BACKGROUND AND FOREGROUND EVENTS AND ADD TO ANNOTATION
         # NOTE: logic for instantiating bg and fg events is NOT the same.
 
-        if save_sources:
-            src_path_pattern = os.path.join(sources_dir, 'source_{}_{}.wav')
+        # create the file pattern to save each separated source
+        sep_path_pattern = None
+        if save_separate:
+            sep_path_pattern = os.path.join(sep_dir, '{{role}}_{i}_{{label}}.wav')
 
         # Add background sounds
         bg_labels = []
         bg_source_files = []
-        for event in self.bg_spec:
+        for i, event in enumerate(self.bg_spec):
+            if save_separate:
+                separated_pattern = sep_path_pattern.format(i=i)
+
             value = self._instantiate_event(
                 event,
                 isbackground=True,
@@ -1356,10 +1371,8 @@ class Scaper(object):
                 allow_repeated_source=allow_repeated_source,
                 used_labels=bg_labels,
                 used_source_files=bg_source_files,
+                separated_pattern=separated_pattern,
                 disable_instantiation_warnings=disable_instantiation_warnings)
-
-            if save_sources:
-                value.source_file = src_path_pattern.format(i, value.label)
 
             # Note: add_background doesn't allow to set a time_stretch, i.e.
             # it's hardcoded to time_stretch=None, so we don't need to check
@@ -1373,6 +1386,9 @@ class Scaper(object):
         fg_labels = []
         fg_source_files = []
         for i, event in enumerate(self.fg_spec):
+            if save_separate:
+                separated_pattern = sep_path_pattern.format(i=i)
+
             value = self._instantiate_event(
                 event,
                 isbackground=False,
@@ -1380,6 +1396,7 @@ class Scaper(object):
                 allow_repeated_source=allow_repeated_source,
                 used_labels=fg_labels,
                 used_source_files=fg_source_files,
+                separated_pattern=separated_pattern,
                 disable_instantiation_warnings=disable_instantiation_warnings)
 
             if value.time_stretch is not None:
@@ -1387,9 +1404,6 @@ class Scaper(object):
                     value.event_duration * value.time_stretch)
             else:
                 event_duration_stretched = value.event_duration
-
-            if save_sources:
-                value.source_file = src_path_pattern.format(i, value.label)
 
             ann.append(time=value.event_time,
                        duration=event_duration_stretched,
@@ -1438,7 +1452,7 @@ class Scaper(object):
         return jam
 
     def _generate_audio(self, audio_path, ann, reverb=None,
-                        save_sources=False,
+                        save_separate=False,
                         disable_sox_warnings=True):
         '''
         Generate audio based on a scaper annotation and save to disk.
@@ -1640,22 +1654,22 @@ class Scaper(object):
                     cmb.build([t.name for t in tmpfiles], audio_path, 'mix')
 
                 # save individual sources as separate audio files
-                if save_sources:
+                if save_separate:
                     for e, t in zip(ann.data, tmpfiles):
-                        source_file = e.value.get('source_file')
-                        if not source_file:
+                        separated_file = e.value.get('separated_file')
+                        if not separated_file:
                             continue
 
                         tfm = sox.Transformer()
                         if reverb is not None:
                             tfm.reverb(reverberance=reverb * 100)
                         # TODO: do we want to normalize the final output?
-                        tfm.build(t.name, source_file)
+                        tfm.build(t.name, separated_file)
 
     def generate(self, audio_path, jams_path, allow_repeated_label=True,
                  allow_repeated_source=True,
                  reverb=None, disable_sox_warnings=True, no_audio=False,
-                 save_sources=False, sources_dir=None, txt_path=None, txt_sep='\t',
+                 save_separate=False, sep_dir=None, txt_path=None, txt_sep='\t',
                  disable_instantiation_warnings=False):
         '''
         Generate a soundscape based on the current specification and save to
@@ -1685,6 +1699,12 @@ class Scaper(object):
             unless their level is ``'CRITICAL'``.
         no_audio : bool
             If true only generates a JAMS file and no audio is saved to disk.
+        save_separate : bool
+            If true, save each event to a separate audio file, in addition to
+            the mixed audio.
+        sep_dir : str
+            The directory to store the separated audio. The files are named using
+            the pattern, ``source_{i}_{label}.wav``
         txt_path: str or None
             If not None, in addition to the JAMS file output a simplified
             annotation in a space separated format [onset  offset  label],
@@ -1718,23 +1738,23 @@ class Scaper(object):
                     'None.')
 
         # create directory to store separated sources
-        if save_sources:
-            if sources_dir is None:
-                sources_dir = os.path.splitext(audio_path)[0] + '_sources'
-            os.makedirs(sources_dir, exist_ok=True)
+        if save_separate:
+            if sep_dir is None:
+                sep_dir = os.path.splitext(audio_path)[0] + '_sources'
+            os.makedirs(sep_dir, exist_ok=True)
 
         # Create specific instance of a soundscape based on the spec
         jam = self._instantiate(
             allow_repeated_label=allow_repeated_label,
             allow_repeated_source=allow_repeated_source,
-            reverb=reverb, save_sources=save_sources, sources_dir=sources_dir,
+            reverb=reverb, save_separate=save_separate, sep_dir=sep_dir,
             disable_instantiation_warnings=disable_instantiation_warnings)
         ann = jam.annotations.search(namespace='scaper')[0]
 
         # Generate the audio and save to disk
         if not no_audio:
             self._generate_audio(audio_path, ann, reverb=reverb,
-                                 save_sources=save_sources,
+                                 save_separate=save_separate,
                                  disable_sox_warnings=disable_sox_warnings)
 
         # Finally save JAMS to disk too
