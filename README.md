@@ -26,6 +26,14 @@ Scaper has two non-python dependencies:
 - SoX: http://sox.sourceforge.net/
 - FFmpeg: https://ffmpeg.org/
 
+#### Linux/macOS
+If you're using [Anaconda](https://www.anaconda.com/distribution/) (or [miniconda](https://docs.conda.io/en/latest/miniconda.html)) to manage your python environment (recommended), you can install these dependencies using `conda` on macOS/Linux:
+
+```
+conda install -c conda-forge sox ffmpeg
+```
+
+#### macOS
 On macOS these can be installed using [homebrew](https://brew.sh/):
 
 ```
@@ -33,14 +41,16 @@ brew install sox
 brew install ffmpeg
 ```
 
+#### Linux
 On linux you can use your distribution's package manager, e.g. on Ubuntu (15.04 "Vivid Vervet" or newer):
 
 ```
 sudo apt-get install sox
 sudo apt-get install ffmpeg
 ```
-NOTE: on earlier versions of Ubuntu [ffmpeg may point to a Libav binary](http://stackoverflow.com/a/9477756/2007700) which is not the correct binary. If you are using anaconda, you can install the correct version by calling `conda install -c conda-forge ffmpeg`. Otherwise, you can [obtain a static binary from the ffmpeg website](https://ffmpeg.org/download.html).
+NOTE: on earlier versions of Ubuntu [ffmpeg may point to a Libav binary](http://stackoverflow.com/a/9477756/2007700) which is not the correct binary. If you are using Anaconda, you can install the correct version as described earlier by calling `conda install -c conda-forge ffmpeg`. Otherwise, you can [obtain a static binary from the ffmpeg website](https://ffmpeg.org/download.html).
 
+#### Windows
 On windows you can use the provided installation binaries:
 - SoX: https://sourceforge.net/projects/sox/files/sox/
 - FFmpeg: https://ffmpeg.org/download.html#build-windows
