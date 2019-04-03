@@ -1619,31 +1619,32 @@ class Scaper(object):
                                     suffix='.wav', delete=False))
                             tfm.build(tmpfiles_internal[-1].name,
                                       tmpfiles[-1].name)
-                        
-                    if save_sources:
-                        base, ext = os.path.splitext(audio_path)
-                        source_folder = '{:s}_sources'.format(base)
-                        source_audio_path = os.path.join(
-                            source_folder, e.value['audio_path'] + ext)
-                        directory = os.path.dirname(source_audio_path)
-                        if not os.path.exists(directory):
-                            # In Python 3.2 and above we could do 
-                            # os.makedirs(..., exist_ok=True) but we test back to
-                            # Python 2.7.
-                            os.makedirs(directory)
-                        shutil.copy(tmpfiles[-1].name, source_audio_path)
-
-                        #TODO what to do in this case? for now throw a warning
-                        if reverb is not None:
-                            warnings.warn(
-                                "Reverb is on and save_sources is True. Reverberation "
-                                "is applied to the mixture but not output "
-                                "source files. In this case the sum of the "
-                                "sources do not add up to the mixture", ScaperWarning)
                     else:
                         raise ScaperError(
                             'Unsupported event role: {:s}'.format(
                                 e.value['role']))
+
+                if save_sources:
+                    base, ext = os.path.splitext(audio_path)
+                    source_folder = '{:s}_sources'.format(base)
+                    source_audio_path = os.path.join(
+                        source_folder, e.value['audio_path'] + ext)
+                    directory = os.path.dirname(source_audio_path)
+                    if not os.path.exists(directory):
+                        # In Python 3.2 and above we could do 
+                        # os.makedirs(..., exist_ok=True) but we test back to
+                        # Python 2.7.
+                        os.makedirs(directory)
+                    shutil.copy(tmpfiles[-1].name, source_audio_path)
+
+                    #TODO what to do in this case? for now throw a warning
+                    if reverb is not None:
+                        warnings.warn(
+                            "Reverb is on and save_sources is True. Reverberation "
+                            "is applied to the mixture but not output "
+                            "source files. In this case the sum of the "
+                            "sources do not add up to the mixture", ScaperWarning)
+
 
                 # Finally combine all the files and optionally apply reverb
                 # If we have more than one tempfile (i.e.g background + at
