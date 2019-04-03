@@ -16,7 +16,12 @@ from .util import _set_temp_logging_level
 from .util import _get_sorted_files
 from .util import _validate_folder_path
 from .util import _populate_label_list
+from .util import _check_random_state
 from .util import _trunc_norm
+from .util import _uniform
+from .util import _choose
+from .util import _normal
+from .util import _const
 from .util import max_polyphony
 from .util import polyphony_gini
 from .util import is_real_number, is_real_array
@@ -24,10 +29,10 @@ from .audio import get_integrated_lufs
 from .version import version as scaper_version
 
 # TODO: for seeding, turn these into more complex functions in util?
-SUPPORTED_DIST = {"const": lambda x: x,
-                  "choose": lambda x: random.choice(x),
-                  "uniform": random.uniform,
-                  "normal": random.normalvariate,
+SUPPORTED_DIST = {"const": _const,
+                  "choose": _choose,
+                  "uniform": _uniform,
+                  "normal": _normal,
                   "truncnorm": _trunc_norm}
 
 # Define single event spec as namedtuple
@@ -245,8 +250,7 @@ def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
                 # Copy result back to original file
                 shutil.copyfile(tmpfiles[-1].name, audio_outfile)
 
-# TODO: this should take a np.RandomSeed object (default to None)
-def _get_value_from_dist(dist_tuple):
+def _get_value_from_dist(dist_tuple, random_state):
     '''
     Sample a value from the provided distribution tuple.
 
@@ -274,7 +278,7 @@ def _get_value_from_dist(dist_tuple):
     '''
     # Make sure it's a valid distribution tuple
     _validate_distribution(dist_tuple)
-    return SUPPORTED_DIST[dist_tuple[0]](*dist_tuple[1:])
+    return SUPPORTED_DIST[dist_tuple[0]](*dist_tuple[1:], random_state=random_state)
 
 
 def _validate_distribution(dist_tuple):
@@ -732,6 +736,7 @@ def _validate_event(label, source_file, source_time, event_time,
     # Time stretch
     _validate_time_stretch(time_stretch)
 
+
 # TODO: add a seed parameter in init that defaults to None
 class Scaper(object):
     '''
@@ -760,7 +765,7 @@ class Scaper(object):
 
     '''
 
-    def __init__(self, duration, fg_path, bg_path, protected_labels=[]):
+    def __init__(self, duration, fg_path, bg_path, protected_labels=[], random_state=None):
         '''
         Create a Scaper object.
 
@@ -784,6 +789,11 @@ class Scaper(object):
             whose semantic validity would be lost if the sound were trimmed
             before the sound event ends, for example an animal vocalization
             such as a dog bark.
+        random_state : int, RandomState instance or None, optional (default=None)
+            If int, random_state is the seed used by the random number 
+            generator; If RandomState instance, random_state is the random number 
+            generator; If None, the random number generator is the RandomState 
+            instance used by np.random.
 
         '''
         # Duration must be a positive real number
@@ -819,6 +829,9 @@ class Scaper(object):
 
         # Copy list of protected labels
         self.protected_labels = protected_labels[:]
+
+        # Get random number generator
+        self.random_state = _check_random_state(random_state)
 
     def add_background(self, label, source_file, source_time):
         '''
@@ -1097,7 +1110,7 @@ class Scaper(object):
             label_tuple = tuple(label_tuple)
         else:
             label_tuple = event.label
-        label = _get_value_from_dist(label_tuple)
+        label = _get_value_from_dist(label_tuple, self.random_state)
 
         # Make sure we can use this label
         if (not allow_repeated_label) and (label in used_labels):
@@ -1109,7 +1122,7 @@ class Scaper(object):
                     "allow_repeated_label=False.".format(label))
             else:
                 while label in used_labels:
-                    label = _get_value_from_dist(label_tuple)
+                    label = _get_value_from_dist(label_tuple, self.random_state)
 
         # Update the used labels list
         if label not in used_labels:
@@ -1125,7 +1138,7 @@ class Scaper(object):
         else:
             source_file_tuple = event.source_file
 
-        source_file = _get_value_from_dist(source_file_tuple)
+        source_file = _get_value_from_dist(source_file_tuple, self.random_state)
 
         # Make sure we can use this source file
         if (not allow_repeated_source) and (source_file in used_source_files):
@@ -1138,7 +1151,7 @@ class Scaper(object):
                     "allow_repeated_source=False.".format(label))
             else:
                 while source_file in used_source_files:
-                    source_file = _get_value_from_dist(source_file_tuple)
+                    source_file = _get_value_from_dist(source_file_tuple, self.random_state)
 
         # Update the used source files list
         if source_file not in used_source_files:
@@ -1158,7 +1171,9 @@ class Scaper(object):
             # potentially be non-positive, hence the loop.
             event_duration = -np.Inf
             while event_duration <= 0:
-                event_duration = _get_value_from_dist(event.event_duration)
+                event_duration = _get_value_from_dist(
+                    event.event_duration, self.random_state
+                )
 
         # Check if chosen event duration is longer than the duration of the
         # selected source file, if so adjust the event duration.
@@ -1179,7 +1194,9 @@ class Scaper(object):
         else:
             time_stretch = -np.Inf
             while time_stretch <= 0:
-                time_stretch = _get_value_from_dist(event.time_stretch)
+                time_stretch = _get_value_from_dist(
+                    event.time_stretch, self.random_state
+                )
             # compute duration after stretching
             event_duration_stretched = event_duration * time_stretch
 
@@ -1215,7 +1232,9 @@ class Scaper(object):
         # determine source time
         source_time = -np.Inf
         while source_time < 0:
-            source_time = _get_value_from_dist(event.source_time)
+            source_time = _get_value_from_dist(
+                event.source_time, self.random_state
+            )
 
         # Make sure source time + event duration is not greater than the
         # source duration, if it is, adjust the source time (i.e. duration
@@ -1237,7 +1256,9 @@ class Scaper(object):
         # foreground events it's not.
         event_time = -np.Inf
         while event_time < 0:
-            event_time = _get_value_from_dist(event.event_time)
+            event_time = _get_value_from_dist(
+                event.event_time, self.random_state
+            )
 
         # Make sure the selected event time + event duration are is not greater
         # than the total duration of the soundscape, if it is adjust the event
@@ -1269,7 +1290,7 @@ class Scaper(object):
                         ScaperWarning)
 
         # determine snr
-        snr = _get_value_from_dist(event.snr)
+        snr = _get_value_from_dist(event.snr, self.random_state)
 
         # get role (which can only take "foreground" or "background" and
         # is set internally, not by the user).
@@ -1277,7 +1298,7 @@ class Scaper(object):
 
         # determine pitch_shift
         if event.pitch_shift is not None:
-            pitch_shift = _get_value_from_dist(event.pitch_shift)
+            pitch_shift = _get_value_from_dist(event.pitch_shift, self.random_state)
         else:
             pitch_shift = None
 
@@ -1291,6 +1312,7 @@ class Scaper(object):
                                        role=role,
                                        pitch_shift=pitch_shift,
                                        time_stretch=time_stretch)
+
         # Return
         return instantiated_event
 

@@ -11,6 +11,8 @@ import glob
 from .scaper_exceptions import ScaperError
 import scipy
 import numpy as np
+import numbers
+import random
 
 
 @contextmanager
@@ -142,8 +144,119 @@ def _populate_label_list(folder_path, label_list):
     # ensure consistent ordering of labels
     label_list.sort()
 
-# TODO: add a seed parameter here for seeding
-def _trunc_norm(mu, sigma, trunc_min, trunc_max):
+
+def _check_random_state(seed):
+    """Turn seed into a np.random.RandomState instance
+
+    Parameters
+    ----------
+    seed : None | int | instance of RandomState
+        If seed is None, return the RandomState singleton used by np.random.
+        If seed is an int, return a new RandomState instance seeded with seed.
+        If seed is already a RandomState instance, return it.
+        Otherwise raise ValueError.
+    """
+    if seed is None or seed is np.random:
+        return np.random.mtrand._rand
+    if isinstance(seed, (numbers.Integral, np.integer)):
+        return np.random.RandomState(seed)
+    if isinstance(seed, np.random.RandomState):
+        return seed
+    raise ValueError('%r cannot be used to seed a numpy.random.RandomState'
+                     ' instance' % seed)
+
+
+def _const(item, random_state):
+    '''
+    Return a value sampled from a constant distribution (just the item).
+
+    Parameters
+    ----------
+    item : any
+        What to return
+    random_state : mtrand.RandomState
+        RandomState object used to sample from this distribution (ignored).
+        This is here to match the other function specifications.
+
+    Returns
+    -------
+    value : any
+        item, returned.
+
+    '''
+    return item
+
+
+def _uniform(minimum, maximum, random_state):
+    '''
+    Return a random value sampled from a uniform distribution 
+    between ```minimum``` and ```maximum```.
+
+    Parameters
+    ----------
+    minimum : float
+        Minimum of uniform distribution
+    maximum : float
+        Maximum of uniform distribution
+    random_state : mtrand.RandomState
+        RandomState object used to sample from this distribution.
+
+    Returns
+    -------
+    value : float
+        A random value sampled from the uniform distribution defined
+        by ```minimum```, ```maximum```.
+
+    '''
+    return random_state.uniform(minimum, maximum)
+
+
+def _normal(mu, sigma, random_state):
+    '''
+    Return a random value sampled from a normal distribution with
+    mean ```mu``` and standard deviation ```sigma```.
+
+    Parameters
+    ----------
+    mu : float
+        The mean of the truncated normal distribution
+    sig : float
+        The standard deviation of the truncated normal distribution
+    random_state : mtrand.RandomState
+        RandomState object used to sample from this distribution.
+
+    Returns
+    -------
+    value : float
+        A random value sampled from the normal distribution defined
+        by ```mu```, ```sigma```.
+
+    '''
+    return random_state.normal(mu, sigma)
+
+
+def _choose(list_of_options, random_state):
+    '''
+    Return a random item from ```list_of_options```, using random_state.
+
+    Parameters
+    ----------
+    list_of_options : list
+        List of items to choose from.
+    random_state : mtrand.RandomState
+        RandomState object used to sample from this distribution.
+
+    Returns
+    -------
+    value : any
+        A random item chosen from ```list_of_options```.
+
+    '''
+    index = random_state.randint(len(list_of_options))
+    return list_of_options[index]
+
+
+def _trunc_norm(mu, sigma, trunc_min, trunc_max, random_state):
     '''
     Return a random value sampled from a truncated normal distribution with
     mean ```mu``` and standard deviation ```sigma``` whose values are limited
@@ -159,6 +272,8 @@ def _trunc_norm(mu, sigma, trunc_min, trunc_max):
         The minimum value allowed for the distribution (lower boundary)
     trunc_max : float
         The maximum value allowed for the distribution (upper boundary)
+    random_state : mtrand.RandomState
+        RandomState object used to sample from this distribution.
 
     Returns
     -------
@@ -172,7 +287,7 @@ def _trunc_norm(mu, sigma, trunc_min, trunc_max):
     # values for a standard normal distribution (mu=0, sigma=1), so we need
     # to recompute a and b given the user specified parameters.
     a, b = (trunc_min - mu) / float(sigma), (trunc_max - mu) / float(sigma)
-    return scipy.stats.truncnorm.rvs(a, b, mu, sigma)
+    return scipy.stats.truncnorm.rvs(a, b, mu, sigma, random_state=random_state)
 
 
 def max_polyphony(ann):

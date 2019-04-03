@@ -13,6 +13,7 @@ from scaper.util import _trunc_norm
 from scaper.util import max_polyphony
 from scaper.util import polyphony_gini
 from scaper.util import is_real_number, is_real_array
+from scaper.util import _check_random_state
 from scaper.scaper_exceptions import ScaperError
 import tempfile
 import os
@@ -117,14 +118,34 @@ def test_populate_label_list():
     assert sorted(labellist) == sorted(FG_LABEL_LIST)
 
 
+def test_check_random_state():
+    # seed is None
+    rng_type = type(np.random.RandomState(10))
+    rng = _check_random_state(None)
+    assert type(rng) == rng_type
+
+    # seed is int
+    rng = _check_random_state(10)
+    assert type(rng) == rng_type
+
+    # seed is RandomState
+    rng_test = np.random.RandomState(10)
+    rng = _check_random_state(rng_test)
+    assert type(rng) == rng_type
+
+    # seed is none of the above : error
+    pytest.raises(ValueError, _check_random_state, 'random')
+
+
 def test_trunc_norm():
     '''
     Should return values from a truncated normal distribution.
 
     '''
+    rng = _check_random_state(0)
     # sample values from a distribution
     mu, sigma, trunc_min, trunc_max = 2, 1, 0, 5
-    x = [_trunc_norm(mu, sigma, trunc_min, trunc_max) for _ in range(100000)]
+    x = [_trunc_norm(mu, sigma, trunc_min, trunc_max, random_state=rng) for _ in range(100000)]
     x = np.asarray(x)
 
     # simple check: values must be within truncated bounds
