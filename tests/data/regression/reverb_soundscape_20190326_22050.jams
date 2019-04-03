@@ -28,7 +28,8 @@
             "snr": 0,
             "role": "background",
             "pitch_shift": null,
-            "time_stretch": null
+            "time_stretch": null,
+            "audio_path": "background/0"
           },
           "confidence": 1.0
         },
@@ -44,7 +45,8 @@
             "snr": 5,
             "role": "foreground",
             "pitch_shift": null,
-            "time_stretch": null
+            "time_stretch": null,
+            "audio_path": "foreground/0"
           },
           "confidence": 1.0
         },
@@ -60,7 +62,8 @@
             "snr": 20,
             "role": "foreground",
             "pitch_shift": 1,
-            "time_stretch": null
+            "time_stretch": null,
+            "audio_path": "foreground/1"
           },
           "confidence": 1.0
         },
@@ -76,7 +79,8 @@
             "snr": 10,
             "role": "foreground",
             "pitch_shift": null,
-            "time_stretch": 1.2
+            "time_stretch": 1.2,
+            "audio_path": "foreground/2"
           },
           "confidence": 1.0
         }
@@ -114,7 +118,8 @@
               ],
               "foreground",
               null,
-              null
+              null,
+              "foreground/0"
             ],
             [
               [
@@ -146,7 +151,8 @@
                 "const",
                 1
               ],
-              null
+              null,
+              "foreground/1"
             ],
             [
               [
@@ -178,7 +184,8 @@
               [
                 "const",
                 1.2
-              ]
+              ],
+              "foreground/2"
             ]
           ],
           "bg_spec": [
@@ -209,7 +216,8 @@
               ],
               "background",
               null,
-              null
+              null,
+              "background/0"
             ]
           ],
           "fg_labels": [

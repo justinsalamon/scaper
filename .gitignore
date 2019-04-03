@@ -9,5 +9,7 @@ dist/*
 docs/_build/*
 scaper/bin/*
 .pytest_cache/*
-tests/separation/*/foreground/*.wav
-tests/separation/*/background/*.wav
+tests/separation/mix_sources/foreground/*.wav
+tests/separation/mix_sources/background/*.wav
+*.DS_Store
+tests/.DS_Store

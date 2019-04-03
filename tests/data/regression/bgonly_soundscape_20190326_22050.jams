@@ -28,7 +28,8 @@
             "snr": 0,
             "role": "background",
             "pitch_shift": null,
-            "time_stretch": null
+            "time_stretch": null,
+            "audio_path": "background/0"
           },
           "confidence": 1.0
         }
@@ -67,7 +68,8 @@
               ],
               "background",
               null,
-              null
+              null,
+              "background/0"
             ]
           ],
           "fg_labels": [
