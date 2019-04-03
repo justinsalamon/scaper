@@ -10,5 +10,3 @@ docs/_build/*
 scaper/bin/*
 .pytest_cache/*
 **/.DS_Store
-tests/separation/*/foreground/*.wav
-tests/separation/*/background/*.wav

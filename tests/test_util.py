@@ -199,8 +199,7 @@ def test_max_polyphony():
                                            snr=0,
                                            role='foreground',
                                            pitch_shift=None,
-                                           time_stretch=None,
-                                           audio_path='foreground/{:d}'.format(ind))
+                                           time_stretch=None)
 
             ann.append(time=ind / 2.,
                        duration=10,
@@ -223,8 +222,7 @@ def test_max_polyphony():
                                            snr=0,
                                            role='foreground',
                                            pitch_shift=None,
-                                           time_stretch=None,
-                                           audio_path='foreground/{:d}'.format(ind))
+                                           time_stretch=None)
 
             ann.append(time=ind * 10,
                        duration=5,

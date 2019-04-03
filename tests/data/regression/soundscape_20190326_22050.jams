@@ -234,7 +234,9 @@
           "allow_repeated_label": true,
           "allow_repeated_source": true,
           "reverb": null,
-          "scaper_version": "1.0.2"
+          "scaper_version": "1.2.0",
+          "soundscape_audio_path": "tests/data/regression/soundscape_20190326_22050.wav",
+          "isolated_events_audio_path": []
         }
       },
       "time": 0,

@@ -1,11 +1,15 @@
 # CREATED: 5/5/17 14:36 by Justin Salamon <justin.salamon@nyu.edu>
 
-from scaper.audio import r128stats, get_integrated_lufs
+from scaper.audio import r128stats, get_integrated_lufs, match_sample_length
+from scaper.util import _close_temp_files
 import numpy as np
 import os
 import pytest
 from scaper.scaper_exceptions import ScaperError
 from pkg_resources import resource_filename
+import shutil
+import soundfile as sf
+import tempfile
 
 # fixtures
 SIREN_FILE = 'tests/data/audio/foreground/siren/69-Siren-1.wav'
@@ -46,6 +50,37 @@ def test_get_integrated_lufs():
 
         i = get_integrated_lufs(af)
         assert i == li
+
+
+def test_match_sample_length():
+    durations_to_match = [1, 2, 5, 7, 22500, 44100, 88200, 100001]
+    invalid_durations_to_match = [0, -1, .5, 1.0]
+    tmpfiles = []
+    with _close_temp_files(tmpfiles):
+        carhorn = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
+        shutil.copyfile(CARHORN_FILE, carhorn.name)
+        tmpfiles.append(carhorn)
+
+        siren = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
+        shutil.copyfile(SIREN_FILE, siren.name)
+        tmpfiles.append(siren)
+
+        for _duration in durations_to_match:
+            match_sample_length(carhorn.name, _duration)
+            carhorn_audio, _ = sf.read(carhorn.name)
+            assert carhorn_audio.shape[0] == _duration
+
+            match_sample_length(siren.name, _duration)
+            siren_audio, _ = sf.read(siren.name)
+            assert siren_audio.shape[0] == _duration
+
+            # should be summable
+            summed_events = sum([carhorn_audio, siren_audio])
+            assert summed_events.shape[0] == _duration
+
+        for _duration in invalid_durations_to_match:
+            pytest.raises(ScaperError, match_sample_length, carhorn.name, _duration)
+            pytest.raises(ScaperError, match_sample_length, siren.name, _duration)
 
 
 def test_r128stats():

@@ -45,8 +45,6 @@ def _close_temp_files(tmpfiles):
         raise
     _close()
 
-
-
 @contextmanager
 def _set_temp_logging_level(level):
     '''
@@ -263,7 +261,7 @@ def _sample_choose(list_of_options, random_state):
         A random item chosen from ```list_of_options```.
 
     '''
-    new_list_of_options = list(set(list_of_options))
+    new_list_of_options = sorted(list(set(list_of_options)))
     if len(new_list_of_options) < len(list_of_options):
         warnings.warn(
             'Removed duplicates from choose list. List length changed '
