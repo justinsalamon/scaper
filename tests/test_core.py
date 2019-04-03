@@ -133,11 +133,14 @@ def _compare_scaper_jams(jam, regjam):
             ann_eventspec_keys.append(k)
     ann_eventspec_keys = list(set(ann_eventspec_keys))
     
+    keys_in_order = ['label', 'source_file', 'source_time', 'event_time', 'event_duration',
+     'snr', 'role', 'pitch_shift', 'time_stretch', 'audio_path']
+    
     n_fg = 0
     n_bg = 0
 
     for a,e in zip(ann,regann):
-        indices = [(list(a.value.keys()).index(k), k)
+        indices = [(keys_in_order.index(k), k)
                 for k in ann_eventspec_keys if k not in regann_eventspec_keys]
         for index, key in indices:
             if e.value['role'] == 'foreground':
@@ -156,9 +159,10 @@ def _compare_scaper_jams(jam, regjam):
     # can tell. So manipulating the spec becomes hard if we added stuff to EventSpec
     # because we don't know the position of the missing key so that we don't compare it.
     # In any case, a test down below compares the data by key instead of as a list.
+    # To make it work, I'm keeping the key order hard coded here.
     
-    # assert (fg_spec_list == regann.sandbox.scaper['fg_spec'])
-    # assert (bg_spec_list == regann.sandbox.scaper['bg_spec'])
+    assert (fg_spec_list == regann.sandbox.scaper['fg_spec'])
+    assert (bg_spec_list == regann.sandbox.scaper['bg_spec'])
     
 
     # 3.3. compare namespace, time and duration
