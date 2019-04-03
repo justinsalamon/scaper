@@ -1122,7 +1122,6 @@ def test_generate_with_seeding(atol=1e-4, rtol=1e-8):
             ]
 
             tmpfiles += wav_files + jam_files + txt_files
-
             for i, sc in enumerate(generators):
                 generators[i].generate(
                     wav_files[i].name, jam_files[i].name, txt_path=txt_files[i].name,
