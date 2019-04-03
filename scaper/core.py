@@ -42,7 +42,7 @@ constants directly).
 
 
 def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
-                       jams_outfile=None):
+                       jams_outfile=None, save_sources=False):
     '''
     Generate a soundscape based on an existing scaper JAMS file and save to
     disk.
@@ -70,6 +70,13 @@ def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
         saved. Useful when either fg_path or bg_path is not None, as it saves
         a new JAMS files where the source file paths match the new fg_path
         and/or bg_path.
+    save_sources : bool
+        If True, this will save the sources in a directory adjacent to the generated
+        mixture. The sources sum up to the mixture. Sources can be found at 
+        `[audio_path]_sources/foreground` and `[audio_path]_sources/background'. 
+        Source audio names follow the pattern: `[role]_[label][count]`, where count 
+        is the index of the source in self.fg_spec (this allows sources of the same 
+        label to be added more than once to the soudscape without breaking things).
 
     Raises
     ------
@@ -139,10 +146,11 @@ def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
 
     # Generate audio and save to disk
     reverb = ann.sandbox.scaper['reverb']
-    sc._generate_audio(audio_outfile, ann, reverb=reverb,
+    sc._generate_audio(audio_outfile, ann, reverb=reverb, save_sources=save_sources,
                        disable_sox_warnings=True)
 
     # If there are slice (trim) operations, need to perform them!
+    # Need to add this logic for the sources too?
     if 'slice' in ann.sandbox.keys():
         for sliceop in ann.sandbox['slice']:
             # must use temp file in order to save to same file
