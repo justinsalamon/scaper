@@ -33,7 +33,7 @@ SUPPORTED_DIST = {"const": lambda x: x,
 EventSpec = namedtuple(
     'EventSpec',
     ['label', 'source_file', 'source_time', 'event_time', 'event_duration',
-     'snr', 'role', 'pitch_shift', 'time_stretch'])
+     'snr', 'role', 'pitch_shift', 'time_stretch', 'audio_path'])
 '''
 Container for storing event specifications, either probabilistic (i.e. using
 distribution tuples to specify possible values) or instantiated (i.e. storing
@@ -895,6 +895,7 @@ class Scaper(object):
         _validate_event(label, source_file, source_time, event_time,
                         event_duration, snr, self.bg_labels, None, None)
 
+        audio_path = '{:s}/{:d}'.format(role, len(self.bg_spec))
         # Create background sound event
         bg_event = EventSpec(label=label,
                              source_file=source_file,
@@ -904,7 +905,8 @@ class Scaper(object):
                              snr=snr,
                              role=role,
                              pitch_shift=pitch_shift,
-                             time_stretch=time_stretch)
+                             time_stretch=time_stretch,
+                             audio_path=audio_path)
 
         # Add event to background spec
         self.bg_spec.append(bg_event)
@@ -1009,6 +1011,7 @@ class Scaper(object):
                         time_stretch)
 
         # Create event
+        audio_path = '{:s}/{:d}'.format('foreground', len(self.fg_spec))
         event = EventSpec(label=label,
                           source_file=source_file,
                           source_time=source_time,
@@ -1017,7 +1020,8 @@ class Scaper(object):
                           snr=snr,
                           role='foreground',
                           pitch_shift=pitch_shift,
-                          time_stretch=time_stretch)
+                          time_stretch=time_stretch,
+                          audio_path=audio_path)
 
         # Add event to foreground specification
         self.fg_spec.append(event)
@@ -1274,6 +1278,10 @@ class Scaper(object):
         # is set internally, not by the user).
         role = event.role
 
+        # get audio_path relative to soundscape path, determined by label and role and 
+        # count
+        audio_path = event.audio_path
+
         # determine pitch_shift
         if event.pitch_shift is not None:
             pitch_shift = _get_value_from_dist(event.pitch_shift)
@@ -1289,7 +1297,8 @@ class Scaper(object):
                                        snr=snr,
                                        role=role,
                                        pitch_shift=pitch_shift,
-                                       time_stretch=time_stretch)
+                                       time_stretch=time_stretch,
+                                       audio_path=audio_path)
         # Return
         return instantiated_event
 
@@ -1316,6 +1325,7 @@ class Scaper(object):
         reverb : float or None
             Has no effect on this function other than being documented in the
             instantiated annotation's sandbox. Passed by ``Scaper.generate``.
+
         disable_instantiation_warnings : bool
             When True (default is False), warnings stemming from event
             instantiation (primarily about automatic duration adjustments) are
@@ -1428,6 +1438,7 @@ class Scaper(object):
         return jam
 
     def _generate_audio(self, audio_path, ann, reverb=None,
+                        save_sources=False,
                         disable_sox_warnings=True):
         '''
         Generate audio based on a scaper annotation and save to disk.
@@ -1443,6 +1454,13 @@ class Scaper(object):
             (no reverberation) and 1 (maximum reverberation). Use None
             (default) to prevent the soundscape from going through the reverb
             module at all.
+        save_sources : bool
+            If True, this will save the sources in a directory adjacent to the generated
+            mixture. The sources sum up to the mixture. Sources can be found at 
+            `[audio_path]_sources/foreground` and `[audio_path]_sources/background'. 
+            Source audio names follow the pattern: `[role]_[label][count]`, where count 
+            is the index of the source in self.fg_spec (this allows sources of the same 
+            label to be added more than once to the soudscape without breaking things).
         disable_sox_warnings : bool
             When True (default), warnings from the pysox module are suppressed
             unless their level is ``'CRITICAL'``.
@@ -1601,7 +1619,27 @@ class Scaper(object):
                                     suffix='.wav', delete=False))
                             tfm.build(tmpfiles_internal[-1].name,
                                       tmpfiles[-1].name)
+                        
+                    if save_sources:
+                        base, ext = os.path.splitext(audio_path)
+                        source_folder = '{:s}_sources'.format(base)
+                        source_audio_path = os.path.join(
+                            source_folder, e.value['audio_path'] + ext)
+                        directory = os.path.dirname(source_audio_path)
+                        if not os.path.exists(directory):
+                            # In Python 3.2 and above we could do 
+                            # os.makedirs(..., exist_ok=True) but we test back to
+                            # Python 2.7.
+                            os.makedirs(directory)
+                        shutil.copy(tmpfiles[-1].name, source_audio_path)
 
+                        #TODO what to do in this case? for now throw a warning
+                        if reverb is not None:
+                            warnings.warn(
+                                "Reverb is on and save_sources is True. Reverberation "
+                                "is applied to the mixture but not output "
+                                "source files. In this case the sum of the "
+                                "sources do not add up to the mixture", ScaperWarning)
                     else:
                         raise ScaperError(
                             'Unsupported event role: {:s}'.format(
@@ -1628,10 +1666,11 @@ class Scaper(object):
                     # TODO: do we want to normalize the final output?
                     cmb.build([t.name for t in tmpfiles], audio_path, 'mix')
 
+
     def generate(self, audio_path, jams_path, allow_repeated_label=True,
                  allow_repeated_source=True,
-                 reverb=None, disable_sox_warnings=True, no_audio=False,
-                 txt_path=None, txt_sep='\t',
+                 reverb=None, save_sources=False, disable_sox_warnings=True, 
+                 no_audio=False, txt_path=None, txt_sep='\t',
                  disable_instantiation_warnings=False):
         '''
         Generate a soundscape based on the current specification and save to
@@ -1656,6 +1695,13 @@ class Scaper(object):
             (no reverberation) and 1 (maximum reverberation). Use None
             (default) to prevent the soundscape from going through the reverb
             module at all.
+        save_sources : bool
+            If True, this will save the sources in a directory adjacent to the generated
+            mixture. The sources sum up to the mixture. Sources can be found at 
+            `[audio_path]_sources/foreground` and `[audio_path]_sources/background'. 
+            Source audio names follow the pattern: `[role]_[label][count]`, where count 
+            is the index of the source in self.fg_spec (this allows sources of the same 
+            label to be added more than once to the soudscape without breaking things).
         disable_sox_warnings : bool
             When True (default), warnings from the pysox module are suppressed
             unless their level is ``'CRITICAL'``.
@@ -1703,7 +1749,7 @@ class Scaper(object):
 
         # Generate the audio and save to disk
         if not no_audio:
-            self._generate_audio(audio_path, ann, reverb=reverb,
+            self._generate_audio(audio_path, ann, reverb=reverb, save_sources=save_sources,
                                  disable_sox_warnings=disable_sox_warnings)
 
         # Finally save JAMS to disk too

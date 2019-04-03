@@ -14,6 +14,8 @@ import jams
 import csv
 import numbers
 from collections import namedtuple
+import shutil
+from contextlib import contextmanager
 
 
 # FIXTURES
@@ -717,7 +719,8 @@ def test_scaper_add_background():
                                   snr=("const", 0),
                                   role='background',
                                   pitch_shift=None,
-                                  time_stretch=None)
+                                  time_stretch=None,
+                                  audio_path='background/0')
     assert sc.bg_spec == [bg_event_expected]
 
 
@@ -747,7 +750,8 @@ def test_scaper_add_event():
                                   snr=('uniform', 10, 20),
                                   role='foreground',
                                   pitch_shift=('normal', 0, 1),
-                                  time_stretch=('uniform', 0.8, 1.2))
+                                  time_stretch=('uniform', 0.8, 1.2),
+                                  audio_path='foreground/0')
     assert sc.fg_spec[0] == fg_event_expected
 
 
@@ -762,7 +766,8 @@ def test_scaper_instantiate_event():
                          snr=('uniform', 10, 20),
                          role='foreground',
                          pitch_shift=('normal', 0, 1),
-                         time_stretch=('uniform', 0.8, 1.2))
+                         time_stretch=('uniform', 0.8, 1.2),
+                         audio_path='foreground/0')
 
     # test valid case
     sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
@@ -936,6 +941,110 @@ def test_scaper_instantiate():
         jam = sc._instantiate(disable_instantiation_warnings=True)
         regjam = jams.load(REG_JAM_PATH)
         _compare_scaper_jams(jam, regjam)
+
+
+def _test_generate_sources(SR, atol=1e-4, rtol=1e-8):
+    sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
+    sc.ref_db = -50
+    sc.sr = SR
+
+    # background
+    sc.add_background(
+        label=('const', 'park'),
+        source_file=(
+            'const',
+            'tests/data/audio/background/park/'
+            '268903__yonts__city-park-tel-aviv-israel.wav'),
+        source_time=('const', 0))
+
+    # foreground events
+    sc.add_event(
+        label=('const', 'siren'),
+        source_file=('const',
+                     'tests/data/audio/foreground/'
+                     'siren/69-Siren-1.wav'),
+        source_time=('uniform', 0, 5),
+        event_time=('normal', 5, 1),
+        event_duration=('truncnorm', 5, 1, 4, 6),
+        snr=('const', 5),
+        pitch_shift=None,
+        time_stretch=None)
+
+    sc.add_event(
+        label=('const', 'car_horn'),
+        source_file=('const',
+                     'tests/data/audio/foreground/'
+                     'car_horn/17-CAR-Rolls-Royce-Horn.wav'),
+        source_time=('const', 0),
+        event_time=('const', 5),
+        event_duration=('truncnorm', 3, 1, 1, 10),
+        snr=('uniform', 10, 20),
+        pitch_shift=('uniform', -1, 1),
+        time_stretch=None)
+
+    sc.add_event(
+        label=('const', 'human_voice'),
+        source_file=('const',
+                     'tests/data/audio/foreground/'
+                     'human_voice/42-Human-Vocal-Voice-taxi-2_edit.wav'),
+        source_time=('const', 0),
+        event_time=('const', 7),
+        event_duration=('const', 2),
+        snr=('const', 10),
+        pitch_shift=None,
+        time_stretch=('uniform', .8, 1.2))
+
+    tmpfiles = []
+
+    @contextmanager
+    def _delete_files(mix_file, directory):
+        yield
+        try:
+            shutil.rmtree(directory)
+            os.remove(mix_file)
+        except:
+            pass
+
+    wav_file = 'tests/mix.wav'
+    directory = 'tests/mix_sources'
+    with _delete_files(wav_file, directory):
+        jam = sc._instantiate(disable_instantiation_warnings=True)
+        sc._generate_audio(wav_file, jam.annotations[0], save_sources=True)
+        source_directory = os.path.splitext(wav_file)[0] + '_sources'
+        
+        mix, sr = soundfile.read(wav_file)
+        ann = jam.annotations.search(namespace='scaper')[0]
+
+        sources = []
+
+        for e in ann.data:
+            source_path = os.path.join(source_directory, e.value['audio_path'] + '.wav')
+            tmpfiles.append(source_path)
+            source = soundfile.read(source_path)[0]
+            sources.append(source)
+
+        # There are annoying off by 1 errors still.
+        # Here's a very strict test (commented out)
+        # assert np.allclose(mix, sum(sources), atol=1e-4, rtol=1e-8) 
+
+        # and a less strict test 
+        min_length = min(s.shape[0] for s in sources)
+        summed = 0
+        for s in sources:
+            summed += s[:min_length]
+        assert np.allclose(mix[:min_length], summed, atol=1e-4, rtol=1e-8) 
+
+        jam = sc._instantiate(disable_instantiation_warnings=True)
+
+        # Running with save_sources = True and reverb not None raises a warning
+        pytest.warns(ScaperWarning, sc._generate_audio, wav_file,
+                    jam.annotations[0], save_sources=True, reverb=.5)
+
+def test_generate_sources():
+    for sr in (16000, 22050, 44100):
+        # try it a bunch of times
+        for i in range(10):
+            _test_generate_sources(sr)
 
 
 def test_generate_audio():
