@@ -1,5 +1,4 @@
 import sox
-import random
 import os
 import warnings
 import jams
@@ -17,19 +16,23 @@ from .util import _set_temp_logging_level
 from .util import _get_sorted_files
 from .util import _validate_folder_path
 from .util import _populate_label_list
-from .util import _trunc_norm
+from .util import _check_random_state
+from .util import _sample_trunc_norm
+from .util import _sample_uniform
+from .util import _sample_choose
+from .util import _sample_normal
+from .util import _sample_const
 from .util import max_polyphony
 from .util import polyphony_gini
 from .util import is_real_number, is_real_array
 from .audio import get_integrated_lufs
 from .version import version as scaper_version
 
-# TODO: for seeding, turn these into more complex functions in util?
-SUPPORTED_DIST = {"const": lambda x: x,
-                  "choose": lambda x: random.choice(x),
-                  "uniform": random.uniform,
-                  "normal": random.normalvariate,
-                  "truncnorm": _trunc_norm}
+SUPPORTED_DIST = {"const": _sample_const,
+                  "choose": _sample_choose,
+                  "uniform": _sample_uniform,
+                  "normal": _sample_normal,
+                  "truncnorm": _sample_trunc_norm}
 
 # Define single event spec as namedtuple
 EventSpec = namedtuple(
@@ -246,8 +249,7 @@ def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
                 # Copy result back to original file
                 shutil.copyfile(tmpfiles[-1].name, audio_outfile)
 
-# TODO: this should take a np.RandomSeed object (default to None)
-def _get_value_from_dist(dist_tuple):
+def _get_value_from_dist(dist_tuple, random_state):
     '''
     Sample a value from the provided distribution tuple.
 
@@ -275,7 +277,7 @@ def _get_value_from_dist(dist_tuple):
     '''
     # Make sure it's a valid distribution tuple
     _validate_distribution(dist_tuple)
-    return SUPPORTED_DIST[dist_tuple[0]](*dist_tuple[1:])
+    return SUPPORTED_DIST[dist_tuple[0]](*dist_tuple[1:], random_state=random_state)
 
 
 def _validate_distribution(dist_tuple):
@@ -813,7 +815,7 @@ def _validate_event(label, source_file, source_time, event_time,
     # Time stretch
     _validate_time_stretch(time_stretch)
 
-# TODO: add a seed parameter in init that defaults to None
+
 class Scaper(object):
     '''
     Create a Scaper object.
@@ -826,47 +828,27 @@ class Scaper(object):
         Path to foreground folder.
     bg_path : str
         Path to background folder.
-    protected_labels : list
+    protected_labels : list 
         Provide a list of protected foreground labels. When a foreground
         label is in the protected list it means that when a sound event
         matching the label gets added to a soundscape instantiation the
         duration of the source audio file cannot be altered, and the
         duration value that was provided in the specification will be
-        ignored.
-
-        Adding labels to the protected list is useful for sound events
+        ignored. Adding labels to the protected list is useful for sound events
         whose semantic validity would be lost if the sound were trimmed
         before the sound event ends, for example an animal vocalization
         such as a dog bark.
-
+    random_state : int, RandomState instance or None, optional (default=None)
+        If int, random_state is the seed used by the random number 
+        generator; If RandomState instance, random_state is the random number 
+        generator; If None, the random number generator is the RandomState 
+        instance used by np.random. Note that if the random state is passed as a 
+        RandomState instance, it is passed by reference, not value. This will lead to
+        the Scaper object advancing the state of the random state object if you use
+        it elsewhere.
     '''
 
-    def __init__(self, duration, fg_path, bg_path, protected_labels=[]):
-        '''
-        Create a Scaper object.
-
-        Parameters
-        ----------
-        duration : float
-            Duration of the soundscape, in seconds.
-        fg_path : str
-            Path to foreground folder.
-        bg_path : str
-            Path to background folder.
-        protected_labels : list
-            Provide a list of protected foreground labels. When a foreground
-            label is in the protected list it means that when a sound event
-            matching the label gets added to a soundscape instantiation the
-            duration of the source audio file cannot be altered, and the
-            duration value that was provided in the specification will be
-            ignored.
-
-            Adding labels to the protected list is useful for sound events
-            whose semantic validity would be lost if the sound were trimmed
-            before the sound event ends, for example an animal vocalization
-            such as a dog bark.
-
-        '''
+    def __init__(self, duration, fg_path, bg_path, protected_labels=[], random_state=None):
         # Duration must be a positive real number
         if np.isrealobj(duration) and duration > 0:
             self.duration = duration
@@ -900,6 +882,51 @@ class Scaper(object):
 
         # Copy list of protected labels
         self.protected_labels = protected_labels[:]
+
+        # Get random number generator
+        self.random_state = _check_random_state(random_state)
+
+    def reset_fg_event_spec(self):
+        '''
+        Resets the foreground event specification to be an empty list as it is when
+        the Scaper object is initialized in the first place. This allows the same
+        Scaper object to be used over and over again to generate new soundscapes
+        with the same underlying settings (e.g. `ref_db`, `num_channels`, and so on.)
+
+        See Also
+        --------
+        Scaper.reset_bg_event_spec : Same functionality but resets the background
+        event specification instead of the foreground specification.
+        '''
+        self.fg_spec = []
+
+    def reset_bg_event_spec(self):
+        '''
+        Resets the background event specification to be an empty list as it is when
+        the Scaper object is initialized in the first place. This allows the same
+        Scaper object to be used over and over again to generate new soundscapes
+        with the same underlying settings (e.g. `ref_db`, `num_channels`, and so on.)
+
+        See Also
+        --------
+        Scaper.reset_fg_event_spec : Same functionality but resets the foreground
+        event specification instead of the foreground specification.
+        '''
+        self.bg_spec = []
+
+    def set_random_state(self, random_state):
+        '''
+        Allows the user to set the random state after creating the Scaper object.
+
+        Parameters
+        ----------
+        random_state : int, RandomState instance or None, optional (default=None)
+            If int, random_state is the seed used by the random number 
+            generator; If RandomState instance, random_state is the random number 
+            generator; If None, the random number generator is the RandomState 
+            instance used by np.random.
+        '''
+        self.random_state = _check_random_state(random_state)
 
     def add_background(self, label, source_file, source_time):
         '''
@@ -1178,7 +1205,7 @@ class Scaper(object):
             label_tuple = tuple(label_tuple)
         else:
             label_tuple = event.label
-        label = _get_value_from_dist(label_tuple)
+        label = _get_value_from_dist(label_tuple, self.random_state)
 
         # Make sure we can use this label
         if (not allow_repeated_label) and (label in used_labels):
@@ -1190,7 +1217,7 @@ class Scaper(object):
                     "allow_repeated_label=False.".format(label))
             else:
                 while label in used_labels:
-                    label = _get_value_from_dist(label_tuple)
+                    label = _get_value_from_dist(label_tuple, self.random_state)
 
         # Update the used labels list
         if label not in used_labels:
@@ -1206,7 +1233,7 @@ class Scaper(object):
         else:
             source_file_tuple = event.source_file
 
-        source_file = _get_value_from_dist(source_file_tuple)
+        source_file = _get_value_from_dist(source_file_tuple, self.random_state)
 
         # Make sure we can use this source file
         if (not allow_repeated_source) and (source_file in used_source_files):
@@ -1219,7 +1246,7 @@ class Scaper(object):
                     "allow_repeated_source=False.".format(label))
             else:
                 while source_file in used_source_files:
-                    source_file = _get_value_from_dist(source_file_tuple)
+                    source_file = _get_value_from_dist(source_file_tuple, self.random_state)
 
         # Update the used source files list
         if source_file not in used_source_files:
@@ -1239,7 +1266,9 @@ class Scaper(object):
             # potentially be non-positive, hence the loop.
             event_duration = -np.Inf
             while event_duration <= 0:
-                event_duration = _get_value_from_dist(event.event_duration)
+                event_duration = _get_value_from_dist(
+                    event.event_duration, self.random_state
+                )
 
         # Check if chosen event duration is longer than the duration of the
         # selected source file, if so adjust the event duration.
@@ -1260,7 +1289,9 @@ class Scaper(object):
         else:
             time_stretch = -np.Inf
             while time_stretch <= 0:
-                time_stretch = _get_value_from_dist(event.time_stretch)
+                time_stretch = _get_value_from_dist(
+                    event.time_stretch, self.random_state
+                )
             # compute duration after stretching
             event_duration_stretched = event_duration * time_stretch
 
@@ -1307,7 +1338,8 @@ class Scaper(object):
             # if it happens again, just use the old method.
             source_time = -np.Inf
             while source_time < 0:
-                source_time = _get_value_from_dist(modified_source_time)
+                source_time = _get_value_from_dist(
+                    modified_source_time, self.random_state)
                 if source_time + event_duration > source_duration:
                     source_time = source_duration - event_duration
                     warn = True
@@ -1343,7 +1375,9 @@ class Scaper(object):
         # foreground events it's not.
         event_time = -np.Inf
         while event_time < 0:
-            event_time = _get_value_from_dist(event.event_time)
+            event_time = _get_value_from_dist(
+                event.event_time, self.random_state
+            )
 
         # Make sure the selected event time + event duration are is not greater
         # than the total duration of the soundscape, if it is adjust the event
@@ -1375,7 +1409,7 @@ class Scaper(object):
                         ScaperWarning)
 
         # determine snr
-        snr = _get_value_from_dist(event.snr)
+        snr = _get_value_from_dist(event.snr, self.random_state)
 
         # get role (which can only take "foreground" or "background" and
         # is set internally, not by the user).
@@ -1383,7 +1417,7 @@ class Scaper(object):
 
         # determine pitch_shift
         if event.pitch_shift is not None:
-            pitch_shift = _get_value_from_dist(event.pitch_shift)
+            pitch_shift = _get_value_from_dist(event.pitch_shift, self.random_state)
         else:
             pitch_shift = None
 
@@ -1397,6 +1431,7 @@ class Scaper(object):
                                        role=role,
                                        pitch_shift=pitch_shift,
                                        time_stretch=time_stretch)
+
         # Return
         return instantiated_event
 

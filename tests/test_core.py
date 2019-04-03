@@ -14,6 +14,7 @@ import jams
 import csv
 import numbers
 from collections import namedtuple
+from copy import deepcopy
 
 
 # FIXTURES
@@ -358,40 +359,41 @@ def test_trim(atol=1e-5, rtol=1e-8):
 
 
 def test_get_value_from_dist():
-
+    rng = scaper.util._check_random_state(0)
     # const
-    x = scaper.core._get_value_from_dist(('const', 1))
+    x = scaper.core._get_value_from_dist(('const', 1), rng)
     assert x == 1
 
     # choose
     for _ in range(10):
-        x = scaper.core._get_value_from_dist(('choose', [1, 2, 3]))
+        x = scaper.core._get_value_from_dist(('choose', [1, 2, 3]), rng)
         assert x in [1, 2, 3]
 
     # uniform
     for _ in range(10):
-        x = scaper.core._get_value_from_dist(('choose', [1, 2, 3]))
+        x = scaper.core._get_value_from_dist(('choose', [1, 2, 3]), rng)
         assert x in [1, 2, 3]
 
     # normal
     for _ in range(10):
-        x = scaper.core._get_value_from_dist(('normal', 5, 1))
+        x = scaper.core._get_value_from_dist(('normal', 5, 1), rng)
         assert scaper.util.is_real_number(x)
 
     # truncnorm
     for _ in range(10):
-        x = scaper.core._get_value_from_dist(('truncnorm', 5, 10, 0, 10))
+        x = scaper.core._get_value_from_dist(('truncnorm', 5, 10, 0, 10), rng)
         assert scaper.util.is_real_number(x)
         assert 0 <= x <= 10
 
     # COPY TESTS FROM test_validate_distribution (to ensure validation applied)
     def __test_bad_tuple_list(tuple_list):
+        rng = scaper.util._check_random_state(0)
         for t in tuple_list:
             if isinstance(t, tuple):
                 print(t, len(t))
             else:
                 print(t)
-            pytest.raises(ScaperError, scaper.core._get_value_from_dist, t)
+            pytest.raises(ScaperError, scaper.core._get_value_from_dist, t, random_state=rng)
 
     # not tuple = error
     nontuples = [[], 5, 'yes']
@@ -598,7 +600,7 @@ def test_validate_time():
 
     # truncnorm can't have negative min value
     __test_bad_time_tuple(('truncnorm', 0, 1, -1, 1))
-
+    
 
 def test_validate_duration():
 
@@ -747,6 +749,65 @@ def test_scaper_init():
     assert sc.n_channels == 1
     assert sc.fade_in_len == 0.01  # 10 ms
     assert sc.fade_out_len == 0.01  # 10 ms
+
+
+def test_reset_fg_bg_event_spec():
+    def _add_fg_event(sc):
+        sc.add_event(label=('const', 'siren'),
+                 source_file=('choose', []),
+                 source_time=('const', 0),
+                 event_time=('uniform', 0, 9),
+                 event_duration=('truncnorm', 2, 1, 1, 3),
+                 snr=('uniform', 10, 20),
+                 pitch_shift=('normal', 0, 1),
+                 time_stretch=('uniform', 0.8, 1.2))
+    
+    def _add_bg_event(sc):
+        sc.add_background(("const", "park"), ("choose", []), ("const", 0))
+
+    sc = scaper.Scaper(
+        10.0, fg_path=FG_PATH, bg_path=BG_PATH, random_state=0)
+
+    # there should be no events initially
+    assert len(sc.fg_spec) == 0
+    assert len(sc.bg_spec) == 0
+
+    # there should be one foreground event now
+    _add_fg_event(sc)
+    assert len(sc.fg_spec) == 1
+    first_fg_spec = deepcopy(sc.fg_spec)
+
+    # after this there should be no foreground events
+    sc.reset_fg_event_spec()
+    assert len(sc.fg_spec) == 0
+
+    # add the foreground event back. now the original fg_spec and this one should be
+    # the same.
+    _add_fg_event(sc)
+    assert first_fg_spec == sc.fg_spec
+
+    # start over, this time using reset_bg_spec too.
+    sc.reset_fg_event_spec()
+
+    # there should be one background event and one foreground event now 
+    _add_fg_event(sc)
+    _add_bg_event(sc)
+    assert len(sc.fg_spec) == 1
+    assert len(sc.bg_spec) == 1
+    first_fg_spec = deepcopy(sc.fg_spec)
+    first_bg_spec = deepcopy(sc.bg_spec)
+
+    # after this there should be no foreground or background events
+    sc.reset_fg_event_spec()
+    sc.reset_bg_event_spec()
+    assert len(sc.fg_spec) == 0
+    assert len(sc.bg_spec) == 0
+
+    # add the both events back. now both event spec sshould match the original
+    _add_fg_event(sc)
+    _add_bg_event(sc)
+    assert first_fg_spec == sc.fg_spec
+    assert first_bg_spec == sc.bg_spec
 
 
 def test_scaper_add_background():
@@ -1033,6 +1094,152 @@ def test_scaper_instantiate():
         jam = sc._instantiate(disable_instantiation_warnings=True)
         regjam = jams.load(REG_JAM_PATH)
         _compare_scaper_jams(jam, regjam)
+
+
+def test_generate_with_seeding(atol=1e-4, rtol=1e-8):
+    # test a scaper generator with different random seeds. init with same random seed
+    # over and over to make sure the output wav stays the same
+    seeds = [
+        0, 10, 20, 
+        scaper.util._check_random_state(0),
+        scaper.util._check_random_state(10),
+        scaper.util._check_random_state(20)
+    ]
+    num_generators = 2
+    for seed in seeds:
+        generators = []
+        for i in range(num_generators):
+            generators.append(_create_scaper_with_random_seed(deepcopy(seed)))
+
+        _compare_generators(generators)
+
+
+def test_set_random_state(atol=1e-4, rtol=1e-8):
+    # test a scaper generator with different random seeds. this time use
+    # set_random_state to change the seed instead 
+    seeds = [
+        0, 10, 20, 
+        scaper.util._check_random_state(0),
+        scaper.util._check_random_state(10),
+        scaper.util._check_random_state(20)
+    ]
+    num_generators = 2
+    for seed in seeds:
+        generators = []
+        for i in range(num_generators):
+            _sc = _create_scaper_with_random_seed(None)
+            _sc.set_random_state(deepcopy(seed))
+            generators.append(_sc)
+
+        _compare_generators(generators)
+
+def _compare_generators(generators, atol=1e-4, rtol=1e-8):
+    tmpfiles = []
+    with _close_temp_files(tmpfiles):
+        wav_files = [
+            tempfile.NamedTemporaryFile(suffix='.wav', delete=True) 
+            for i in range(len(generators))
+        ]
+        jam_files = [
+            tempfile.NamedTemporaryFile(suffix='.jams', delete=True) 
+            for i in range(len(generators))
+        ]
+        txt_files = [
+            tempfile.NamedTemporaryFile(suffix='.txt', delete=True) 
+            for i in range(len(generators))
+        ]
+
+        tmpfiles += wav_files + jam_files + txt_files
+        for i, sc in enumerate(generators):
+            generators[i].generate(
+                wav_files[i].name, jam_files[i].name, txt_path=txt_files[i].name,
+                    disable_instantiation_warnings=True
+            )
+        
+        audio = [soundfile.read(wav_file.name)[0] for wav_file in wav_files]
+        for i, a in enumerate(audio):
+            assert np.allclose(audio[0], a, atol=atol, rtol=rtol)
+
+        # load all the jams data
+        # make sure they are all the same as the first one
+        jams_data = [jams.load(jam_file.name) for jam_file in jam_files]
+        for x in jams_data:
+            _compare_scaper_jams(x, jams_data[0])
+
+        # load the txt files and compare them
+        def _load_txt(txt_file):
+            txt_data = []
+            with open(txt_file.name) as file:
+                reader = csv.reader(file, delimiter='\t')
+                for row in reader:
+                    txt_data.append(row)
+            txt_data = np.asarray(txt_data)
+            return txt_data
+        
+        txt_data = [_load_txt(txt_file) for txt_file in txt_files]
+        regtxt_data = txt_data[0]
+
+        for t in txt_data:
+            assert np.allclose([float(x) for x in t[:, 0]],
+                                [float(x) for x in regtxt_data[:, 0]])
+            assert np.allclose([float(x) for x in t[:, 1]],
+                                [float(x) for x in regtxt_data[:, 1]])
+            # compare labels
+            assert (t[:, 2] == regtxt_data[:, 2]).all()
+
+
+def _create_scaper_with_random_seed(seed):
+    sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH, random_state=deepcopy(seed))
+    sc.ref_db = -50
+    sc.sr = 44100
+
+    # background
+    sc.add_background(
+        label=('const', 'park'),
+        source_file=(
+            'const',
+            'tests/data/audio/background/park/'
+            '268903__yonts__city-park-tel-aviv-israel.wav'),
+        source_time=('const', 0))
+
+    # foreground events
+    sc.add_event(
+        label=('const', 'siren'),
+        source_file=('const',
+                     'tests/data/audio/foreground/'
+                     'siren/69-Siren-1.wav'),
+        source_time=('uniform', 0, 8),
+        event_time=('truncnorm', 4, 1, 0, 8),
+        event_duration=('normal', 4, 1),
+        snr=('const', 5),
+        pitch_shift=None,
+        time_stretch=None)
+
+    sc.add_event(
+        label=('const', 'car_horn'),
+        source_file=('const',
+                     'tests/data/audio/foreground/'
+                     'car_horn/17-CAR-Rolls-Royce-Horn.wav'),
+        source_time=('uniform', 0, 8),
+        event_time=('truncnorm', 4, 1, 0, 8),
+        event_duration=('normal', 4, 1),
+        snr=('const', 20),
+        pitch_shift=None,
+        time_stretch=None)
+
+    sc.add_event(
+        label=('const', 'human_voice'),
+        source_file=('const',
+                     'tests/data/audio/foreground/'
+                     'human_voice/42-Human-Vocal-Voice-taxi-2_edit.wav'),
+        source_time=('const', 0),
+        event_time=('const', 7),
+        event_duration=('const', 2),
+        snr=('const', 10),
+        pitch_shift=None,
+        time_stretch=None)
+
+    return sc
 
 
 def test_generate_audio():

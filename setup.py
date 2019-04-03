@@ -42,10 +42,9 @@ setup(
     ],
     extras_require={
         'docs': [
-                'sphinx==1.2.3',  # autodoc was broken in 1.3.1
-                'sphinxcontrib-napoleon',
+                'sphinx',  # autodoc was broken in 1.3.1
                 'sphinx_rtd_theme',
-                'numpydoc',
+                'sphinx_issues',
             ],
         'tests': ['backports.tempfile', 'pysoundfile']
     }
