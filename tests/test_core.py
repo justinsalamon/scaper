@@ -983,10 +983,10 @@ def test_scaper_instantiate():
         _compare_scaper_jams(jam, regjam)
 
 
-def _test_generate_sources(SR, atol=1e-4, rtol=1e-8):
+def create_scaper_scene():
     sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
     sc.ref_db = -50
-    sc.sr = SR
+    sc.sr = 44100
 
     # background
     sc.add_background(
@@ -1033,7 +1033,12 @@ def _test_generate_sources(SR, atol=1e-4, rtol=1e-8):
         snr=('const', 10),
         pitch_shift=None,
         time_stretch=('uniform', .8, 1.2))
+        
+    return sc
 
+
+def _test_generate_sources(SR, atol=1e-4, rtol=1e-8):
+    sc = create_scaper_scene()
     tmpfiles = []
 
     @contextmanager
