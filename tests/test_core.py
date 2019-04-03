@@ -14,6 +14,7 @@ import jams
 import csv
 import numbers
 from collections import namedtuple
+from copy import deepcopy
 
 
 # FIXTURES
@@ -938,6 +939,102 @@ def test_scaper_instantiate():
         regjam = jams.load(REG_JAM_PATH)
         _compare_scaper_jams(jam, regjam)
 
+
+def create_scaper_with_random_seed(seed):
+    sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH, random_state=deepcopy(seed))
+    sc.ref_db = -50
+    sc.sr = 44100
+
+    # background
+    sc.add_background(
+        label=('const', 'park'),
+        source_file=(
+            'const',
+            'tests/data/audio/background/park/'
+            '268903__yonts__city-park-tel-aviv-israel.wav'),
+        source_time=('const', 0))
+
+    # foreground events
+    sc.add_event(
+        label=('const', 'siren'),
+        source_file=('const',
+                     'tests/data/audio/foreground/'
+                     'siren/69-Siren-1.wav'),
+        source_time=('uniform', 0, 8),
+        event_time=('truncnorm', 4, 1, 0, 8),
+        event_duration=('normal', 4, 1),
+        snr=('const', 5),
+        pitch_shift=None,
+        time_stretch=None)
+
+    sc.add_event(
+        label=('const', 'car_horn'),
+        source_file=('const',
+                     'tests/data/audio/foreground/'
+                     'car_horn/17-CAR-Rolls-Royce-Horn.wav'),
+        source_time=('uniform', 0, 8),
+        event_time=('truncnorm', 4, 1, 0, 8),
+        event_duration=('normal', 4, 1),
+        snr=('const', 20),
+        pitch_shift=None,
+        time_stretch=None)
+
+    sc.add_event(
+        label=('const', 'human_voice'),
+        source_file=('const',
+                     'tests/data/audio/foreground/'
+                     'human_voice/42-Human-Vocal-Voice-taxi-2_edit.wav'),
+        source_time=('const', 0),
+        event_time=('const', 7),
+        event_duration=('const', 2),
+        snr=('const', 10),
+        pitch_shift=None,
+        time_stretch=None)
+
+    return sc
+
+
+def test_generate_with_seeding(atol=1e-4, rtol=1e-8):
+    # test a scaper generator with different random seeds. init with same random seed
+    # over and over to make sure the output wav stays the same
+    seeds = [
+        0, 10, 20, 
+        scaper.util._check_random_state(0),
+        scaper.util._check_random_state(10),
+        scaper.util._check_random_state(20)
+    ]
+    num_generators = 3
+    for seed in seeds:
+        generators = []
+        for i in range(num_generators):
+            generators.append(create_scaper_with_random_seed(seed))
+
+        tmpfiles = []
+        with _close_temp_files(tmpfiles):
+            wav_files = [
+                tempfile.NamedTemporaryFile(suffix='.wav', delete=True) 
+                for i in range(num_generators)
+            ]
+            jam_files = [
+                tempfile.NamedTemporaryFile(suffix='.jams', delete=True) 
+                for i in range(num_generators)
+            ]
+            txt_files = [
+                tempfile.NamedTemporaryFile(suffix='.txt', delete=True) 
+                for i in range(num_generators)
+            ]
+
+            tmpfiles += wav_files + jam_files + txt_files
+
+            for i, sc in enumerate(generators):
+                generators[i].generate(
+                    wav_files[i].name, jam_files[i].name, txt_path=txt_files[i].name,
+                        disable_instantiation_warnings=True
+                )
+            
+            audio = [soundfile.read(wav_file.name)[0] for wav_file in wav_files]
+            for i, a in enumerate(audio):
+                assert np.allclose(audio[0], a, atol=atol, rtol=rtol)
 
 def test_generate_audio():
     for sr in (44100, 22050):
