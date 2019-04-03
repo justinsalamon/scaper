@@ -358,40 +358,41 @@ def test_trim(atol=1e-5, rtol=1e-8):
 
 
 def test_get_value_from_dist():
-
+    rng = scaper.util._check_random_state(0)
     # const
-    x = scaper.core._get_value_from_dist(('const', 1))
+    x = scaper.core._get_value_from_dist(('const', 1), rng)
     assert x == 1
 
     # choose
     for _ in range(10):
-        x = scaper.core._get_value_from_dist(('choose', [1, 2, 3]))
+        x = scaper.core._get_value_from_dist(('choose', [1, 2, 3]), rng)
         assert x in [1, 2, 3]
 
     # uniform
     for _ in range(10):
-        x = scaper.core._get_value_from_dist(('choose', [1, 2, 3]))
+        x = scaper.core._get_value_from_dist(('choose', [1, 2, 3]), rng)
         assert x in [1, 2, 3]
 
     # normal
     for _ in range(10):
-        x = scaper.core._get_value_from_dist(('normal', 5, 1))
+        x = scaper.core._get_value_from_dist(('normal', 5, 1), rng)
         assert scaper.util.is_real_number(x)
 
     # truncnorm
     for _ in range(10):
-        x = scaper.core._get_value_from_dist(('truncnorm', 5, 10, 0, 10))
+        x = scaper.core._get_value_from_dist(('truncnorm', 5, 10, 0, 10), rng)
         assert scaper.util.is_real_number(x)
         assert 0 <= x <= 10
 
     # COPY TESTS FROM test_validate_distribution (to ensure validation applied)
     def __test_bad_tuple_list(tuple_list):
+        rng = scaper.util._check_random_state(0)
         for t in tuple_list:
             if isinstance(t, tuple):
                 print(t, len(t))
             else:
                 print(t)
-            pytest.raises(ScaperError, scaper.core._get_value_from_dist, t)
+            pytest.raises(ScaperError, scaper.core._get_value_from_dist, t, random_state=rng)
 
     # not tuple = error
     nontuples = [[], 5, 'yes']
