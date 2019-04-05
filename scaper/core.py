@@ -458,41 +458,43 @@ def _validate_time(time_tuple):
         If the validation fails.
 
     '''
-    # Make sure it's a valid distribution tuple
-    _validate_distribution(time_tuple)
 
     # Ensure the values are valid for time
-    if time_tuple[0] == "const":
-        if (time_tuple[1] is None or
-                not is_real_number(time_tuple[1]) or
-                time_tuple[1] < 0):
-            raise ScaperError(
-                'Time must be a real non-negative number.')
-    elif time_tuple[0] == "choose":
-        if (not time_tuple[1] or
-                not is_real_array(time_tuple[1]) or
-                not all(x is not None for x in time_tuple[1]) or
-                not all(x >= 0 for x in time_tuple[1])):
-            raise ScaperError(
-                'Time list must be a non-empty list of non-negative real '
-                'numbers.')
-    elif time_tuple[0] == "uniform":
-        if time_tuple[1] < 0:
-            raise ScaperError(
-                'A "uniform" distribution tuple for time must have '
-                'min_value >= 0')
-    elif time_tuple[0] == "normal":
-        warnings.warn(
-            'A "normal" distribution tuple for time can result in '
-            'negative values, in which case the distribution will be '
-            're-sampled until a positive value is returned: this can result '
-            'in an infinite loop!',
-            ScaperWarning)
-    elif time_tuple[0] == "truncnorm":
-        if time_tuple[3] < 0:
-            raise ScaperError(
-                'A "truncnorm" distirbution tuple for time must specify a non-'
-                'negative trunc_min value.')
+    if time_tuple is not None:
+        # Make sure it's a valid distribution tuple
+        _validate_distribution(time_tuple)
+
+        if time_tuple[0] == "const":
+            if (time_tuple[1] is None or
+                    not is_real_number(time_tuple[1]) or
+                    time_tuple[1] < 0):
+                raise ScaperError(
+                    'Time must be a real non-negative number.')
+        elif time_tuple[0] == "choose":
+            if (not time_tuple[1] or
+                    not is_real_array(time_tuple[1]) or
+                    not all(x is not None for x in time_tuple[1]) or
+                    not all(x >= 0 for x in time_tuple[1])):
+                raise ScaperError(
+                    'Time list must be a non-empty list of non-negative real '
+                    'numbers.')
+        elif time_tuple[0] == "uniform":
+            if time_tuple[1] < 0:
+                raise ScaperError(
+                    'A "uniform" distribution tuple for time must have '
+                    'min_value >= 0')
+        elif time_tuple[0] == "normal":
+            warnings.warn(
+                'A "normal" distribution tuple for time can result in '
+                'negative values, in which case the distribution will be '
+                're-sampled until a positive value is returned: this can result '
+                'in an infinite loop!',
+                ScaperWarning)
+        elif time_tuple[0] == "truncnorm":
+            if time_tuple[3] < 0:
+                raise ScaperError(
+                    'A "truncnorm" distirbution tuple for time must specify a non-'
+                    'negative trunc_min value.')
 
 
 def _validate_duration(duration_tuple):
@@ -511,39 +513,41 @@ def _validate_duration(duration_tuple):
         If the validation fails.
 
     '''
-    # Make sure it's a valid distribution tuple
-    _validate_distribution(duration_tuple)
 
     # Ensure the values are valid for duration
-    if duration_tuple[0] == "const":
-        if (not is_real_number(duration_tuple[1]) or
-                duration_tuple[1] <= 0):
-            raise ScaperError(
-                'Duration must be a real number greater than zero.')
-    elif duration_tuple[0] == "choose":
-        if (not duration_tuple[1] or
-                not is_real_array(duration_tuple[1]) or
-                not all(x > 0 for x in duration_tuple[1])):
-            raise ScaperError(
-                'Duration list must be a non-empty list of positive real '
-                'numbers.')
-    elif duration_tuple[0] == "uniform":
-        if duration_tuple[1] <= 0:
-            raise ScaperError(
-                'A "uniform" distribution tuple for duration must have '
-                'min_value > 0')
-    elif duration_tuple[0] == "normal":
-        warnings.warn(
-            'A "normal" distribution tuple for duration can result in '
-            'non-positives values, in which case the distribution will be '
-            're-sampled until a positive value is returned: this can result '
-            'in an infinite loop!',
-            ScaperWarning)
-    elif duration_tuple[0] == "truncnorm":
-        if duration_tuple[3] <= 0:
-            raise ScaperError(
-                'A "truncnorm" distirbution tuple for time must specify a '
-                'positive trunc_min value.')
+    if duration_tuple is not None:
+        # Make sure it's a valid distribution tuple
+        _validate_distribution(duration_tuple)
+
+        if duration_tuple[0] == "const":
+            if (not is_real_number(duration_tuple[1]) or
+                    duration_tuple[1] <= 0):
+                raise ScaperError(
+                    'Duration must be a real number greater than zero.')
+        elif duration_tuple[0] == "choose":
+            if (not duration_tuple[1] or
+                    not is_real_array(duration_tuple[1]) or
+                    not all(x > 0 for x in duration_tuple[1])):
+                raise ScaperError(
+                    'Duration list must be a non-empty list of positive real '
+                    'numbers.')
+        elif duration_tuple[0] == "uniform":
+            if duration_tuple[1] <= 0:
+                raise ScaperError(
+                    'A "uniform" distribution tuple for duration must have '
+                    'min_value > 0')
+        elif duration_tuple[0] == "normal":
+            warnings.warn(
+                'A "normal" distribution tuple for duration can result in '
+                'non-positives values, in which case the distribution will be '
+                're-sampled until a positive value is returned: this can result '
+                'in an infinite loop!',
+                ScaperWarning)
+        elif duration_tuple[0] == "truncnorm":
+            if duration_tuple[3] <= 0:
+                raise ScaperError(
+                    'A "truncnorm" distirbution tuple for time must specify a '
+                    'positive trunc_min value.')
 
 
 def _validate_snr(snr_tuple):
@@ -819,7 +823,11 @@ class Scaper(object):
         # Copy list of protected labels
         self.protected_labels = protected_labels[:]
 
-    def add_background(self, label, source_file, source_time):
+    def add_background(self,
+                       label=('choose', []),
+                       source_file=('choose', []),
+                       source_time=None,
+                       snr=('const', 0)):
         '''
         Add a background recording to the background specification.
 
@@ -854,6 +862,10 @@ class Scaper(object):
             smaller than ``<source file duration> - <soundscape duration>``.
             Larger values will be automatically changed to fulfill this
             requirement when calling ``Scaper.generate``.
+        snr : tuple
+            Specifies the desired signal to noise ratio (SNR) between the event
+            and the background. Defaults to ``('const', 0)`` See Notes below for
+            the expected format of this tuple and the allowed values.
 
         Notes
         -----
@@ -886,7 +898,6 @@ class Scaper(object):
         # These values are fixed for the background sound
         event_time = ("const", 0)
         event_duration = ("const", self.duration)
-        snr = ("const", 0)
         role = 'background'
         pitch_shift = None
         time_stretch = None
@@ -909,8 +920,15 @@ class Scaper(object):
         # Add event to background spec
         self.bg_spec.append(bg_event)
 
-    def add_event(self, label, source_file, source_time, event_time,
-                  event_duration, snr, pitch_shift, time_stretch):
+    def add_event(self,
+                  label=('choose', []),
+                  source_file=('choose', []),
+                  source_time=('const', 0),
+                  event_time=None,
+                  event_duration=None,
+                  snr=('const', 0),
+                  pitch_shift=None,
+                  time_stretch=None):
         '''
         Add a foreground sound event to the foreground specification.
 
@@ -1022,7 +1040,7 @@ class Scaper(object):
         # Add event to foreground specification
         self.fg_spec.append(event)
 
-    def _instantiate_event(self, event, isbackground=False,
+    def _instantiate_event(self, event,
                            allow_repeated_label=True,
                            allow_repeated_source=True,
                            used_labels=[],
@@ -1041,9 +1059,6 @@ class Scaper(object):
         ----------
         event : EventSpec
             Event specification containing distribution tuples.
-        isbackground : bool
-            Flag indicating whether the event to instantiate is a background
-            event or not (False implies it is a foreground event).
         allow_repeated_label : bool
             When True (default) any label can be used, including a label that
             has already been used for another event. When False, only a label
@@ -1082,7 +1097,7 @@ class Scaper(object):
         '''
         # set paths and labels depending on whether its a foreground/background
         # event
-        if isbackground:
+        if event.role == 'background':
             file_path = self.bg_path
             allowed_labels = self.bg_labels
         else:
@@ -1150,6 +1165,10 @@ class Scaper(object):
         # source file's duration without modification.
         if label in self.protected_labels:
             event_duration = source_duration
+        # default to using entire event
+        # NOTE: background event_duration is fixed, so this only affects fg events
+        elif event.event_duration is None:
+            event_duration = min(source_duration, self.duration)
         else:
             # determine event duration
             # For background events the duration is fixed to self.duration
@@ -1161,7 +1180,7 @@ class Scaper(object):
 
         # Check if chosen event duration is longer than the duration of the
         # selected source file, if so adjust the event duration.
-        if (event_duration > source_duration):
+        if event_duration > source_duration:
             old_duration = event_duration  # for warning
             event_duration = source_duration
             if not disable_instantiation_warnings:
@@ -1186,7 +1205,7 @@ class Scaper(object):
         # without losing validity (since the event will end when the soundscape
         # ends).
         if time_stretch is None:
-            if (event_duration > self.duration):
+            if event_duration > self.duration:
                 old_duration = event_duration  # for warning
                 event_duration = self.duration
                 if not disable_instantiation_warnings:
@@ -1197,7 +1216,7 @@ class Scaper(object):
                             label, old_duration, self.duration, self.duration),
                         ScaperWarning)
         else:
-            if (event_duration_stretched > self.duration):
+            if event_duration_stretched > self.duration:
                 old_duration = event_duration  # for warning
                 event_duration = self.duration / float(time_stretch)
                 if not disable_instantiation_warnings:
@@ -1211,10 +1230,15 @@ class Scaper(object):
                             event_duration),
                         ScaperWarning)
 
+        # set source time default to uniformly sample over any valid source_time
+        source_time_dist = event.source_time
+        if source_time_dist is None:
+            source_time_dist = ('uniform', 0, source_duration - event_duration)
+
         # determine source time
         source_time = -np.Inf
         while source_time < 0:
-            source_time = _get_value_from_dist(event.source_time)
+            source_time = _get_value_from_dist(source_time_dist)
 
         # Make sure source time + event duration is not greater than the
         # source duration, if it is, adjust the source time (i.e. duration
@@ -1231,12 +1255,17 @@ class Scaper(object):
                         source_duration, source_time),
                     ScaperWarning)
 
+        # set event time default to uniformly sample over any valid event_time
+        event_time_dist = event.event_time
+        if event_time_dist is None:
+            event_time_dist = ('uniform', 0, self.duration - event_duration)
+
         # determine event time
         # for background events the event time is fixed to 0, but for
         # foreground events it's not.
         event_time = -np.Inf
         while event_time < 0:
-            event_time = _get_value_from_dist(event.event_time)
+            event_time = _get_value_from_dist(event_time_dist)
 
         # Make sure the selected event time + event duration are is not greater
         # than the total duration of the soundscape, if it is adjust the event
@@ -1347,7 +1376,6 @@ class Scaper(object):
         for event in self.bg_spec:
             value = self._instantiate_event(
                 event,
-                isbackground=True,
                 allow_repeated_label=allow_repeated_label,
                 allow_repeated_source=allow_repeated_source,
                 used_labels=bg_labels,
@@ -1368,7 +1396,6 @@ class Scaper(object):
         for event in self.fg_spec:
             value = self._instantiate_event(
                 event,
-                isbackground=False,
                 allow_repeated_label=allow_repeated_label,
                 allow_repeated_source=allow_repeated_source,
                 used_labels=fg_labels,
@@ -1516,7 +1543,7 @@ class Scaper(object):
                                 tmpfiles_internal[-1].name)
 
                             # Normalize background to reference DB.
-                            gain = self.ref_db - bg_lufs
+                            gain = self.ref_db + e.value['snr'] - bg_lufs
 
                             # Use transformer to adapt gain
                             tfm = sox.Transformer()
