@@ -27,14 +27,20 @@ def _close_temp_files(tmpfiles):
         List of temporary file handles
 
     '''
+    def _close():
+        for t in tmpfiles:
+            try:
+                t.close()
+                os.unlink(t.name)
+            except:
+                pass
+    try:
+        yield
+    except:
+        _close()
+        raise
+    _close()
 
-    yield
-    for t in tmpfiles:
-        try:
-            t.close()
-            os.unlink(t.name)
-        except:
-            pass
 
 
 @contextmanager
