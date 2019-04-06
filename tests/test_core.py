@@ -981,6 +981,36 @@ def test_generate_with_seeding(atol=1e-4, rtol=1e-8):
             for i, a in enumerate(audio):
                 assert np.allclose(audio[0], a, atol=atol, rtol=rtol)
 
+            # load all the jams data
+            # make sure they are all the same as the first one
+            jams_data = [jams.load(jam_file.name) for jam_file in jam_files]
+            for x in jams_data:
+                _compare_scaper_jams(x, jams_data[0])
+
+            # load the txt files and compare them
+            def _load_txt(txt_file):
+                txt_data = []
+                with open(txt_file.name) as file:
+                    reader = csv.reader(file, delimiter='\t')
+                    for row in reader:
+                        txt_data.append(row)
+                txt_data = np.asarray(txt_data)
+                return txt_data
+            
+            txt_data = [_load_txt(txt_file) for txt_file in txt_files]
+            regtxt_data = txt_data[0]
+
+            for t in txt_data:
+                assert np.allclose([float(x) for x in t[:, 0]],
+                                   [float(x) for x in regtxt_data[:, 0]])
+                assert np.allclose([float(x) for x in t[:, 1]],
+                                   [float(x) for x in regtxt_data[:, 1]])
+                # compare labels
+                assert (t[:, 2] == regtxt_data[:, 2]).all()
+
+
+
+
 
 def _create_scaper_with_random_seed(seed):
     sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH, random_state=deepcopy(seed))
