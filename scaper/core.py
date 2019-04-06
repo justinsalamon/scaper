@@ -1,5 +1,4 @@
 import sox
-import random
 import os
 import warnings
 import jams
@@ -18,23 +17,22 @@ from .util import _get_sorted_files
 from .util import _validate_folder_path
 from .util import _populate_label_list
 from .util import _check_random_state
-from .util import _trunc_norm
-from .util import _uniform
-from .util import _choose
-from .util import _normal
-from .util import _const
+from .util import _sample_trunc_norm
+from .util import _sample_uniform
+from .util import _sample_choose
+from .util import _sample_normal
+from .util import _sample_const
 from .util import max_polyphony
 from .util import polyphony_gini
 from .util import is_real_number, is_real_array
 from .audio import get_integrated_lufs
 from .version import version as scaper_version
 
-# TODO: for seeding, turn these into more complex functions in util?
-SUPPORTED_DIST = {"const": _const,
-                  "choose": _choose,
-                  "uniform": _uniform,
-                  "normal": _normal,
-                  "truncnorm": _trunc_norm}
+SUPPORTED_DIST = {"const": _sample_const,
+                  "choose": _sample_choose,
+                  "uniform": _sample_uniform,
+                  "normal": _sample_normal,
+                  "truncnorm": _sample_trunc_norm}
 
 # Define single event spec as namedtuple
 EventSpec = namedtuple(
@@ -818,7 +816,6 @@ def _validate_event(label, source_file, source_time, event_time,
     _validate_time_stretch(time_stretch)
 
 
-# TODO: add a seed parameter in init that defaults to None
 class Scaper(object):
     '''
     Create a Scaper object.

@@ -172,7 +172,7 @@ def _check_random_state(seed):
                      ' instance' % seed)
 
 
-def _const(item, random_state):
+def _sample_const(item, random_state):
     '''
     Return a value sampled from a constant distribution (just the item).
 
@@ -193,7 +193,7 @@ def _const(item, random_state):
     return item
 
 
-def _uniform(minimum, maximum, random_state):
+def _sample_uniform(minimum, maximum, random_state):
     '''
     Return a random value sampled from a uniform distribution 
     between ```minimum``` and ```maximum```.
@@ -217,7 +217,7 @@ def _uniform(minimum, maximum, random_state):
     return random_state.uniform(minimum, maximum)
 
 
-def _normal(mu, sigma, random_state):
+def _sample_normal(mu, sigma, random_state):
     '''
     Return a random value sampled from a normal distribution with
     mean ```mu``` and standard deviation ```sigma```.
@@ -241,7 +241,7 @@ def _normal(mu, sigma, random_state):
     return random_state.normal(mu, sigma)
 
 
-def _choose(list_of_options, random_state):
+def _sample_choose(list_of_options, random_state):
     '''
     Return a random item from ```list_of_options```, using random_state.
 
@@ -262,7 +262,7 @@ def _choose(list_of_options, random_state):
     return list_of_options[index]
 
 
-def _trunc_norm(mu, sigma, trunc_min, trunc_max, random_state):
+def _sample_trunc_norm(mu, sigma, trunc_min, trunc_max, random_state):
     '''
     Return a random value sampled from a truncated normal distribution with
     mean ```mu``` and standard deviation ```sigma``` whose values are limited
