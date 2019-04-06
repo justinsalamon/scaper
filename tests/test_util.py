@@ -9,7 +9,7 @@ from scaper.util import _set_temp_logging_level
 from scaper.util import _validate_folder_path
 from scaper.util import _get_sorted_files
 from scaper.util import _populate_label_list
-from scaper.util import _trunc_norm
+from scaper.util import _sample_trunc_norm
 from scaper.util import max_polyphony
 from scaper.util import polyphony_gini
 from scaper.util import is_real_number, is_real_array
@@ -137,7 +137,7 @@ def test_check_random_state():
     pytest.raises(ValueError, _check_random_state, 'random')
 
 
-def test_trunc_norm():
+def test_sample_trunc_norm():
     '''
     Should return values from a truncated normal distribution.
 
@@ -145,7 +145,7 @@ def test_trunc_norm():
     rng = _check_random_state(0)
     # sample values from a distribution
     mu, sigma, trunc_min, trunc_max = 2, 1, 0, 5
-    x = [_trunc_norm(mu, sigma, trunc_min, trunc_max, random_state=rng) for _ in range(100000)]
+    x = [_sample_trunc_norm(mu, sigma, trunc_min, trunc_max, random_state=rng) for _ in range(100000)]
     x = np.asarray(x)
 
     # simple check: values must be within truncated bounds

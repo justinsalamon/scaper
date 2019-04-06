@@ -953,7 +953,7 @@ def test_generate_with_seeding(atol=1e-4, rtol=1e-8):
     for seed in seeds:
         generators = []
         for i in range(num_generators):
-            generators.append(create_scaper_with_random_seed(seed))
+            generators.append(_create_scaper_with_random_seed(seed))
 
         tmpfiles = []
         with _close_temp_files(tmpfiles):
@@ -982,7 +982,7 @@ def test_generate_with_seeding(atol=1e-4, rtol=1e-8):
                 assert np.allclose(audio[0], a, atol=atol, rtol=rtol)
 
 
-def create_scaper_with_random_seed(seed):
+def _create_scaper_with_random_seed(seed):
     sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH, random_state=deepcopy(seed))
     sc.ref_db = -50
     sc.sr = 44100
