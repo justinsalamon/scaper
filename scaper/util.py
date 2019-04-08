@@ -12,7 +12,6 @@ from .scaper_exceptions import ScaperError
 import scipy
 import numpy as np
 import numbers
-import random
 
 
 @contextmanager
