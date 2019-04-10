@@ -9,6 +9,7 @@ import logging
 import os
 import glob
 from .scaper_exceptions import ScaperError
+from .scaper_warnings import ScaperWarning
 import scipy
 import numpy as np
 import numbers
@@ -257,8 +258,14 @@ def _sample_choose(list_of_options, random_state):
         A random item chosen from ```list_of_options```.
 
     '''
-    index = random_state.randint(len(list_of_options))
-    return list_of_options[index]
+    new_list_of_options = list(set(list_of_options))
+    if len(new_list_of_options) < len(list_of_options):
+        warnings.warn(
+            'Removed duplicates from choose list. List length changed '
+            'from {:d} to {:d}'.format(len(list_of_options), len(new_list_of_options)),
+            ScaperWarning)
+    index = random_state.randint(len(new_list_of_options))
+    return new_list_of_options[index]
 
 
 def _sample_trunc_norm(mu, sigma, trunc_min, trunc_max, random_state):
