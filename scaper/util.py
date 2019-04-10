@@ -9,6 +9,7 @@ import logging
 import os
 import glob
 from .scaper_exceptions import ScaperError
+import warnings
 from .scaper_warnings import ScaperWarning
 import scipy
 import numpy as np
@@ -238,6 +239,8 @@ def _sample_normal(mu, sigma, random_state):
 def _sample_choose(list_of_options, random_state):
     '''
     Return a random item from ```list_of_options```, using random_state.
+    If there are duplicates in ```list_of_options```, we remove them from the 
+    list before sampling an item from the list.
 
     Parameters
     ----------
