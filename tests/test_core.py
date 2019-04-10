@@ -600,7 +600,7 @@ def test_validate_time():
 
     # truncnorm can't have negative min value
     __test_bad_time_tuple(('truncnorm', 0, 1, -1, 1))
-
+    
 
 def test_validate_duration():
 

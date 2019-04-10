@@ -9,12 +9,13 @@ from scaper.util import _set_temp_logging_level
 from scaper.util import _validate_folder_path
 from scaper.util import _get_sorted_files
 from scaper.util import _populate_label_list
-from scaper.util import _sample_trunc_norm
+from scaper.util import _sample_trunc_norm, _sample_choose
 from scaper.util import max_polyphony
 from scaper.util import polyphony_gini
 from scaper.util import is_real_number, is_real_array
 from scaper.util import _check_random_state
 from scaper.scaper_exceptions import ScaperError
+from scaper.scaper_warnings import ScaperWarning
 import tempfile
 import os
 import logging
@@ -149,6 +150,12 @@ def test_check_random_state():
 
     # seed is none of the above : error
     pytest.raises(ValueError, _check_random_state, 'random')
+
+
+def test_sample_choose():
+    # using choose with duplicates will issue a warning
+    rng = _check_random_state(0)
+    pytest.warns(ScaperWarning, _sample_choose, [0, 1, 2, 2, 2], rng)
 
 
 def test_sample_trunc_norm():
