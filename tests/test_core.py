@@ -767,8 +767,13 @@ def test_scaper_instantiate_event():
     # test valid case
     sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
     instantiated_event = sc._instantiate_event(
+<<<<<<< HEAD
         fg_event, allow_repeated_label=True,
         allow_repeated_source=True, used_labels=[], used_source_files=[],
+=======
+        fg_event, allow_repeated_label=True, allow_repeated_source=True,
+        used_labels=[], used_source_files=[],
+>>>>>>> master
         disable_instantiation_warnings=True)
     assert instantiated_event.label == 'siren'
     assert instantiated_event.source_file == (
@@ -787,8 +792,13 @@ def test_scaper_instantiate_event():
     # test
     for _ in range(20):
         instantiated_event = sc._instantiate_event(
+<<<<<<< HEAD
             fg_event8, allow_repeated_label=False,
             allow_repeated_source=True, used_labels=['siren', 'human_voice'],
+=======
+            fg_event8, allow_repeated_label=False, allow_repeated_source=True,
+            used_labels=['siren', 'human_voice'],
+>>>>>>> master
             disable_instantiation_warnings=True)
         assert instantiated_event.label == 'car_horn'
 
