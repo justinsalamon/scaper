@@ -104,7 +104,8 @@ def _compare_scaper_jams(jam, regjam):
     # everything but the specs and version can be compared directly:
     for k in set(ann.sandbox.scaper.keys()) | set(regann.sandbox.scaper.keys()):
         if k not in ['bg_spec', 'fg_spec', 'scaper_version']:
-            assert ann.sandbox.scaper[k] == regann.sandbox.scaper[k]
+            assert ann.sandbox.scaper[k] == regann.sandbox.scaper[k], (
+                'Unequal values for "{}"'.format(k))
 
     # to compare specs need to covert raw specs to list of lists
     assert ([[list(x) if isinstance(x, tuple) else x for x in e] for e in
@@ -1055,8 +1056,10 @@ def _test_generate_audio(SR, REG_WAV_PATH, REG_BGONLY_WAV_PATH, REG_REVERB_WAV_P
                          'tests/data/audio/background/park/'
                          '268903__yonts__city-park-tel-aviv-israel.wav'),
             source_time=('const', 0))
-        jam = sc._instantiate(disable_instantiation_warnings=True)
-        sc._generate_audio(wav_file.name, jam.annotations[0], reverb=0.2)
+
+        reverb = 0.2
+        jam = sc._instantiate(disable_instantiation_warnings=True, reverb=reverb)
+        sc._generate_audio(wav_file.name, jam.annotations[0], reverb=reverb)
         # validate audio
         wav, sr = soundfile.read(wav_file.name)
         regwav, sr = soundfile.read(REG_BGONLY_WAV_PATH)
