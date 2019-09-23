@@ -766,8 +766,8 @@ def test_scaper_instantiate_event():
     # test valid case
     sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
     instantiated_event = sc._instantiate_event(
-        fg_event, isbackground=False, allow_repeated_label=True,
-        allow_repeated_source=True, used_labels=[], used_source_files=[],
+        fg_event, allow_repeated_label=True, allow_repeated_source=True,
+        used_labels=[], used_source_files=[],
         disable_instantiation_warnings=True)
     assert instantiated_event.label == 'siren'
     assert instantiated_event.source_file == (
@@ -786,8 +786,8 @@ def test_scaper_instantiate_event():
     # test
     for _ in range(20):
         instantiated_event = sc._instantiate_event(
-            fg_event8, isbackground=False, allow_repeated_label=False,
-            allow_repeated_source=True, used_labels=['siren', 'human_voice'],
+            fg_event8, allow_repeated_label=False, allow_repeated_source=True,
+            used_labels=['siren', 'human_voice'],
             disable_instantiation_warnings=True)
         assert instantiated_event.label == 'car_horn'
 
@@ -797,7 +797,7 @@ def test_scaper_instantiate_event():
     # test
     for _ in range(20):
         instantiated_event = sc._instantiate_event(
-            fg_event9, isbackground=False, allow_repeated_label=True,
+            fg_event9, allow_repeated_label=True,
             allow_repeated_source=False,
             used_labels=[],
             used_source_files=(
@@ -827,14 +827,12 @@ def test_scaper_instantiate_event():
     # repeated label when not allowed throws error
     sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
     pytest.raises(ScaperError, sc._instantiate_event, fg_event,
-                  isbackground=False,
                   allow_repeated_label=False,
                   allow_repeated_source=True,
                   used_labels=['siren'])
 
     # repeated source when not allowed throws error
     pytest.raises(ScaperError, sc._instantiate_event, fg_event,
-                  isbackground=False,
                   allow_repeated_label=True,
                   allow_repeated_source=False,
                   used_labels=['siren'],

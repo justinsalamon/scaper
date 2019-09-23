@@ -11,6 +11,7 @@ import glob
 from .scaper_exceptions import ScaperError
 import scipy
 import numpy as np
+import soundfile
 
 
 @contextmanager
@@ -55,8 +56,11 @@ def _set_temp_logging_level(level):
     yield
     logger.setLevel(current_level)
 
+# TODO: this needs some formalization
+AUDIO_FORMATS = {f.lower() for f in soundfile.available_formats()}
+AUDIO_FORMATS |= {'m4a', 'mp3'}
 
-def _get_sorted_files(folder_path):
+def _get_sorted_files(folder_path, max_depth=None):
     '''
     Return a list of absolute paths to all valid files contained within the
     folder specified by ```folder_path```.
@@ -80,9 +84,14 @@ def _get_sorted_files(folder_path):
     # Get folder contents and filter for valid files
     # Note, we sort the list to ensure consistent behavior across operating
     # systems.
-    files = sorted(glob.glob(os.path.join(folder_path, "*")))
-    files = [f for f in files if os.path.isfile(f)]
+    files = []
+    for root, dirs, fs in os.walk(folder_path):
+        depth = os.path.relpath(root, folder_path).count(os.sep)
+        if max_depth is None or depth <= max_depth:
+            files.extend([os.path.join(root, f) for f in fs
+                          if os.path.splitext(f)[1].strip('.') in AUDIO_FORMATS])
 
+    files.sort()
     return files
 
 
@@ -108,7 +117,7 @@ def _validate_folder_path(folder_path):
                 str(folder_path)))
 
 
-def _populate_label_list(folder_path, label_list):
+def _populate_label_list(folder_path, label_list, max_depth=None):
     '''
     Given a path to a folder and a list, add the names of all subfolders
     contained in this folder (excluding folders whose name starts with '.') to
@@ -130,15 +139,12 @@ def _populate_label_list(folder_path, label_list):
     folder.
 
     '''
+    # get all unique labels from available files
+    new_label_list = {os.path.relpath(os.path.dirname(f), folder_path)
+                      for f in _get_sorted_files(folder_path, max_depth)}
 
-    # Make sure folder path is valid
-    _validate_folder_path(folder_path)
+    label_list.extend(list(new_label_list))
 
-    folder_names = os.listdir(folder_path)
-    for fname in folder_names:
-        if (os.path.isdir(os.path.join(folder_path, fname)) and
-                fname[0] != '.'):
-            label_list.append(fname)
     # ensure consistent ordering of labels
     label_list.sort()
 
