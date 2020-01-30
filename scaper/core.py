@@ -1321,7 +1321,8 @@ class Scaper(object):
             # if it happens again, just use the old method.
             source_time = -np.Inf
             while source_time < 0:
-                source_time = _get_value_from_dist(modified_source_time)
+                source_time = _get_value_from_dist(
+                    modified_source_time, self.random_state)
                 if source_time + event_duration > source_duration:
                     source_time = source_duration - event_duration
                     warn = True
