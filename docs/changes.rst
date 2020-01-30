@@ -3,6 +3,11 @@
 Changelog
 ---------
 
+v1.1.0
+~~~~~~
+- Added functionality which modifies a source_time distribution tuple according to the duration of the source and the duration of the event.
+- This release alters behavior of Scaper compared to earlier versions.
+
 v1.0.3
 ~~~~~~
 - Fix bug where temp files might not be closed if an error is raised

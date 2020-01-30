@@ -9,6 +9,7 @@ import tempfile
 import numpy as np
 import shutil
 import csv
+from copy import deepcopy
 from .scaper_exceptions import ScaperError
 from .scaper_warnings import ScaperWarning
 from .util import _close_temp_files
@@ -356,6 +357,86 @@ def _validate_distribution(dist_tuple):
                 '(std dev) is real and non-negative, the 4th item (trunc_min) '
                 'is a real number and the 5th item (trun_max) is a real '
                 'number that is equal to or greater than trunc_min.')
+
+
+def _ensure_satisfiable_source_time_tuple(source_time, source_duration, event_duration):
+    '''
+    Modify a source_time distribution tuple according to the duration of the
+    source and the duration of the event. This allows you to sample from 
+    anywhere in a source file without knowing the exact duration of every
+    source file. 
+
+    Parameters
+    ----------
+    source_time : tuple
+        Tuple specifying a distribution to sample from. See Scaper.add_event
+        for details about the expected format of the tuple and allowed values.
+    source_duration : float
+        Duration of the source audio file.
+    event_duration : float
+        Duration of the event to be extracted from the source file.
+
+    See Also
+    --------
+    Scaper.add_event : Add a foreground sound event to the foreground
+    specification.
+    '''
+    _validate_distribution(source_time)
+    old_source_time = deepcopy(source_time)
+    source_time = list(source_time)
+
+    # If it's a constant distribution, just make sure it's within bounds.
+    if source_time[0] == 'const':
+        if source_time[1] + event_duration > source_duration:
+            source_time[1] = max(0, source_duration - event_duration)
+
+    # If it's a choose, iterate through the list to make sure it's all in bounds.
+    # Some logic here so we don't add stuff out of bounds more than once.
+    elif source_time[0] == 'choose':
+        for i, t in enumerate(source_time[1]):
+            if t + event_duration > source_duration:
+                source_time[1][i] = max(0, source_duration - event_duration)
+        source_time[1] = list(set(source_time[1]))
+
+    # If it's a uniform distribution, tuple must be of length 3, We change the 3rd
+    # item to source_duration - event_duration so that we stay in bounds. If the min
+    # out of bounds, we change it to be source_duration - event_duration.
+    elif source_time[0] == 'uniform':
+        if source_time[1] + event_duration > source_duration:
+            source_time[1] = max(0, source_duration - event_duration)
+        if source_time[2] + event_duration > source_duration:
+            source_time[2] = max(0, source_duration - event_duration)
+        if (source_time[1] == source_time[2]):
+            # switch to const
+            source_time = ['const', source_time[1]]
+        
+    # If it's a normal distribution, we change the mean of the distribution to
+    # source_duration - event_duration if source_duration - mean < event_duration.
+    elif source_time[0] == 'normal':
+        if source_time[1] + event_duration > source_duration:
+            source_time[1] = max(0, source_duration - event_duration)
+
+    # If it's a truncated normal distribution, we change the mean as we did above for a
+    # normal distribution, and change the max (5th item) to 
+    # source_duration - event_duration if it's bigger. If the min is out of bounds, we
+    # change it like in the uniform case.
+    elif source_time[0] == 'truncnorm':
+        if source_time[1] + event_duration > source_duration:
+            source_time[1] = max(0, source_duration - event_duration)
+        if source_time[3] + event_duration > source_duration:
+            source_time[3] = max(0, source_duration - event_duration)
+        if source_time[4] + event_duration > source_duration:
+            source_time[4] = max(0, source_duration - event_duration)
+        if (source_time[3] == source_time[4]):
+            # switch to const
+            source_time = ['const', source_time[1]]
+    
+    source_time = tuple(source_time)
+    # check if the source_time changed from the old_source_time to throw a warning.
+    # it gets set here but the warning happens after the return from this call
+    warn = (source_time != old_source_time)
+
+    return tuple(source_time), warn
 
 
 def _validate_label(label, allowed_labels):
@@ -1211,25 +1292,50 @@ class Scaper(object):
                             event_duration),
                         ScaperWarning)
 
-        # determine source time
-        source_time = -np.Inf
-        while source_time < 0:
-            source_time = _get_value_from_dist(event.source_time)
+        # Modify event.source_time so that sampling from the source time distribution
+        # stays within the bounds of the audio file - event_duration. This allows users 
+        # to sample from anywhere in a source file without knowing the exact duration 
+        # of every source file. Only modify if label is not in protected labels.
+        if label not in self.protected_labels:
+            tuple_still_invalid = False
+            modified_source_time, warn = _ensure_satisfiable_source_time_tuple(
+                event.source_time, source_duration,  event_duration
+            )
+            
+            # determine source time and also check again just in case (for normal dist).
+            # if it happens again, just use the old method.
+            source_time = -np.Inf
+            while source_time < 0:
+                source_time = _get_value_from_dist(modified_source_time)
+                if source_time + event_duration > source_duration:
+                    source_time = source_duration - event_duration
+                    warn = True
+                    tuple_still_invalid = True
 
-        # Make sure source time + event duration is not greater than the
-        # source duration, if it is, adjust the source time (i.e. duration
-        # takes precedences over start time).
-        if source_time + event_duration > source_duration:
-            old_source_time = source_time
-            source_time = source_duration - event_duration
-            if not disable_instantiation_warnings:
-                warnings.warn(
-                    '{:s} source time ({:.2f}) is too great given event '
-                    'duration ({:.2f}) and source duration ({:.2f}), changed '
-                    'to {:.2f}.'.format(
-                        label, old_source_time, event_duration,
-                        source_duration, source_time),
-                    ScaperWarning)
+            if warn and not disable_instantiation_warnings:
+                old_source_time = ', '.join(map(str, event.source_time))
+                new_source_time = ', '.join(map(str, modified_source_time))
+                if not tuple_still_invalid:
+                    warnings.warn(
+                        "{:s} source time tuple ({:s}) could not be satisfied given "
+                        "source duration ({:.2f}) and event duration ({:.2f}), "
+                        "source time tuple changed to ({:s})".format(
+                            label, old_source_time, source_duration, 
+                            event_duration, new_source_time), 
+                        ScaperWarning)
+                else:
+                    warnings.warn(
+                        "{:s} source time tuple ({:s}) could not be satisfied given "
+                        "source duration ({:.2f}) and event duration ({:.2f}), "
+                        "source time tuple changed to ({:s}) but was still not "
+                        "satisfiable, likely due to using 'normal' distribution with "
+                        "bounds too close to the start or end of the audio file".format(
+                            label, old_source_time, source_duration, 
+                            event_duration, new_source_time),
+                        ScaperWarning)
+        else:
+            source_time = 0.0
+
 
         # determine event time
         # for background events the event time is fixed to 0, but for
