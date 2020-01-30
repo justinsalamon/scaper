@@ -476,7 +476,7 @@ def test_ensure_satisfiable_source_time_tuple():
     _adjusted, warn = scaper.core._ensure_satisfiable_source_time_tuple(
         _test_dist, source_duration, event_duration)
     assert (warn)
-    assert np.allclose(_adjusted[1], [0, 1, 2, 5, 5, 5, 5])
+    assert np.allclose(_adjusted[1], [0, 1, 2, 5])
 
 
 def test_validate_distribution():
