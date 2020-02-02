@@ -849,6 +849,36 @@ class Scaper(object):
     '''
 
     def __init__(self, duration, fg_path, bg_path, protected_labels=[], random_state=None):
+        '''
+        Create a Scaper object.
+
+        Parameters
+        ----------
+        duration : float
+            Duration of the soundscape, in seconds.
+        fg_path : str
+            Path to foreground folder.
+        bg_path : str
+            Path to background folder.
+        protected_labels : list 
+            Provide a list of protected foreground labels. When a foreground
+            label is in the protected list it means that when a sound event
+            matching the label gets added to a soundscape instantiation the
+            duration of the source audio file cannot be altered, and the
+            duration value that was provided in the specification will be
+            ignored. Adding labels to the protected list is useful for sound events
+            whose semantic validity would be lost if the sound were trimmed
+            before the sound event ends, for example an animal vocalization
+            such as a dog bark.
+        random_state : int, RandomState instance or None, optional (default=None)
+            If int, random_state is the seed used by the random number 
+            generator; If RandomState instance, random_state is the random number 
+            generator; If None, the random number generator is the RandomState 
+            instance used by np.random. Note that if the random state is passed as a 
+            RandomState instance, it is passed by reference, not value. This will lead to
+            the Scaper object advancing the state of the random state object if you use
+            it elsewhere.
+        '''
         # Duration must be a positive real number
         if np.isrealobj(duration) and duration > 0:
             self.duration = duration
