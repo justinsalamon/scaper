@@ -3,6 +3,13 @@
 Changelog
 ---------
 
+v1.2.0
+~~~~~~
+- Added a random_state parameter to Scaper object, which allows all runs to be perfectly reproducible given the same audio and the same random seed.
+- Switched from numpydoc to napoleon for generating the documentation. Also switched Sphinx to the most recent version.
+- Added functions to Scaper object that allow one to reset the foreground and background event specifications independently. This allows users to reuse the same Scaper object and generate multiple soundscapes.
+- Added a function to Scaper that allows the user to set the random state after creation.
+
 v1.1.0
 ~~~~~~
 - Added functionality which modifies a source_time distribution tuple according to the duration of the source and the duration of the event.

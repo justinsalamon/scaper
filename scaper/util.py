@@ -9,8 +9,12 @@ import logging
 import os
 import glob
 from .scaper_exceptions import ScaperError
+import warnings
+from .scaper_warnings import ScaperWarning
 import scipy
 import numpy as np
+import numbers
+from copy import deepcopy
 
 
 @contextmanager
@@ -149,7 +153,127 @@ def _populate_label_list(folder_path, label_list):
     label_list.sort()
 
 
-def _trunc_norm(mu, sigma, trunc_min, trunc_max):
+def _check_random_state(seed):
+    """Turn seed into a np.random.RandomState instance
+
+    Parameters
+    ----------
+    seed : None | int | instance of RandomState
+        If seed is None, return the RandomState singleton used by np.random.
+        If seed is an int, return a new RandomState instance seeded with seed.
+        If seed is already a RandomState instance, return it.
+        Otherwise raise ValueError.
+    """
+    if seed is None or seed is np.random:
+        return np.random.mtrand._rand
+    elif isinstance(seed, (numbers.Integral, np.integer, int)):
+        return np.random.RandomState(seed)
+    elif isinstance(seed, np.random.RandomState):
+        return seed
+    else:
+        raise ValueError('%r cannot be used to seed a numpy.random.RandomState'
+                         ' instance' % seed)
+
+
+def _sample_const(item, random_state):
+    '''
+    Return a value sampled from a constant distribution (just the item).
+
+    Parameters
+    ----------
+    item : any
+        What to return
+    random_state : mtrand.RandomState
+        RandomState object used to sample from this distribution (ignored).
+        This is here to match the other function specifications.
+
+    Returns
+    -------
+    value : any
+        item, returned.
+
+    '''
+    return item
+
+
+def _sample_uniform(minimum, maximum, random_state):
+    '''
+    Return a random value sampled from a uniform distribution 
+    between ```minimum``` and ```maximum```.
+
+    Parameters
+    ----------
+    minimum : float
+        Minimum of uniform distribution
+    maximum : float
+        Maximum of uniform distribution
+    random_state : mtrand.RandomState
+        RandomState object used to sample from this distribution.
+
+    Returns
+    -------
+    value : float
+        A random value sampled from the uniform distribution defined
+        by ```minimum```, ```maximum```.
+
+    '''
+    return random_state.uniform(minimum, maximum)
+
+
+def _sample_normal(mu, sigma, random_state):
+    '''
+    Return a random value sampled from a normal distribution with
+    mean ```mu``` and standard deviation ```sigma```.
+
+    Parameters
+    ----------
+    mu : float
+        The mean of the truncated normal distribution
+    sig : float
+        The standard deviation of the truncated normal distribution
+    random_state : mtrand.RandomState
+        RandomState object used to sample from this distribution.
+
+    Returns
+    -------
+    value : float
+        A random value sampled from the normal distribution defined
+        by ```mu```, ```sigma```.
+
+    '''
+    return random_state.normal(mu, sigma)
+
+
+def _sample_choose(list_of_options, random_state):
+    '''
+    Return a random item from ```list_of_options```, using random_state.
+    If there are duplicates in ```list_of_options```, we remove them from the 
+    list before sampling an item from the list.
+
+    Parameters
+    ----------
+    list_of_options : list
+        List of items to choose from.
+    random_state : mtrand.RandomState
+        RandomState object used to sample from this distribution.
+
+    Returns
+    -------
+    value : any
+        A random item chosen from ```list_of_options```.
+
+    '''
+    new_list_of_options = list(set(list_of_options))
+    if len(new_list_of_options) < len(list_of_options):
+        warnings.warn(
+            'Removed duplicates from choose list. List length changed '
+            'from {:d} to {:d}'.format(len(list_of_options), len(new_list_of_options)),
+            ScaperWarning)
+    index = random_state.randint(len(new_list_of_options))
+    return new_list_of_options[index]
+
+
+def _sample_trunc_norm(mu, sigma, trunc_min, trunc_max, random_state):
     '''
     Return a random value sampled from a truncated normal distribution with
     mean ```mu``` and standard deviation ```sigma``` whose values are limited
@@ -165,6 +289,8 @@ def _trunc_norm(mu, sigma, trunc_min, trunc_max):
         The minimum value allowed for the distribution (lower boundary)
     trunc_max : float
         The maximum value allowed for the distribution (upper boundary)
+    random_state : mtrand.RandomState
+        RandomState object used to sample from this distribution.
 
     Returns
     -------
@@ -178,7 +304,7 @@ def _trunc_norm(mu, sigma, trunc_min, trunc_max):
     # values for a standard normal distribution (mu=0, sigma=1), so we need
     # to recompute a and b given the user specified parameters.
     a, b = (trunc_min - mu) / float(sigma), (trunc_max - mu) / float(sigma)
-    return scipy.stats.truncnorm.rvs(a, b, mu, sigma)
+    return scipy.stats.truncnorm.rvs(a, b, mu, sigma, random_state=random_state)
 
 
 def max_polyphony(ann):

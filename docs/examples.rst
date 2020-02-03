@@ -48,16 +48,24 @@ Example: synthesizing 1000 soundscapes in one go
     time_stretch_min = 0.8
     time_stretch_max = 1.2
 
+    # generate a random seed for this Scaper object
+    seed = 123
+
+    # create a scaper that will be used below
+    sc = scaper.Scaper(duration, fg_folder, bg_folder, random_state=seed)
+    sc.protected_labels = []
+    sc.ref_db = ref_db
+
     # Generate 1000 soundscapes using a truncated normal distribution of start times
 
     for n in range(n_soundscapes):
 
         print('Generating soundscape: {:d}/{:d}'.format(n+1, n_soundscapes))
 
-        # create a scaper
-        sc = scaper.Scaper(duration, fg_folder, bg_folder)
-        sc.protected_labels = []
-        sc.ref_db = ref_db
+        # reset the event specifications for foreground and background at the 
+        # beginning of each loop to clear all previously added events
+        sc.reset_bg_spec()
+        sc.reset_fg_spec()
 
         # add background
         sc.add_background(label=('const', 'noise'),

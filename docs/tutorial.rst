@@ -100,6 +100,46 @@ when we add foreground events, we'll have to specify an ``snr``
 be louder (or softer) with respect to the background level specified by
 ``sc.ref_db``.
 
+Seeding the Scaper object for reproducibility
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A further argument can be specified to the ``Scaper`` object:
+
+- The random state: this can be either a numpy.random.RandomState object or an integer.
+  In the latter case, a random state will be constructed. The random state is what will 
+  be used for drawing from any distributions. If the audio kept in all of the folders is
+  exactly the same and the random state is fixed between runs, the same soundscape will be 
+  generated both times. If you don't define any random state or set seed to None, runs 
+  will be random and not reproducible. You can use np.random.get_state() to reproduce 
+  the run after the fact by recording the seed that was used somewhere.
+
+This can be specified like so (e.g. for a random seed of 0):
+
+.. code-block:: python
+
+    import scaper
+    import os
+    soundscape_duration = 10.0
+    seed = 123
+    foreground_folder = os.path.expanduser('~/audio/foreground/')
+    background_folder = os.path.expanduser('~/audio/background/')
+    sc = scaper.Scaper(soundscape_duration, foreground_folder, background_folder, 
+                       random_state=seed)
+    sc.ref_db = -20
+
+If the random state is not specified, it defaults to the old behavior which just uses
+the RandomState used by np.random. You can also set the random state after creation
+via ``Scaper.set_random_state``. Alternatively, you can set the random state directly:
+
+.. code-block:: python
+
+    import numpy as np
+    seed = np.random.RandomState(123)
+    sc = scaper.Scaper(soundscape_duration, foreground_folder, background_folder, 
+                       random_state=seed)
+    sc.ref_db = -20
+
+
 Adding a background and foreground sound events
 -----------------------------------------------
 
