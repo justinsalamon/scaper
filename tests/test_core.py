@@ -15,6 +15,8 @@ import csv
 import numbers
 from collections import namedtuple
 from copy import deepcopy
+import shutil
+from contextlib import contextmanager
 
 
 # FIXTURES
@@ -102,18 +104,24 @@ def _compare_scaper_jams(jam, regjam):
     assert 'scaper' in ann.sandbox.keys()
     assert 'scaper' in regann.sandbox.keys()
 
+    excluded_scaper_sandbox_keys = [
+        'bg_spec', 'fg_spec', 'scaper_version', 'soundscape_audio_path', 
+        'isolated_events_audio_path'
+    ]
     # everything but the specs and version can be compared directly:
     for k in set(ann.sandbox.scaper.keys()) | set(regann.sandbox.scaper.keys()):
-        if k not in ['bg_spec', 'fg_spec', 'scaper_version']:
+        if k not in excluded_scaper_sandbox_keys:
             assert ann.sandbox.scaper[k] == regann.sandbox.scaper[k], (
                 'Unequal values for "{}"'.format(k))
 
     # to compare specs need to covert raw specs to list of lists
-    assert ([[list(x) if isinstance(x, tuple) else x for x in e] for e in
-             ann.sandbox.scaper['bg_spec']] == regann.sandbox.scaper['bg_spec'])
-
-    assert ([[list(x) if isinstance(x, tuple) else x for x in e] for e in
-             ann.sandbox.scaper['fg_spec']] == regann.sandbox.scaper['fg_spec'])
+    bg_spec_list = [[list(x) if isinstance(x, tuple) else x for x in e] for e in
+                    ann.sandbox.scaper['bg_spec']] 
+    fg_spec_list = [[list(x) if isinstance(x, tuple) else x for x in e] for e in
+                    ann.sandbox.scaper['fg_spec']]
+    
+    assert (fg_spec_list == regann.sandbox.scaper['fg_spec'])
+    assert (bg_spec_list == regann.sandbox.scaper['bg_spec'])
 
     # 3.3. compare namespace, time and duration
     assert ann.namespace == regann.namespace
@@ -187,7 +195,7 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
                          time_stretch=('uniform', 0.8, 1.2))
 
         # generate, then generate from the jams and compare audio files
-        # repeat 5 time
+        # repeat 5 times
         for _ in range(5):
             sc.generate(orig_wav_file.name, orig_jam_file.name,
                         disable_instantiation_warnings=True)
@@ -260,7 +268,7 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
                                   jams_outfile=gen_jam_file.name)
         orig_jam = jams.load(orig_jam_file.name)
         gen_jam = jams.load(gen_jam_file.name)
-        assert orig_jam == gen_jam
+        _compare_scaper_jams(orig_jam, gen_jam)
 
 
 def test_trim(atol=1e-5, rtol=1e-8):
@@ -1195,19 +1203,14 @@ def _create_scaper_with_random_seed(seed):
 
     # background
     sc.add_background(
-        label=('const', 'park'),
-        source_file=(
-            'const',
-            'tests/data/audio/background/park/'
-            '268903__yonts__city-park-tel-aviv-israel.wav'),
+        label=('choose', []),
+        source_file=('choose', []),
         source_time=('const', 0))
 
     # foreground events
     sc.add_event(
-        label=('const', 'siren'),
-        source_file=('const',
-                     'tests/data/audio/foreground/'
-                     'siren/69-Siren-1.wav'),
+        label=('choose', []),
+        source_file=('choose', []),
         source_time=('uniform', 0, 8),
         event_time=('truncnorm', 4, 1, 0, 8),
         event_duration=('normal', 4, 1),
@@ -1216,10 +1219,8 @@ def _create_scaper_with_random_seed(seed):
         time_stretch=None)
 
     sc.add_event(
-        label=('const', 'car_horn'),
-        source_file=('const',
-                     'tests/data/audio/foreground/'
-                     'car_horn/17-CAR-Rolls-Royce-Horn.wav'),
+        label=('choose', []),
+        source_file=('choose', []),
         source_time=('uniform', 0, 8),
         event_time=('truncnorm', 4, 1, 0, 8),
         event_duration=('normal', 4, 1),
@@ -1228,10 +1229,8 @@ def _create_scaper_with_random_seed(seed):
         time_stretch=None)
 
     sc.add_event(
-        label=('const', 'human_voice'),
-        source_file=('const',
-                     'tests/data/audio/foreground/'
-                     'human_voice/42-Human-Vocal-Voice-taxi-2_edit.wav'),
+        label=('choose', []),
+        source_file=('choose', []),
         source_time=('const', 0),
         event_time=('const', 7),
         event_duration=('const', 2),
@@ -1370,6 +1369,115 @@ def _test_generate_audio(SR, REG_WAV_PATH, REG_BGONLY_WAV_PATH, REG_REVERB_WAV_P
         wav, sr = soundfile.read(wav_file.name)
         regwav, sr = soundfile.read(REG_BGONLY_WAV_PATH)
         assert np.allclose(wav, regwav, atol=atol, rtol=rtol)
+
+def create_scaper_scene_without_random_seed():
+    sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
+    sc.ref_db = -50
+    sc.sr = 44100
+
+    # background
+    sc.add_background(
+        label=('const', 'park'),
+        source_file=(
+            'const',
+            'tests/data/audio/background/park/'
+            '268903__yonts__city-park-tel-aviv-israel.wav'),
+        source_time=('const', 0))
+
+    # foreground events
+    sc.add_event(
+        label=('const', 'siren'),
+        source_file=('const',
+                     'tests/data/audio/foreground/'
+                     'siren/69-Siren-1.wav'),
+        source_time=('uniform', 0, 5),
+        event_time=('normal', 5, 1),
+        event_duration=('truncnorm', 5, 1, 4, 6),
+        snr=('const', 5),
+        pitch_shift=None,
+        time_stretch=None)
+
+    sc.add_event(
+        label=('const', 'car_horn'),
+        source_file=('const',
+                     'tests/data/audio/foreground/'
+                     'car_horn/17-CAR-Rolls-Royce-Horn.wav'),
+        source_time=('const', 0),
+        event_time=('const', 5),
+        event_duration=('truncnorm', 3, 1, 1, 10),
+        snr=('uniform', 10, 20),
+        pitch_shift=('uniform', -1, 1),
+        time_stretch=(None))
+
+    sc.add_event(
+        label=('const', 'human_voice'),
+        source_file=('const',
+                     'tests/data/audio/foreground/'
+                     'human_voice/42-Human-Vocal-Voice-taxi-2_edit.wav'),
+        source_time=('const', 0),
+        event_time=('const', 7),
+        event_duration=('const', 2),
+        snr=('const', 10),
+        pitch_shift=('uniform', -1, 1),
+        time_stretch=('uniform', .8, 1.2))
+        
+    return sc    
+
+
+def _test_generate_isolated_events(SR, isolated_events_path=None, atol=1e-4, rtol=1e-8):
+    sc = create_scaper_scene_without_random_seed()
+    tmpfiles = []
+
+    @contextmanager
+    def _delete_files(mix_file, directory):
+        yield
+        try:
+            shutil.rmtree(directory)
+            os.remove(mix_file)
+        except:
+            pass
+
+    wav_file = 'tests/mix.wav'
+    if isolated_events_path is None:
+        isolated_events_path = 'tests/mix_events'
+    with _delete_files(wav_file, isolated_events_path):
+        jam = sc._instantiate(disable_instantiation_warnings=True)
+        sc._generate_audio(wav_file, jam.annotations[0], save_isolated_events=True, 
+                           isolated_events_path=isolated_events_path)
+        source_directory = os.path.splitext(wav_file)[0] + '_events'
+        
+
+        isolated_events = []
+        ann = jam.annotations.search(namespace='scaper')[0]
+
+        soundscape_audio, _ = soundfile.read(ann.sandbox.scaper.soundscape_audio_path)
+        isolated_event_audio_paths = ann.sandbox.scaper.isolated_events_audio_path
+        isolated_audio = []
+
+        for event_spec, event_audio_path in zip(ann, isolated_event_audio_paths):
+            # event_spec contains the event description, label, etc
+            # event_audio contains the path to the actual audio
+
+            # make sure the path matches the event description
+            assert event_spec.value['role'] in event_audio_path
+            assert event_spec.value['label'] in event_audio_path
+            isolated_audio.append(soundfile.read(event_audio_path)[0])
+
+        # the sum of the isolated audio should sum to the soundscape
+        assert np.allclose(sum(isolated_audio), soundscape_audio, atol=1e-4, rtol=1e-8)
+
+        jam = sc._instantiate(disable_instantiation_warnings=True)
+
+        # Running with save_isolated_events = True and reverb not None raises a warning
+        pytest.warns(ScaperWarning, sc._generate_audio, wav_file,
+                    jam.annotations[0], save_isolated_events=True, reverb=.5)
+
+def test_generate_isolated_events():
+    for sr, isolated_events_path in zip(
+        (16000, 22050, 44100), (None, 'tests/mix_events', None)):
+        # try it a bunch of times
+        for i in range(10):
+            _test_generate_isolated_events(sr, isolated_events_path)
 
 
 def test_generate():
