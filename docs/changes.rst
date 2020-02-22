@@ -3,6 +3,12 @@
 Changelog
 ---------
 
+v.1.3.0
+~~~~~~~
+- Source separation support! Add option to save isolated foreground events and background audio files.
+- Makes pysoundfile a formal dependency.
+- Seeding tests more robust.
+
 v1.2.0
 ~~~~~~
 - Added a random_state parameter to Scaper object, which allows all runs to be perfectly reproducible given the same audio and the same random seed.

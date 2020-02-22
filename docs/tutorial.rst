@@ -315,8 +315,6 @@ This is especially useful for generating datasets that can be used to train and 
 source separation algorithms or models. To enable this, two additional arguments can be 
 given to ``generate()`` and ``generate_from_jams()``:
 
-isolated_events_path:
-
 * ``save_isolated_events``: whether or not to save the audio corresponding to the 
   to the isolated foreground events and backgrounds within the synthesized soundscape. 
   In our example, there are three components - the background and the two foreground events.
