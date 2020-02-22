@@ -78,18 +78,18 @@ def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
         a new JAMS files where the source file paths match the new fg_path
         and/or bg_path.
     save_isolated_events : bool
-        If True, this will save the isolated event audio in a directory adjacent to the soundscape
+        If True, this will save the isolated event audio in a directory adjacent to the generated soundscape
         mixture, or to the path defined by `isolated_events_path`. The audio of the isolated events sum 
         up to the mixture if reverb is not applied. Isolated events can be found 
         (by default) at `<audio_outfile parent folder>/<audio_outfile name>_events`.
-        Isolated event file names follow the pattern: `[role][count]_[label]`, where count 
+        Isolated event file names follow the pattern: `<role><idx>_<label>`, where idx
         is the index of the isolated event in 
         self.fg_spec or self.bg_spec (this allows events of the same label to be added more than 
         once to the soundscape without breaking things). Role is "background" or "foreground".
         For example: `foreground0_siren.wav` or `background0_park.wav`.
     isolated_events_path : str
-        Like `audio_outfile`, this determines the path of the directory within which 
-        the isolated event audio will be saved.
+        Path to folder for saving isolated events. If None, defaults to
+        `<audio_outfile parent folder>/<audio_outfile name>_events`.
 
     Raises
     ------
@@ -1641,19 +1641,21 @@ class Scaper(object):
             (default) to prevent the soundscape from going through the reverb
             module at all.
         save_isolated_events : bool
-            If True, this will save the isolated event audio in a directory adjacent to the soundscape
-            mixture, or to the path defined by `isolated_events_path`. The audio of the isolated events sum 
-            up to the mixture if reverb is not applied. Isolated events can be found 
-            (by default) at `<audio_outfile parent folder>/<audio_outfile name>_events`.
-            Isolated event file names follow the pattern: `[role][count]_[label]`, where count 
-            is the index of the isolated event in 
-            self.fg_spec or self.bg_spec (this allows events of the same label to be added more than 
-            once to the soundscape without breaking things). Role is "background" or "foreground".
-            For example: `foreground0_siren.wav` or `background0_park.wav`.
+            If True, this will save the isolated foreground events and
+            backgrounds in a directory adjacent to the generated soundscape
+            mixture, or to the path defined by `isolated_events_path`. The
+            audio of the isolated events sum up to the mixture if reverb is not
+            applied. Isolated events can be found (by default) at
+            `<audio_outfile parent folder>/<audio_outfile name>_events`.
+            Isolated event file names follow the pattern: `<role><idx>_<label>`,
+            where idx is the index of the isolated event in self.fg_spec or
+            self.bg_spec (this allows events of the same label to be added more
+            than once to the soundscape without breaking things). Role is
+            "background" or "foreground". For example: `foreground0_siren.wav`
+            or `background0_park.wav`.
         isolated_events_path : str
-            Like `audio_path`, this determines the path of the directory within which 
-            the isolated event audio will be saved. If None, defaults to the parent 
-            folder of audio_path.
+            Path to folder for saving isolated events. If None, defaults to
+            `<audio_path parent folder>/<audio_path name>_events`.
         disable_sox_warnings : bool
             When True (default), warnings from the pysox module are suppressed
             unless their level is ``'CRITICAL'``.
@@ -1904,18 +1906,21 @@ class Scaper(object):
             (default) to prevent the soundscape from going through the reverb
             module at all.
         save_isolated_events : bool
-            If True, this will save the isolated event audio in a directory adjacent to the soundscape
-            mixture, or to the path defined by `isolated_events_path`. The audio of the isolated events sum 
-            up to the mixture if reverb is not applied. Isolated events can be found 
-            (by default) at `<audio_outfile parent folder>/<audio_outfile name>_events`.
-            Isolated event file names follow the pattern: `[role][count]_[label]`, where count 
-            is the index of the isolated event in 
-            self.fg_spec or self.bg_spec (this allows events of the same label to be added more than 
-            once to the soundscape without breaking things). Role is "background" or "foreground".
-            For example: `foreground0_siren.wav` or `background0_park.wav`.
+            If True, this will save the isolated foreground events and
+            backgrounds in a directory adjacent to the generated soundscape
+            mixture, or to the path defined by `isolated_events_path`. The
+            audio of the isolated events sum up to the mixture if reverb is not
+            applied. Isolated events can be found (by default) at
+            `<audio_outfile parent folder>/<audio_outfile name>_events`.
+            Isolated event file names follow the pattern: `<role><idx>_<label>`,
+            where count is the index of the isolated event in self.fg_spec or
+            self.bg_spec (this allows events of the same label to be added more
+            than once to the soundscape without breaking things). Role is
+            "background" or "foreground". For example: `foreground0_siren.wav`
+            or `background0_park.wav`.
         isolated_events_path : str
-            Like `audio_outfile`, this determines the path of the directory within which 
-            the isolated event audio will be saved.
+            Path to folder for saving isolated events. If None, defaults to
+            `<audio_path parent folder>/<audio_path name>_events`.
         disable_sox_warnings : bool
             When True (default), warnings from the pysox module are suppressed
             unless their level is ``'CRITICAL'``. If you're experiencing issues related 

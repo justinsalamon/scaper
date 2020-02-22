@@ -315,16 +315,14 @@ This is especially useful for generating datasets that can be used to train and 
 source separation algorithms or models. To enable this, two additional arguments can be 
 given to ``generate()`` and ``generate_from_jams()``:
 
-isolated_events_path: 
-
-
+isolated_events_path:
 
 * ``save_isolated_events``: whether or not to save the audio corresponding to the 
   to the isolated foreground events and backgrounds within the synthesized soundscape. 
   In our example, there are three components - the background and the two foreground events.
 * ``isolated_events_path``: the path where the audio corresponding to the isolated 
   foreground events and backgrounds will be saved. If None (default) and 
-  save_isolated_events = True, the events are saved to <parentdir>/_events/, where 
+  save_isolated_events = True, the events are saved to <parentdir>/<audiofilename>_events/, where
   <parentdir> is the parent folder of the soundscape audio file provided in the 
   audiofile parameter in the example below:
 
@@ -350,9 +348,9 @@ The code above will produce the following directory structure:
     ~/scaper_output/mysoundscape.jams 
     ~/scaper_output/mysoundscape.txt 
     ~/scaper_output/mysoundscape_events/
-      background0_<label0>.wav
-      foreground0_<label0>.wav
-      foreground1_<label1>.wav
+      background0_<label>.wav
+      foreground0_<label>.wav
+      foreground1_<label>.wav
 
 The labels for each isolated event are determined after ``generate`` is called. 
 If ``isolated_events_path`` were specified, then it would produce:
@@ -362,10 +360,10 @@ If ``isolated_events_path`` were specified, then it would produce:
     ~/scaper_output/mysoundscape.wav 
     ~/scaper_output/mysoundscape.jams 
     ~/scaper_output/mysoundscape.txt 
-    ~/scaper_output/<isolated_events_path>/
-      background0_<label0>.wav
-      foreground0_<label0>.wav
-      foreground1_<label1>.wav
+    <isolated_events_path>/
+      background0_<label>.wav
+      foreground0_<label>.wav
+      foreground1_<label>.wav
 
 The audio of the isolated events is guaranteed to sum up to the soundscape audio if and
 only if ``reverb`` is ``None``! The audio of the isolated events as well as the audio
