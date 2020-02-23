@@ -340,7 +340,7 @@ given to ``generate()`` and ``generate_from_jams()``:
 
 The code above will produce the following directory structure:
 
-.. code-block::
+.. code-block:: none
 
     ~/scaper_output/mysoundscape.wav 
     ~/scaper_output/mysoundscape.jams 
@@ -353,7 +353,7 @@ The code above will produce the following directory structure:
 The labels for each isolated event are determined after ``generate`` is called. 
 If ``isolated_events_path`` were specified, then it would produce:
 
-.. code-block::
+.. code-block:: none
 
     ~/scaper_output/mysoundscape.wav 
     ~/scaper_output/mysoundscape.jams 
