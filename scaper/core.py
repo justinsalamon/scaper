@@ -1709,10 +1709,11 @@ class Scaper(object):
                         cmb.convert(samplerate=self.sr,
                                     n_channels=self.n_channels,
                                     bitdepth=None)
-                        # Then trim
+                        # Then trim, using the duration as the lower limit to handle
+                        # backgrounds that are too short
                         cmb.trim(e.value['source_time'],
                                  e.value['source_time'] +
-                                 e.value['event_duration'])
+                                 max(e.value['event_duration'], self.duration))
 
                         # PROCESS BEFORE COMPUTING LUFS
                         tmpfiles_internal = []
