@@ -1454,13 +1454,25 @@ def _test_generate_isolated_events(SR, isolated_events_path=None, atol=1e-4, rto
         isolated_event_audio_paths = ann.sandbox.scaper.isolated_events_audio_path
         isolated_audio = []
 
+        role_counter = {
+            'background': 0,
+            'foreground': 0
+        }
+
         for event_spec, event_audio_path in zip(ann, isolated_event_audio_paths):
             # event_spec contains the event description, label, etc
             # event_audio contains the path to the actual audio
 
             # make sure the path matches the event description
-            assert event_spec.value['role'] in event_audio_path
-            assert event_spec.value['label'] in event_audio_path
+
+            look_for = '{:s}{:d}_{:s}'.format(
+                event_spec.value['role'], 
+                role_counter[event_spec.value['role']],
+                event_spec.value['label']
+            )
+            assert look_for in event_audio_path
+            role_counter[event_spec.value['role']] += 1
+
             isolated_audio.append(soundfile.read(event_audio_path)[0])
 
         # the sum of the isolated audio should sum to the soundscape
