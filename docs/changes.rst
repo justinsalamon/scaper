@@ -2,6 +2,11 @@
 
 Changelog
 ---------
+v.1.3.2
+~~~~~~~
+- Fixed a bug with generating the file names when saving the isolated events. The idx for
+  background and foreground events now increment separately.
+
 v.1.3.1
 ~~~~~~~
 - Fixed a bug with generating docs on ReadTheDocs.
