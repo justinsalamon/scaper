@@ -134,8 +134,8 @@ def match_sample_length(audio_path, duration_in_samples):
             'Duration in samples must be an integer.')
 
     audio, sr = soundfile.read(audio_path)
+    audio_info = soundfile.info(audio_path)
     current_duration = audio.shape[0]
-    old_shape = audio.shape
 
     if duration_in_samples < current_duration:
         audio = audio[:duration_in_samples]
@@ -147,4 +147,5 @@ def match_sample_length(audio_path, duration_in_samples):
 
         audio = np.pad(audio, pad_width, 'constant')
 
-    soundfile.write(audio_path, audio, sr)
+    soundfile.write(audio_path, audio, sr, 
+        subtype=audio_info.subtype, format=audio_info.format)

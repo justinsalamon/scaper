@@ -10,6 +10,7 @@ from pkg_resources import resource_filename
 import shutil
 import soundfile as sf
 import tempfile
+import random
 
 # fixtures
 SIREN_FILE = 'tests/data/audio/foreground/siren/69-Siren-1.wav'
@@ -51,6 +52,18 @@ def test_get_integrated_lufs():
         i = get_integrated_lufs(af)
         assert i == li
 
+def change_format_and_subtype(audio_path):
+    audio, sr = sf.read(audio_path)
+
+    formats = ['WAV', 'FLAC']
+    _format = random.choice(formats)
+
+    subtypes = sf.available_subtypes(_format)
+    accepted_subtypes = ['PCM_16', 'PCM_32', 'PCM_24', 'FLOAT', 'DOUBLE']
+    subtypes = [s for s in subtypes.keys() if s in accepted_subtypes]
+    _subtype = random.choice(subtypes)
+    
+    sf.write(audio_path, audio, sr, subtype=_subtype, format=_format)
 
 def test_match_sample_length():
     durations_to_match = [1, 2, 5, 7, 22500, 44100, 88200, 100001]
@@ -58,21 +71,33 @@ def test_match_sample_length():
     tmpfiles = []
     with _close_temp_files(tmpfiles):
         carhorn = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
-        shutil.copyfile(CARHORN_FILE, carhorn.name)
         tmpfiles.append(carhorn)
 
         siren = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
-        shutil.copyfile(SIREN_FILE, siren.name)
         tmpfiles.append(siren)
 
         for _duration in durations_to_match:
+            shutil.copyfile(SIREN_FILE, siren.name)
+            shutil.copyfile(CARHORN_FILE, carhorn.name)
+
+            change_format_and_subtype(siren.name)
+            change_format_and_subtype(carhorn.name)
+
+            prev_audio_info = sf.info(carhorn.name)
             match_sample_length(carhorn.name, _duration)
             carhorn_audio, _ = sf.read(carhorn.name)
+            next_audio_info = sf.info(carhorn.name)
             assert carhorn_audio.shape[0] == _duration
+            assert prev_audio_info.format == next_audio_info.format
+            assert prev_audio_info.subtype == next_audio_info.subtype
 
+            prev_audio_info = sf.info(siren.name)
             match_sample_length(siren.name, _duration)
             siren_audio, _ = sf.read(siren.name)
+            next_audio_info = sf.info(siren.name)
             assert siren_audio.shape[0] == _duration
+            assert prev_audio_info.format == next_audio_info.format
+            assert prev_audio_info.subtype == next_audio_info.subtype
 
             # should be summable
             summed_events = sum([carhorn_audio, siren_audio])
