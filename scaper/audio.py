@@ -133,18 +133,19 @@ def match_sample_length(audio_path, duration_in_samples):
         raise ScaperError(
             'Duration in samples must be an integer.')
 
-    audio, sr = soundfile.read(audio_path)
-    current_duration = audio.shape[0]
-    old_shape = audio.shape
+    audio_info = soundfile.info(audio_path)
+    current_duration = int(file_info.duration * file_info.samplerate)
 
-    if duration_in_samples < current_duration:
-        audio = audio[:duration_in_samples]
-    elif duration_in_samples > current_duration:
-        n_pad = duration_in_samples - current_duration
+    if duration_in_samples != current_duration:
+        audio, sr = soundfile.read(audio_path)
+        if duration_in_samples < current_duration:
+            audio = audio[:duration_in_samples]
+        elif duration_in_samples > current_duration:
+            n_pad = duration_in_samples - current_duration
 
-        pad_width = [(0, 0) for _ in range(len(audio.shape))]
-        pad_width[0] = (0, n_pad)
+            pad_width = [(0, 0) for _ in range(len(audio.shape))]
+            pad_width[0] = (0, n_pad)
 
-        audio = np.pad(audio, pad_width, 'constant')
+            audio = np.pad(audio, pad_width, 'constant')
 
-    soundfile.write(audio_path, audio, sr)
+        soundfile.write(audio_path, audio, sr, subtype=audio_info.subtype)
