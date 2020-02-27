@@ -134,7 +134,7 @@ def match_sample_length(audio_path, duration_in_samples):
             'Duration in samples must be an integer.')
 
     audio_info = soundfile.info(audio_path)
-    current_duration = int(file_info.duration * file_info.samplerate)
+    current_duration = int(audio_info.duration * audio_info.samplerate)
 
     if duration_in_samples != current_duration:
         audio, sr = soundfile.read(audio_path)
