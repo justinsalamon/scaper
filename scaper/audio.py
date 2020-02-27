@@ -148,4 +148,4 @@ def match_sample_length(audio_path, duration_in_samples):
 
             audio = np.pad(audio, pad_width, 'constant')
 
-        soundfile.write(audio_path, audio, sr, subtype=audio_info.subtype)
+        soundfile.write(audio_path, audio, sr, format=audio_info.format, subtype=audio_info.subtype)
