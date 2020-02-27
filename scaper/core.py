@@ -1876,7 +1876,7 @@ class Scaper(object):
                 
                 # Make sure every single audio file has exactly the same duration 
                 # using soundfile.
-                duration_in_samples = int(sox.file_info.duration(audio_path) * self.sr)
+                duration_in_samples = int(self.duration * self.sr)
                 for _audio_file in [audio_path] + isolated_events_audio_path:
                     match_sample_length(_audio_file, duration_in_samples)
         
