@@ -1725,7 +1725,7 @@ class Scaper(object):
                         cmb.convert(samplerate=self.sr,
                                     n_channels=self.n_channels,
                                     bitdepth=None)
-                        # Then trim
+                        # Then trim the background event audio
                         cmb.trim(e.value['source_time'],
                                  e.value['source_time'] +
                                  e.value['event_duration'])
