@@ -1656,3 +1656,5 @@ def test_backwards_compat_for_duration():
 
             assert np.allclose(orig_audio, gen_audio)
 
+            pytest.warns(ScaperWarning, scaper.generate_from_jams,
+                jam_without_orig_duration.name, gen_wav.name)
