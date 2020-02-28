@@ -1703,14 +1703,14 @@ def test_scaper_with_short_background():
         # what it should be is the file tiled with itself and then cut to 10s
         # write it to disk and then use it in a new scaper object
         source_audio, sr = soundfile.read(SHORT_BG_FILE)
-        duration = int(10 * sr)
+        duration_samples = int(10 * sr)
 
         # tile the audio to what we expect
         tiled_audio = np.tile(
-            source_audio, 1 + int(duration / source_audio.shape[0]))
+            source_audio, 1 + int(duration_samples / source_audio.shape[0]))
 
         # cut it to what we want
-        tiled_audio = tiled_audio[:duration]
+        tiled_audio = tiled_audio[:duration_samples]
 
         # save it somewhere to be used in a new Scaper object
         soundfile.write(tiled_file.name, tiled_audio, sr)

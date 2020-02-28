@@ -1316,12 +1316,14 @@ class Scaper(object):
         # Get the duration of the source audio file
         source_duration = sox.file_info.duration(source_file)
 
+        # If this is a background event, the event duration is the 
+        # duration of the soundscape.
+        if isbackground:
+            event_duration = self.duration
         # If the foreground event's label is in the protected list, use the
         # source file's duration without modification.
-        if label in self.protected_labels:
+        elif label in self.protected_labels:
             event_duration = source_duration
-        elif isbackground:
-            event_duration = self.duration
         else:
             # determine event duration
             # For background events the duration is fixed to self.duration
