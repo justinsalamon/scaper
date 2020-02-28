@@ -152,7 +152,7 @@ def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
         warnings.warn(
             "Couldn't find original_duration field in the scaper sandbox, "
             "using duration field instead. This can lead to incorrect behavior "
-            "if generating from a jams file that has been trimmed previously",
+            "if generating from a jams file that has been trimmed previously.",
             ScaperWarning)
     
     protected_labels = ann.sandbox.scaper['protected_labels']
