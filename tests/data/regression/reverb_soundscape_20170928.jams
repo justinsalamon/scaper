@@ -234,6 +234,7 @@
           ],
           "polyphony_gini": 0.5422979845375607,
           "duration": 10.0,
+          "original_duration": 10.0,
           "bg_labels": [
             "park",
             "restaurant",

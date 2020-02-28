@@ -36,6 +36,7 @@
       "sandbox": {
         "scaper": {
           "duration": 10.0,
+          "original_duration": 10.0,
           "fg_path": "tests/data/audio/foreground",
           "bg_path": "tests/data/audio/background",
           "fg_spec": [],

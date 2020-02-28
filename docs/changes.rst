@@ -2,6 +2,27 @@
 
 Changelog
 ---------
+v.1.3.5
+~~~~~~~
+- Fixed a bug where short backgrounds did not concatenate to fill the entire soundscape.
+
+v.1.3.4
+~~~~~~~
+- Fixed a bug where the soundscapes were off by one sample when generated. Fixes bug 
+  where generating from jams using a trimmed jams file was using the trimmed soundscape 
+  duration instead of the original duration.
+- Added a field to the sandbox that keeps track of the original duration of the 
+  soundscape before any trimming is applied.
+
+v.1.3.3
+~~~~~~~
+- Fixed a bug with the format and subtype of audio files not being maintained in 
+  match_sample_length.
+
+v.1.3.2
+~~~~~~~
+- Fixed a bug with generating the file names when saving the isolated events. The idx for
+  background and foreground events now increment separately.
 
 v.1.3.1
 ~~~~~~~

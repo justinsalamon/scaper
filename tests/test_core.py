@@ -106,7 +106,7 @@ def _compare_scaper_jams(jam, regjam):
 
     excluded_scaper_sandbox_keys = [
         'bg_spec', 'fg_spec', 'scaper_version', 'soundscape_audio_path', 
-        'isolated_events_audio_path'
+        'isolated_events_audio_path',
     ]
     # everything but the specs and version can be compared directly:
     for k in set(ann.sandbox.scaper.keys()) | set(regann.sandbox.scaper.keys()):
@@ -1454,14 +1454,40 @@ def _test_generate_isolated_events(SR, isolated_events_path=None, atol=1e-4, rto
         isolated_event_audio_paths = ann.sandbox.scaper.isolated_events_audio_path
         isolated_audio = []
 
+        role_counter = {
+            'background': 0,
+            'foreground': 0
+        }
+
         for event_spec, event_audio_path in zip(ann, isolated_event_audio_paths):
             # event_spec contains the event description, label, etc
             # event_audio contains the path to the actual audio
 
             # make sure the path matches the event description
-            assert event_spec.value['role'] in event_audio_path
-            assert event_spec.value['label'] in event_audio_path
-            isolated_audio.append(soundfile.read(event_audio_path)[0])
+            look_for = '{:s}{:d}_{:s}.wav'.format(
+                event_spec.value['role'], 
+                role_counter[event_spec.value['role']],
+                event_spec.value['label']
+            )
+
+            expected_path = os.path.join(isolated_events_path, look_for)
+            # make sure the path exists
+            assert os.path.exists(expected_path)
+
+            # make sure what's in the sandbox also exists
+            assert os.path.exists(event_audio_path)
+            # is an audio file with the same contents as what we expect
+            _isolated_expected_audio, sr = soundfile.read(expected_path)
+            _isolated_sandbox_audio, sr = soundfile.read(event_audio_path)
+            assert np.allclose(_isolated_sandbox_audio, _isolated_expected_audio)
+
+            # make sure the filename matches
+            assert look_for == os.path.basename(event_audio_path)
+
+            # increment for the next role
+            role_counter[event_spec.value['role']] += 1
+
+            isolated_audio.append(_isolated_sandbox_audio)
 
         # the sum of the isolated audio should sum to the soundscape
         assert np.allclose(sum(isolated_audio), soundscape_audio, atol=1e-4, rtol=1e-8)
@@ -1589,3 +1615,46 @@ def _test_generate(SR, REG_WAV_PATH, REG_JAM_PATH, REG_TXT_PATH, atol=1e-4, rtol
             pytest.raises(ScaperError, sc.generate, wav_file.name,
                           jam_file.name, reverb=reverb,
                           disable_instantiation_warnings=True)
+
+
+def test_scaper_off_by_one_with_jams():
+    # this file broke in Scaper 1.3.3 and before as the duration
+    # of the generated audio was incorrect. it was addressed by PR #88.
+    # using it to test if it will ever break again
+    jam_file = 'tests/data/regression/scaper_133_off_by_one_regression_test.jams'
+    tmpfiles = []
+    with _close_temp_files(tmpfiles):
+        gen_wav_file = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
+        scaper.generate_from_jams(jam_file, gen_wav_file.name)
+        gen_wav, sr = soundfile.read(gen_wav_file.name)
+
+        assert gen_wav.shape[0] == 10 * 44100
+
+def test_backwards_compat_for_duration():
+    for sr in (44100, 22050):
+        REG_JAM_PATH = TEST_PATHS[sr]['REG'].jams
+        tmpfiles = []
+        with _close_temp_files(tmpfiles):
+            orig_wav = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
+            gen_wav = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
+            jam_without_orig_duration = tempfile.NamedTemporaryFile(
+                suffix='.jams', delete=True)
+
+            jam = jams.load(REG_JAM_PATH)
+
+            scaper.generate_from_jams(REG_JAM_PATH, orig_wav.name)
+
+            ann = jam.annotations[0]
+            ann.sandbox.scaper.pop('original_duration')
+            jam.save(jam_without_orig_duration.name)
+
+            scaper.generate_from_jams(
+                jam_without_orig_duration.name, gen_wav.name)
+
+            orig_audio, sr = soundfile.read(orig_wav.name)
+            gen_audio, sr = soundfile.read(gen_wav.name)
+
+            assert np.allclose(orig_audio, gen_audio)
+
+            pytest.warns(ScaperWarning, scaper.generate_from_jams,
+                jam_without_orig_duration.name, gen_wav.name)

@@ -145,7 +145,16 @@ def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
         ann.sandbox.scaper['bg_path'] = new_bg_path
 
     # Create scaper object
-    duration = ann.sandbox.scaper['duration']
+    if 'original_duration' in ann.sandbox.scaper:
+        duration = ann.sandbox.scaper['original_duration']
+    else:
+        duration = ann.sandbox.scaper['duration']
+        warnings.warn(
+            "Couldn't find original_duration field in the scaper sandbox, "
+            "using duration field instead. This can lead to incorrect behavior "
+            "if generating from a jams file that has been trimmed previously.",
+            ScaperWarning)
+    
     protected_labels = ann.sandbox.scaper['protected_labels']
     sc = Scaper(duration, new_fg_path, new_bg_path, protected_labels)
 
@@ -1592,6 +1601,7 @@ class Scaper(object):
         # Add specs and other info to sandbox
         ann.sandbox.scaper = jams.Sandbox(
             duration=self.duration,
+            original_duration=self.duration,
             fg_path=self.fg_path,
             bg_path=self.bg_path,
             fg_spec=self.fg_spec,
@@ -1687,6 +1697,8 @@ class Scaper(object):
             tmpfiles = []
             with _close_temp_files(tmpfiles):
                 isolated_events_audio_path = []
+
+                role_counter = {'background': 0, 'foreground': 0}
 
                 for i, e in enumerate(ann.data):
                     if e.value['role'] == 'background':
@@ -1828,10 +1840,13 @@ class Scaper(object):
                         else:
                             event_folder = isolated_events_path
 
+                        _role_count = role_counter[e.value['role']]
                         event_audio_path = os.path.join(
                             event_folder, 
                             '{:s}{:d}_{:s}{:s}'.format(
-                                e.value['role'], i, e.value['label'], ext))
+                                e.value['role'], _role_count, e.value['label'], ext))
+                        role_counter[e.value['role']] += 1
+                        
                         if not os.path.exists(event_folder):
                             # In Python 3.2 and above we could do 
                             # os.makedirs(..., exist_ok=True) but we test back to
@@ -1872,7 +1887,7 @@ class Scaper(object):
                 
                 # Make sure every single audio file has exactly the same duration 
                 # using soundfile.
-                duration_in_samples = int(sox.file_info.duration(audio_path) * self.sr)
+                duration_in_samples = int(self.duration * self.sr)
                 for _audio_file in [audio_path] + isolated_events_audio_path:
                     match_sample_length(_audio_file, duration_in_samples)
         
