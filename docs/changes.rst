@@ -4,9 +4,11 @@ Changelog
 ---------
 v.1.3.4
 ~~~~~~~
-- Fixed a bug where the soundscapes were off by one sample when generated. Added a
-  field to the sandbox that keeps track of the original duration of the soundscape 
-  before any trimming is applied.
+- Fixed a bug where the soundscapes were off by one sample when generated. Fixes bug 
+  where generating from jams using a trimmed jams file was using the trimmed soundscape 
+  duration instead of the original duration.
+- Added a field to the sandbox that keeps track of the original duration of the 
+  soundscape before any trimming is applied.
 
 v.1.3.3
 ~~~~~~~
