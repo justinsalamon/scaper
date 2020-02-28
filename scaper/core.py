@@ -1675,7 +1675,6 @@ class Scaper(object):
         Scaper.generate
 
         '''
-        success = True
         if ann.namespace != 'scaper':
             raise ScaperError(
                 'Annotation namespace must be scaper, found: {:s}'.format(
@@ -1888,7 +1887,6 @@ class Scaper(object):
         
         ann.sandbox.scaper.soundscape_audio_path = audio_path
         ann.sandbox.scaper.isolated_events_audio_path = isolated_events_audio_path
-        return success
 
     def generate(self, audio_path, jams_path, allow_repeated_label=True,
                  allow_repeated_source=True,reverb=None, save_isolated_events=False, 
