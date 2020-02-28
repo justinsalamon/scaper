@@ -1661,7 +1661,7 @@ def test_backwards_compat_for_duration():
                 jam_without_orig_duration.name, gen_wav.name)
 
 def _generate_soundscape_with_short_background(background_file, audio_path, jams_path, ref_db):
-    with tempfile.TemporaryDirectory() as tmpdir:
+    with backports.tempfile.TemporaryDirectory() as tmpdir:
         subdir = os.path.join(tmpdir, 'audio')
         shutil.copytree(SHORT_BG_PATH, subdir)
         OUTPUT_PATH = os.path.join(subdir, 'noise', 'noise.wav')
@@ -1682,7 +1682,6 @@ def _generate_soundscape_with_short_background(background_file, audio_path, jams
         sc.generate(audio_path, jams_path)
 
 def test_scaper_with_short_background():
-
     SHORT_BG_FILE = os.path.join(
         SHORT_BG_PATH, 'noise', 'noise-free-sound-0145.wav')
 
@@ -1706,19 +1705,22 @@ def test_scaper_with_short_background():
         source_audio, sr = soundfile.read(SHORT_BG_FILE)
         duration = int(10 * sr)
 
+        # tile the audio to what we expect
         tiled_audio = np.tile(
             source_audio, 1 + int(duration / source_audio.shape[0]))
+
+        # cut it to what we want
         tiled_audio = tiled_audio[:duration]
+
+        # save it somewhere to be used in a new Scaper object
         soundfile.write(tiled_file.name, tiled_audio, sr)
 
         _generate_soundscape_with_short_background(
             tiled_file.name, wav2_file.name, jam_file.name, ref_db=-40)
 
-        # what was generated
+        # compare what is generated with a short bg compared to a long bg
+        # should be the same
         audio1, sr = soundfile.read(wav1_file.name)
         audio2, sr = soundfile.read(wav2_file.name)
-
-        soundfile.write('tests/local/audio1.wav', audio1, sr)
-        soundfile.write('tests/local/audio2.wav', audio2, sr)
 
         assert np.allclose(audio1, audio2)
