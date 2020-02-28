@@ -92,6 +92,7 @@
           "fg_spec": [],
           "polyphony_gini": 0,
           "duration": 10.0,
+          "original_duration": 10.0,
           "bg_labels": [
             "park",
             "restaurant",

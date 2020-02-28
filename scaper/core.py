@@ -145,7 +145,11 @@ def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
         ann.sandbox.scaper['bg_path'] = new_bg_path
 
     # Create scaper object
-    duration = ann.sandbox.scaper['duration']
+    if 'original_duration' in ann.sandbox.scaper:
+        duration = ann.sandbox.scaper['original_duration']
+    else:
+        duration = ann.sandbox.scaper['duration']
+    
     protected_labels = ann.sandbox.scaper['protected_labels']
     sc = Scaper(duration, new_fg_path, new_bg_path, protected_labels)
 
@@ -1592,6 +1596,7 @@ class Scaper(object):
         # Add specs and other info to sandbox
         ann.sandbox.scaper = jams.Sandbox(
             duration=self.duration,
+            original_duration=self.duration,
             fg_path=self.fg_path,
             bg_path=self.bg_path,
             fg_spec=self.fg_spec,
@@ -1670,6 +1675,7 @@ class Scaper(object):
         Scaper.generate
 
         '''
+        success = True
         if ann.namespace != 'scaper':
             raise ScaperError(
                 'Annotation namespace must be scaper, found: {:s}'.format(
@@ -1876,12 +1882,13 @@ class Scaper(object):
                 
                 # Make sure every single audio file has exactly the same duration 
                 # using soundfile.
-                duration_in_samples = int(sox.file_info.duration(audio_path) * self.sr)
+                duration_in_samples = int(self.duration * self.sr)
                 for _audio_file in [audio_path] + isolated_events_audio_path:
                     match_sample_length(_audio_file, duration_in_samples)
         
         ann.sandbox.scaper.soundscape_audio_path = audio_path
         ann.sandbox.scaper.isolated_events_audio_path = isolated_events_audio_path
+        return success
 
     def generate(self, audio_path, jams_path, allow_repeated_label=True,
                  allow_repeated_source=True,reverb=None, save_isolated_events=False, 
