@@ -2,6 +2,11 @@
 
 Changelog
 ---------
+v.1.3.3
+~~~~~~~
+- Fixed a bug with the format and subtype of audio files not being maintained in 
+  match_sample_length.
+
 v.1.3.2
 ~~~~~~~
 - Fixed a bug with generating the file names when saving the isolated events. The idx for
