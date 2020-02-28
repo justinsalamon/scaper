@@ -54,13 +54,18 @@ def test_get_integrated_lufs():
 
 def change_format_and_subtype(audio_path):
     audio, sr = sf.read(audio_path)
+    audio_info = sf.info(audio_path)
 
     formats = ['WAV', 'FLAC']
+    if audio_info.format in formats:
+        formats.remove(audio_info.format)
     _format = random.choice(formats)
 
     subtypes = sf.available_subtypes(_format)
     accepted_subtypes = ['PCM_16', 'PCM_32', 'PCM_24', 'FLOAT', 'DOUBLE']
     subtypes = [s for s in subtypes.keys() if s in accepted_subtypes]
+    if audio_info.subtype in subtypes:
+        subtypes.remove(audio_info.subtype)
     _subtype = random.choice(subtypes)
     
     sf.write(audio_path, audio, sr, subtype=_subtype, format=_format)
