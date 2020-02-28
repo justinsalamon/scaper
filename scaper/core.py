@@ -1713,7 +1713,7 @@ class Scaper(object):
                         # backgrounds that are too short
                         cmb.trim(e.value['source_time'],
                                  e.value['source_time'] +
-                                 max(e.value['event_duration'], self.duration))
+                                 e.value['event_duration'])
 
                         # PROCESS BEFORE COMPUTING LUFS
                         tmpfiles_internal = []

@@ -3,10 +3,6 @@
 Changelog
 ---------
 
-v.1.3.2
-~~~~~~~
-- Fixed a bug where short backgrounds did not concatenate to fill the entire soundscape.
-
 v.1.3.1
 ~~~~~~~
 - Fixed a bug with generating docs on ReadTheDocs.
