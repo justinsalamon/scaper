@@ -2,6 +2,10 @@
 
 Changelog
 ---------
+v.1.3.5
+~~~~~~~
+- Fixed a bug where short backgrounds did not concatenate to fill the entire soundscape.
+
 v.1.3.4
 ~~~~~~~
 - Fixed a bug where the soundscapes were off by one sample when generated. Fixes bug 

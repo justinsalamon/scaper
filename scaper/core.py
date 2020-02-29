@@ -1316,9 +1316,13 @@ class Scaper(object):
         # Get the duration of the source audio file
         source_duration = sox.file_info.duration(source_file)
 
+        # If this is a background event, the event duration is the 
+        # duration of the soundscape.
+        if isbackground:
+            event_duration = self.duration
         # If the foreground event's label is in the protected list, use the
         # source file's duration without modification.
-        if label in self.protected_labels:
+        elif label in self.protected_labels:
             event_duration = source_duration
         else:
             # determine event duration
@@ -1331,17 +1335,17 @@ class Scaper(object):
                     event.event_duration, self.random_state
                 )
 
-        # Check if chosen event duration is longer than the duration of the
-        # selected source file, if so adjust the event duration.
-        if (event_duration > source_duration):
-            old_duration = event_duration  # for warning
-            event_duration = source_duration
-            if not disable_instantiation_warnings:
-                warnings.warn(
-                    "{:s} event duration ({:.2f}) is greater that source "
-                    "duration ({:.2f}), changing to {:.2f}".format(
-                        label, old_duration, source_duration, event_duration),
-                    ScaperWarning)
+            # Check if chosen event duration is longer than the duration of the
+            # selected source file, if so adjust the event duration.
+            if (event_duration > source_duration):
+                old_duration = event_duration  # for warning
+                event_duration = source_duration
+                if not disable_instantiation_warnings:
+                    warnings.warn(
+                        "{:s} event duration ({:.2f}) is greater that source "
+                        "duration ({:.2f}), changing to {:.2f}".format(
+                            label, old_duration, source_duration, event_duration),
+                        ScaperWarning)
 
         # Get time stretch value
         if event.time_stretch is None:
@@ -1402,7 +1406,7 @@ class Scaper(object):
                 source_time = _get_value_from_dist(
                     modified_source_time, self.random_state)
                 if source_time + event_duration > source_duration:
-                    source_time = source_duration - event_duration
+                    source_time = max(0, source_duration - event_duration)
                     warn = True
                     tuple_still_invalid = True
 
@@ -1721,7 +1725,7 @@ class Scaper(object):
                         cmb.convert(samplerate=self.sr,
                                     n_channels=self.n_channels,
                                     bitdepth=None)
-                        # Then trim
+                        # Then trim the duration of the background event
                         cmb.trim(e.value['source_time'],
                                  e.value['source_time'] +
                                  e.value['event_duration'])
