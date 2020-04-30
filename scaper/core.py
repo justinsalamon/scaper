@@ -9,6 +9,8 @@ import numpy as np
 import shutil
 import csv
 from copy import deepcopy
+import soundfile
+import pyrubberband
 from .scaper_exceptions import ScaperError
 from .scaper_warnings import ScaperWarning
 from .util import _close_temp_files
@@ -1772,13 +1774,14 @@ class Scaper(object):
                                  e.value['source_time'] +
                                  e.value['event_duration'])
 
+                        # Switch to Pyrubberband, do just before computing LUFS
                         # Pitch shift
-                        if e.value['pitch_shift'] is not None:
-                            tfm.pitch(e.value['pitch_shift'])
-
-                        # Time stretch
-                        if e.value['time_stretch'] is not None:
-                            tfm.tempo(1.0 / float(e.value['time_stretch']))
+                        # if e.value['pitch_shift'] is not None:
+                        #     tfm.pitch(e.value['pitch_shift'])
+                        #
+                        # # Time stretch
+                        # if e.value['time_stretch'] is not None:
+                        #     tfm.tempo(1.0 / float(e.value['time_stretch']))
 
                         # Apply very short fade in and out
                         # (avoid unnatural sound onsets/offsets)
@@ -1788,13 +1791,31 @@ class Scaper(object):
                         # PROCESS BEFORE COMPUTING LUFS
                         tmpfiles_internal = []
                         with _close_temp_files(tmpfiles_internal):
+
                             # create internal tmpfile
                             tmpfiles_internal.append(
                                 tempfile.NamedTemporaryFile(
                                     suffix='.wav', delete=False))
+
                             # synthesize edited foreground sound event
                             tfm.build(e.value['source_file'],
                                       tmpfiles_internal[-1].name)
+
+                            # pitch shift and/or time stretch
+                            if e.value['pitch_shift'] is not None:
+                                print('rubberband!')
+                                event_audio, event_sr = soundfile.read(tmpfiles_internal[-1].name)
+                                event_audio_shifted = pyrubberband.pitch_shift(event_audio, event_sr,
+                                                                               e.value['pitch_shift'])
+                                soundfile.write(tmpfiles_internal[-1].name, event_audio_shifted, event_sr)
+
+                            if e.value['time_stretch'] is not None:
+                                print('rubberband!')
+                                event_audio, event_sr = soundfile.read(tmpfiles_internal[-1].name)
+                                event_audio_stretched = pyrubberband.time_stretch(event_audio, event_sr,
+                                                                                  1.0 / float(e.value['time_stretch']))
+                                soundfile.write(tmpfiles_internal[-1].name, event_audio_stretched, event_sr)
+
                             # if time stretched get actual new duration
                             if e.value['time_stretch'] is not None:
                                 fg_stretched_duration = sox.file_info.duration(
