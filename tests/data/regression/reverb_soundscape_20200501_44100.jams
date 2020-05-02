@@ -96,7 +96,7 @@
           "fade_out_len": 0.01,
           "bg_path": "tests/data/audio/background",
           "original_duration": 10.0,
-          "reverb": null,
+          "reverb": 0.2,
           "polyphony_max": 2,
           "polyphony_gini": 0.5422979845375607,
           "fg_labels": [
@@ -142,7 +142,7 @@
               null
             ]
           ],
-          "soundscape_audio_path": "tests/data/regression/soundscape_20200501_22050.wav",
+          "soundscape_audio_path": "tests/data/regression/reverb_soundscape_20200501_44100.wav",
           "fg_spec": [
             [
               [
@@ -238,7 +238,7 @@
               ]
             ]
           ],
-          "sr": 22050,
+          "sr": 44100,
           "allow_repeated_label": true,
           "bg_labels": [
             "park",

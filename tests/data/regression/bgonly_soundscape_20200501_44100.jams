@@ -94,9 +94,9 @@
               null
             ]
           ],
-          "soundscape_audio_path": "tests/data/regression/bgonly_soundscape_20200501_22050.wav",
+          "soundscape_audio_path": "tests/data/regression/bgonly_soundscape_20200501_44100.wav",
           "fg_spec": [],
-          "sr": 22050,
+          "sr": 44100,
           "allow_repeated_label": true,
           "bg_labels": [
             "park",

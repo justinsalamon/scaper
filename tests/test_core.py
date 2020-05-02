@@ -35,6 +35,8 @@ BG_LABELS = ['park', 'restaurant', 'street']
 _EXTS = ('wav', 'jams', 'txt')
 _TestFiles = namedtuple('TestFiles', _EXTS)
 
+SAMPLE_RATES = [44100, 22050]
+
 
 def _get_test_paths(name):
     return _TestFiles(*[
@@ -45,14 +47,14 @@ def _get_test_paths(name):
 
 TEST_PATHS = {
     22050: {
-        'REG': _get_test_paths('soundscape_20190326_22050'),
+        'REG': _get_test_paths('soundscape_20200501_22050'),
         'REG_BGONLY': _get_test_paths('bgonly_soundscape_20200501_22050'),
         'REG_REVERB': _get_test_paths('reverb_soundscape_20200501_22050'),
     },
     44100: {
-        'REG': _get_test_paths('soundscape_20200501'),
-        'REG_BGONLY': _get_test_paths('bgonly_soundscape_20200501'),
-        'REG_REVERB': _get_test_paths('reverb_soundscape_20200501'),
+        'REG': _get_test_paths('soundscape_20200501_44100'),
+        'REG_BGONLY': _get_test_paths('bgonly_soundscape_20200501_44100'),
+        'REG_REVERB': _get_test_paths('reverb_soundscape_20200501_44100'),
     },
 }
 
@@ -1048,7 +1050,7 @@ def test_scaper_instantiate_event():
 
 
 def test_scaper_instantiate():
-    for sr in (44100, 22050):
+    for sr in SAMPLE_RATES:
         REG_JAM_PATH = TEST_PATHS[sr]['REG'].jams
         # Here we just instantiate a known fixed spec and check if that jams
         # we get back is as expected.
@@ -1245,7 +1247,7 @@ def _create_scaper_with_random_seed(seed):
 
 
 def test_generate_audio():
-    for sr in (44100, 22050):
+    for sr in SAMPLE_RATES:
         REG_WAV_PATH = TEST_PATHS[sr]['REG'].wav
         REG_BGONLY_WAV_PATH = TEST_PATHS[sr]['REG_BGONLY'].wav
         REG_REVERB_WAV_PATH = TEST_PATHS[sr]['REG_REVERB'].wav
@@ -1259,6 +1261,8 @@ def _test_generate_audio(SR, REG_WAV_PATH, REG_BGONLY_WAV_PATH, REG_REVERB_WAV_P
     sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
     sc.ref_db = -50
     sc.sr = SR
+
+    print("TEST SR: {}".format(SR))
 
     # background
     sc.add_background(
@@ -1512,7 +1516,7 @@ def test_generate_isolated_events():
 
 
 def test_generate():
-    for sr in (44100, 22050):
+    for sr in SAMPLE_RATES:
         REG_WAV_PATH, REG_JAM_PATH, REG_TXT_PATH = TEST_PATHS[sr]['REG']
         _test_generate(sr, REG_WAV_PATH, REG_JAM_PATH, REG_TXT_PATH)
 
@@ -1637,7 +1641,7 @@ def test_scaper_off_by_one_with_jams():
 
 
 def test_backwards_compat_for_duration():
-    for sr in (44100, 22050):
+    for sr in SAMPLE_RATES:
         REG_JAM_PATH = TEST_PATHS[sr]['REG'].jams
         tmpfiles = []
         with _close_temp_files(tmpfiles):
