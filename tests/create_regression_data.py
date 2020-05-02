@@ -1,5 +1,6 @@
 import os
 import scaper
+import jams
 
 os.chdir('..')
 
@@ -11,17 +12,20 @@ BG_PATH = 'tests/data/audio/background'
 ALT_FG_PATH = 'tests/data/audio_alt_path/foreground'
 ALT_BG_PATH = 'tests/data/audio_alt_path/background'
 
-REG_NAME = 'soundscape_20190326_22050'
+REG_NAME = 'soundscape_20200501_22050'
+# REG_NAME = 'soundscape_20190326_22050'
 # REG_WAV_PATH = 'tests/data/regression/soundscape_20170928.wav'
 # REG_JAM_PATH = 'tests/data/regression/soundscape_20170928.jams'
 # REG_TXT_PATH = 'tests/data/regression/soundscape_20170928.txt'
 
-REG_BGONLY_NAME = 'bgonly_soundscape_20190326_22050'
+REG_BGONLY_NAME = 'bgonly_soundscape_20200501_22050'
+# REG_BGONLY_NAME = 'bgonly_soundscape_20190326_22050'
 # REG_BGONLY_WAV_PATH = 'tests/data/regression/bgonly_soundscape_20170928.wav'
 # REG_BGONLY_JAM_PATH = 'tests/data/regression/bgonly_soundscape_20170928.jams'
 # REG_BGONLY_TXT_PATH = 'tests/data/regression/bgonly_soundscape_20170928.txt'
 
-REG_REVERB_NAME = 'reverb_soundscape_20190326_22050'
+REG_REVERB_NAME = 'reverb_soundscape_20200501_22050'
+# REG_REVERB_NAME = 'reverb_soundscape_20190326_22050'
 # REG_REVERB_WAV_PATH = 'tests/data/regression/reverb_soundscape_20170928.wav'
 # REG_REVERB_JAM_PATH = 'tests/data/regression/reverb_soundscape_20170928.jams'
 # REG_REVERB_TXT_PATH = 'tests/data/regression/reverb_soundscape_20170928.txt'
@@ -30,8 +34,11 @@ REG_REVERB_NAME = 'reverb_soundscape_20190326_22050'
 FB_LABELS = ['car_horn', 'human_voice', 'siren']
 BG_LABELS = ['park', 'restaurant', 'street']
 
+
 def test_names(name, exts=('wav', 'jams', 'txt')):
     return [os.path.join('tests/data/regression', name + '.' + ext) for ext in exts]
+
+
 test_names(REG_NAME)
 
 print("==========USING BELOW FOR TESTS==============")
@@ -104,7 +111,6 @@ wav_file, jam_file, txt_file = test_names(REG_REVERB_NAME)
 sc.generate(wav_file, jam_file, txt_path=txt_file, reverb=0.2, disable_instantiation_warnings=True)
 print('Wrote:', wav_file, jam_file, txt_file)
 
-import jams
 jams.load(jam_file)
 
 # soundscape with only one event will use transformer (regression test)
