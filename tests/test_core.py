@@ -46,13 +46,13 @@ def _get_test_paths(name):
 TEST_PATHS = {
     22050: {
         'REG': _get_test_paths('soundscape_20190326_22050'),
-        'REG_BGONLY': _get_test_paths('bgonly_soundscape_20190326_22050'),
-        'REG_REVERB': _get_test_paths('reverb_soundscape_20190326_22050'),
+        'REG_BGONLY': _get_test_paths('bgonly_soundscape_20200501_22050'),
+        'REG_REVERB': _get_test_paths('reverb_soundscape_20200501_22050'),
     },
     44100: {
-        'REG': _get_test_paths('soundscape_20170928'),
-        'REG_BGONLY': _get_test_paths('bgonly_soundscape_20170928'),
-        'REG_REVERB': _get_test_paths('reverb_soundscape_20170928'),
+        'REG': _get_test_paths('soundscape_20200501'),
+        'REG_BGONLY': _get_test_paths('bgonly_soundscape_20200501'),
+        'REG_REVERB': _get_test_paths('reverb_soundscape_20200501'),
     },
 }
 
