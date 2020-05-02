@@ -1778,7 +1778,8 @@ class Scaper(object):
 
                         # Time stretch
                         if e.value['time_stretch'] is not None:
-                            tfm.tempo(1.0 / float(e.value['time_stretch']))
+                            factor = 1.0 / float(e.value['time_stretch'])
+                            tfm.tempo(factor, audio_type='s', quick=False)
 
                         # Apply very short fade in and out
                         # (avoid unnatural sound onsets/offsets)
