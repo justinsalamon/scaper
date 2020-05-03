@@ -28,8 +28,15 @@ SHORT_BG_PATH = 'tests/data/audio/short_background'
 ALT_FG_PATH = 'tests/data/audio_alt_path/foreground'
 ALT_BG_PATH = 'tests/data/audio_alt_path/background'
 
+# fg and bg labels for testing
+FB_LABELS = ['car_horn', 'human_voice', 'siren']
+BG_LABELS = ['park', 'restaurant', 'street']
+
 _EXTS = ('wav', 'jams', 'txt')
 _TestFiles = namedtuple('TestFiles', _EXTS)
+
+SAMPLE_RATES = [44100, 22050]
+
 
 def _get_test_paths(name):
     return _TestFiles(*[
@@ -37,22 +44,19 @@ def _get_test_paths(name):
         for ext in _EXTS
     ])
 
+
 TEST_PATHS = {
     22050: {
-        'REG': _get_test_paths('soundscape_20190326_22050'),
-        'REG_BGONLY': _get_test_paths('bgonly_soundscape_20190326_22050'),
-        'REG_REVERB': _get_test_paths('reverb_soundscape_20190326_22050'),
+        'REG': _get_test_paths('soundscape_20200501_22050'),
+        'REG_BGONLY': _get_test_paths('bgonly_soundscape_20200501_22050'),
+        'REG_REVERB': _get_test_paths('reverb_soundscape_20200501_22050'),
     },
     44100: {
-        'REG': _get_test_paths('soundscape_20170928'),
-        'REG_BGONLY': _get_test_paths('bgonly_soundscape_20170928'),
-        'REG_REVERB': _get_test_paths('reverb_soundscape_20170928'),
+        'REG': _get_test_paths('soundscape_20200501_44100'),
+        'REG_BGONLY': _get_test_paths('bgonly_soundscape_20200501_44100'),
+        'REG_REVERB': _get_test_paths('reverb_soundscape_20200501_44100'),
     },
 }
-
-# fg and bg labels for testing
-FB_LABELS = ['car_horn', 'human_voice', 'siren']
-BG_LABELS = ['park', 'restaurant', 'street']
 
 
 def _compare_scaper_jams(jam, regjam):
@@ -1046,7 +1050,7 @@ def test_scaper_instantiate_event():
 
 
 def test_scaper_instantiate():
-    for sr in (44100, 22050):
+    for sr in SAMPLE_RATES:
         REG_JAM_PATH = TEST_PATHS[sr]['REG'].jams
         # Here we just instantiate a known fixed spec and check if that jams
         # we get back is as expected.
@@ -1243,7 +1247,7 @@ def _create_scaper_with_random_seed(seed):
 
 
 def test_generate_audio():
-    for sr in (44100, 22050):
+    for sr in SAMPLE_RATES:
         REG_WAV_PATH = TEST_PATHS[sr]['REG'].wav
         REG_BGONLY_WAV_PATH = TEST_PATHS[sr]['REG_BGONLY'].wav
         REG_REVERB_WAV_PATH = TEST_PATHS[sr]['REG_REVERB'].wav
@@ -1257,6 +1261,8 @@ def _test_generate_audio(SR, REG_WAV_PATH, REG_BGONLY_WAV_PATH, REG_REVERB_WAV_P
     sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
     sc.ref_db = -50
     sc.sr = SR
+
+    print("TEST SR: {}".format(SR))
 
     # background
     sc.add_background(
@@ -1370,6 +1376,7 @@ def _test_generate_audio(SR, REG_WAV_PATH, REG_BGONLY_WAV_PATH, REG_REVERB_WAV_P
         wav, sr = soundfile.read(wav_file.name)
         regwav, sr = soundfile.read(REG_BGONLY_WAV_PATH)
         assert np.allclose(wav, regwav, atol=atol, rtol=rtol)
+
 
 def create_scaper_scene_without_random_seed():
     sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
@@ -1499,16 +1506,17 @@ def _test_generate_isolated_events(SR, isolated_events_path=None, atol=1e-4, rto
         pytest.warns(ScaperWarning, sc._generate_audio, wav_file,
                     jam.annotations[0], save_isolated_events=True, reverb=.5)
 
+
 def test_generate_isolated_events():
     for sr, isolated_events_path in zip(
-        (16000, 22050, 44100), (None, 'tests/mix_events', None)):
+            (16000, 22050, 44100), (None, 'tests/mix_events', None)):
         # try it a bunch of times
         for i in range(10):
             _test_generate_isolated_events(sr, isolated_events_path)
 
 
 def test_generate():
-    for sr in (44100, 22050):
+    for sr in SAMPLE_RATES:
         REG_WAV_PATH, REG_JAM_PATH, REG_TXT_PATH = TEST_PATHS[sr]['REG']
         _test_generate(sr, REG_WAV_PATH, REG_JAM_PATH, REG_TXT_PATH)
 
@@ -1631,8 +1639,9 @@ def test_scaper_off_by_one_with_jams():
 
         assert gen_wav.shape[0] == 10 * 44100
 
+
 def test_backwards_compat_for_duration():
-    for sr in (44100, 22050):
+    for sr in SAMPLE_RATES:
         REG_JAM_PATH = TEST_PATHS[sr]['REG'].jams
         tmpfiles = []
         with _close_temp_files(tmpfiles):
@@ -1660,6 +1669,7 @@ def test_backwards_compat_for_duration():
             pytest.warns(ScaperWarning, scaper.generate_from_jams,
                 jam_without_orig_duration.name, gen_wav.name)
 
+
 def _generate_soundscape_with_short_background(background_file, audio_path, jams_path, ref_db):
     with backports.tempfile.TemporaryDirectory() as tmpdir:
         subdir = os.path.join(tmpdir, 'audio')
@@ -1680,6 +1690,7 @@ def _generate_soundscape_with_short_background(background_file, audio_path, jams
         )
 
         sc.generate(audio_path, jams_path)
+
 
 def test_scaper_with_short_background():
     SHORT_BG_FILE = os.path.join(
