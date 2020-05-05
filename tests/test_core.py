@@ -1034,6 +1034,7 @@ def test_scaper_instantiate_event():
             instantiated_event = sc._instantiate_event(event)
             source_time = instantiated_event.source_time
             num_draws += 1
+
     pytest.warns(ScaperWarning, _repeat_instantiation, fg_event5f)
 
     # event_time + event_duration > soundscape duration: warning
@@ -1047,6 +1048,24 @@ def test_scaper_instantiate_event():
                                   event_duration=('const', 4),
                                   time_stretch=('const', 2))
     pytest.warns(ScaperWarning, sc._instantiate_event, fg_event7)
+
+    # stretched duration should always be adjusted to be <= self.duration
+    for stretch in [2, 3, 1.5]:
+        fg_event11 = fg_event._replace(event_time=('const', 2),
+                                       event_duration=('const', 7),
+                                       time_stretch=('const', stretch))
+        fg_event11_inst = sc._instantiate_event(fg_event11)
+        assert fg_event11_inst.event_time == 0
+        assert fg_event11_inst.event_duration == sc.duration / stretch
+
+    # Make sure event time is respected when possible
+    for e_stretch, e_duration in zip([1, 1.25, 0.5], [7, 7, 18]):
+        fg_event12 = fg_event._replace(event_time=('const', 1),
+                                       event_duration=('const', e_duration),
+                                       time_stretch=('const', e_stretch))
+        fg_event12_inst = sc._instantiate_event(fg_event12)
+        assert fg_event12_inst.event_time == 1
+        assert fg_event12_inst.event_duration == e_duration
 
 
 def test_scaper_instantiate():
@@ -1145,6 +1164,7 @@ def test_set_random_state(atol=1e-4, rtol=1e-8):
             generators.append(_sc)
 
         _compare_generators(generators)
+
 
 def _compare_generators(generators, atol=1e-4, rtol=1e-8):
     tmpfiles = []

@@ -1364,7 +1364,7 @@ class Scaper(object):
         # without losing validity (since the event will end when the soundscape
         # ends).
         if time_stretch is None:
-            if (event_duration > self.duration):
+            if event_duration > self.duration:
                 old_duration = event_duration  # for warning
                 event_duration = self.duration
                 if not disable_instantiation_warnings:
@@ -1375,18 +1375,19 @@ class Scaper(object):
                             label, old_duration, self.duration, self.duration),
                         ScaperWarning)
         else:
-            if (event_duration_stretched > self.duration):
+            if event_duration_stretched > self.duration:
                 old_duration = event_duration  # for warning
                 event_duration = self.duration / float(time_stretch)
+                event_duration_stretched = self.duration
                 if not disable_instantiation_warnings:
                     warnings.warn(
                         "{:s} event duration ({:.2f}) with stretch factor "
                         "{:.2f} gives {:.2f} which is greater than the "
                         "soundscape duration ({:.2f}), changing to "
-                        "{:.2f}".format(
+                        "{:.2f} ({:.2f} after time stretching)".format(
                             label, old_duration, time_stretch,
-                            event_duration_stretched, self.duration,
-                            event_duration),
+                            old_duration * time_stretch, self.duration,
+                            event_duration, event_duration_stretched),
                         ScaperWarning)
 
         # Modify event.source_time so that sampling from the source time distribution
@@ -1396,7 +1397,7 @@ class Scaper(object):
         if label not in self.protected_labels:
             tuple_still_invalid = False
             modified_source_time, warn = _ensure_satisfiable_source_time_tuple(
-                event.source_time, source_duration,  event_duration
+                event.source_time, source_duration, event_duration
             )
             
             # determine source time and also check again just in case (for normal dist).
@@ -1433,7 +1434,6 @@ class Scaper(object):
                         ScaperWarning)
         else:
             source_time = 0.0
-
 
         # determine event time
         # for background events the event time is fixed to 0, but for

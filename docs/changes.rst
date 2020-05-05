@@ -2,15 +2,19 @@
 
 Changelog
 ---------
-v.1.3.6
+v1.3.7
+~~~~~~
+- Fixed a bug where time stretched events could have a negative start time if they were longer than the soundscape duration.
+
+v1.3.6
 ~~~~~~~
 - Use sox flag -s for time stretching (speech mode), gives better sounding results.
 
-v.1.3.5
+v1.3.5
 ~~~~~~~
 - Fixed a bug where short backgrounds did not concatenate to fill the entire soundscape.
 
-v.1.3.4
+v1.3.4
 ~~~~~~~
 - Fixed a bug where the soundscapes were off by one sample when generated. Fixes bug 
   where generating from jams using a trimmed jams file was using the trimmed soundscape 
@@ -18,21 +22,21 @@ v.1.3.4
 - Added a field to the sandbox that keeps track of the original duration of the 
   soundscape before any trimming is applied.
 
-v.1.3.3
+v1.3.3
 ~~~~~~~
 - Fixed a bug with the format and subtype of audio files not being maintained in 
   match_sample_length.
 
-v.1.3.2
+v1.3.2
 ~~~~~~~
 - Fixed a bug with generating the file names when saving the isolated events. The idx for
   background and foreground events now increment separately.
 
-v.1.3.1
+v1.3.1
 ~~~~~~~
 - Fixed a bug with generating docs on ReadTheDocs.
 
-v.1.3.0
+v1.3.0
 ~~~~~~~
 - Source separation support! Add option to save isolated foreground events and background audio files.
 - Makes pysoundfile a formal dependency.
