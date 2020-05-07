@@ -9,6 +9,7 @@ A library for soundscape synthesis and augmentation
 [![Build Status](https://travis-ci.org/justinsalamon/scaper.svg?branch=master)](https://travis-ci.org/justinsalamon/scaper)
 [![Coverage Status](https://coveralls.io/repos/github/justinsalamon/scaper/badge.svg?branch=master)](https://coveralls.io/github/justinsalamon/scaper?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/scaper/badge/?version=latest)](http://scaper.readthedocs.io/en/latest/?badge=latest)
+[![Downloads](https://pepy.tech/badge/scaper)](https://pepy.tech/project/scaper)
 [![PyPI](https://img.shields.io/badge/python-2.7%2C%203.4%2C%203.5%2C%203.6-blue.svg)]()
 
 Please refer to the [documentation](http://scaper.readthedocs.io/) for details.
