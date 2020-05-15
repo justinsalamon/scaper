@@ -1,6 +1,6 @@
 # CREATED: 5/5/17 14:36 by Justin Salamon <justin.salamon@nyu.edu>
 
-from scaper.audio import r128stats, get_integrated_lufs, match_sample_length
+from scaper.audio import get_integrated_lufs, match_sample_length
 from scaper.util import _close_temp_files
 import numpy as np
 import os
@@ -26,17 +26,6 @@ CARHORN_LUFS_I = -13.3
 HUMANVOICE_LUFS_I = -20.0
 DOGBARK_LUFS_I = -11.0  # for x4 concatenated file
 
-SIREN_LUFS_DICT = {'I': -23.0, 'I Threshold': -33.1, 'LRA': 8.8,
-                   'LRA High': -18.8, 'LRA Low': -27.6, 'LRA Threshold': -43.5}
-CARHORN_LUFS_DICT = {'I': -13.3, 'I Threshold': -23.3, 'LRA': 0.0,
-                     'LRA High': 0.0, 'LRA Low': 0.0, 'LRA Threshold': 0.0}
-HUMANVOICE_LUFS_DICT = {'I': -20.0, 'I Threshold': -30.0, 'LRA': 0.0,
-                        'LRA High': 0.0, 'LRA Low': 0.0, 'LRA Threshold': 0.0}
-# for x4 concatenated file
-DOGBARK_LUFS_DICT = {'I': -11.0, 'I Threshold': -21.0, 'LRA': 0.0,
-                     'LRA High': 0.0, 'LRA Low': 0.0, 'LRA Threshold': 0.0}
-
-
 def test_get_integrated_lufs():
 
     # should get error if can't return lufs
@@ -50,7 +39,7 @@ def test_get_integrated_lufs():
     for af, li in zip(audiofiles, lufsi):
 
         i = get_integrated_lufs(af)
-        assert i == li
+        assert np.allclose(i, li, atol=1)
 
 def change_format_and_subtype(audio_path):
     audio, sr = sf.read(audio_path)
@@ -112,17 +101,3 @@ def test_match_sample_length():
             pytest.raises(ScaperError, match_sample_length, carhorn.name, _duration)
             pytest.raises(ScaperError, match_sample_length, siren.name, _duration)
 
-
-def test_r128stats():
-
-    # should return false if can't get data
-    fakefile = 'tests/data/audio/foreground/siren/fakefile.wav'
-    pytest.raises(ScaperError, r128stats, fakefile)
-
-    # test correct functionality
-    audiofiles = [SIREN_FILE, CARHORN_FILE, HUMANVOICE_FILE]
-    lufs_dicts = [SIREN_LUFS_DICT, CARHORN_LUFS_DICT, HUMANVOICE_LUFS_DICT]
-
-    for af, ld in zip(audiofiles, lufs_dicts):
-        d = r128stats(af)
-        assert d == ld
