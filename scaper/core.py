@@ -1732,30 +1732,33 @@ class Scaper(object):
                         tfm.convert(samplerate=self.sr,
                                     n_channels=self.n_channels,
                                     bitdepth=self.bitdepth)
-                        # Then trim the duration of the background event
-                        tfm.trim(e.value['source_time'],
-                                 e.value['source_time'] +
-                                 e.value['event_duration'])
 
                         # PROCESS BEFORE COMPUTING LUFS
                         tmpfiles_internal = []
                         with _close_temp_files(tmpfiles_internal):
                             # create internal tmpfile
-                            tmpfiles_internal.append(
-                                tempfile.NamedTemporaryFile(
-                                    suffix='.wav', delete=False))
                             # synthesize concatenated/trimmed background
-                            tfm.build(
-                                e.value['source_file'],
-                                tmpfiles_internal[-1].name)
-                            audio_data, _sr = soundfile.read(tmpfiles_internal[-1].name)
+                            file_sr = sox.file_info.sample_rate(e.value['source_file'])
+                            stop_time = e.value['source_time'] + e.value['event_duration']
+                            source_audio, sample_rate_in = soundfile.read(
+                                e.value['source_file'], dtype='float32',
+                                start=int(e.value['source_time'] * file_sr),
+                                stop=int(stop_time * file_sr),
+                            )
+                            audio_data = tfm.build_array(
+                                source_audio,
+                                sample_rate_in=sample_rate_in,
+                                sample_rate_out=self.sr,
+                                channels_out=self.n_channels,
+                                bits_out=self.bitdepth
+                            )[1]
 
                             tile_tuple = [1 for _ in range(len(audio_data.shape))]
                             tile_tuple[0] = ntiles
                             audio_data = np.tile(audio_data, tuple(tile_tuple))
 
                             # NOW compute LUFS
-                            bg_lufs = get_integrated_lufs(audio_data, _sr)
+                            bg_lufs = get_integrated_lufs(audio_data, self.sr)
 
                             # Normalize background to reference DB.
                             gain = self.ref_db - bg_lufs
@@ -1765,18 +1768,6 @@ class Scaper(object):
                             audio_data = audio_data[:sample_duration]
                             events_audio_data.append(audio_data)
 
-                            # # Use transformer to adapt gain
-                            # tfm = sox.Transformer()
-                            # tfm.gain(gain_db=gain, normalize=False)
-
-                            # # Prepare tmp file for output
-                            # tmpfiles.append(
-                            #     tempfile.NamedTemporaryFile(
-                            #         suffix='.wav', delete=False))
-
-                            # tfm.build(tmpfiles_internal[-1].name,
-                            #           tmpfiles[-1].name)
-
                     elif e.value['role'] == 'foreground':
                         # Create transformer
                         tfm = sox.Transformer()
@@ -1784,10 +1775,6 @@ class Scaper(object):
                         tfm.convert(samplerate=self.sr,
                                     n_channels=self.n_channels,
                                     bitdepth=self.bitdepth)
-                        # Trim
-                        tfm.trim(e.value['source_time'],
-                                 e.value['source_time'] +
-                                 e.value['event_duration'])
 
                         # Pitch shift
                         if e.value['pitch_shift'] is not None:
@@ -1800,33 +1787,39 @@ class Scaper(object):
 
                         # Apply very short fade in and out
                         # (avoid unnatural sound onsets/offsets)
-                        tfm.fade(fade_in_len=self.fade_in_len,
-                                 fade_out_len=self.fade_out_len)
+                        if self.fade_in_len != 0 or self.fade_out_len != 0:
+                            tfm.fade(fade_in_len=self.fade_in_len,
+                                    fade_out_len=self.fade_out_len)
 
                         # PROCESS BEFORE COMPUTING LUFS
                         tmpfiles_internal = []
                         with _close_temp_files(tmpfiles_internal):
                             # create internal tmpfile
-                            tmpfiles_internal.append(
-                                tempfile.NamedTemporaryFile(
-                                    suffix='.wav', delete=False))
                             # synthesize edited foreground sound event
-                            tfm.build(e.value['source_file'],
-                                      tmpfiles_internal[-1].name)
+                            file_sr = sox.file_info.sample_rate(e.value['source_file'])
+                            stop_time = e.value['source_time'] + e.value['event_duration']
+                            source_audio, sample_rate_in = soundfile.read(
+                                e.value['source_file'], dtype='float32',
+                                start=int(e.value['source_time'] * file_sr),
+                                stop=int(stop_time * file_sr),
+                            )
+                            audio_data = tfm.build_array(
+                                source_audio,
+                                sample_rate_in=sample_rate_in,
+                                sample_rate_out=self.sr,
+                                channels_out=self.n_channels,
+                                bits_out=self.bitdepth
+                            )[1]
+
                             # if time stretched get actual new duration
                             if e.value['time_stretch'] is not None:
-                                fg_stretched_duration = sox.file_info.duration(
-                                    tmpfiles_internal[-1].name)
-                            audio_data, _sr = soundfile.read(
-                                tmpfiles_internal[-1].name)
+                                fg_stretched_duration = audio_data.shape[0] / self.sr
+
                             # NOW compute LUFS
-                            fg_lufs = get_integrated_lufs(audio_data, _sr)
+                            fg_lufs = get_integrated_lufs(audio_data, self.sr)
 
                             # Normalize to specified SNR with respect to
                             # background
-                            
-
-                            # Normalize background to reference DB.
                             gain = self.ref_db + e.value['snr'] - fg_lufs
                             gain = 10 ** (gain / 20)
                             audio_data = gain * audio_data
@@ -1844,17 +1837,6 @@ class Scaper(object):
                             audio_data = np.pad(audio_data, pad_tuple)
                             audio_data = audio_data[:sample_duration]
                             events_audio_data.append(audio_data)
-
-                            # Finally save result to a tmp file
-                            # tmpfiles.append(
-                            #     tempfile.NamedTemporaryFile(
-                            #         suffix='.wav', delete=False))
-                            # audio_info = soundfile.info(tmpfiles_internal[-1].name)
-                            # soundfile.write(
-                            #     tmpfiles[-1].name, audio_data, self.sr, 
-                            #     subtype=audio_info.subtype, 
-                            #     format=audio_info.format
-                            # )
 
                     else:
                         raise ScaperError(
@@ -1906,27 +1888,19 @@ class Scaper(object):
                         "saved to disk.", ScaperWarning)
                 else:
                     soundscape_audio_data = sum(events_audio_data)
-                    soundfile.write(
-                        audio_path, soundscape_audio_data, self.sr, 
-                    )
                     if reverb is not None:
                         tfm = sox.Transformer()
                         tfm.reverb(reverberance=reverb * 100)
-                        tmpfiles.append(
-                            tempfile.NamedTemporaryFile(
-                                suffix='.wav', delete=False))
-                        tfm.build(audio_path, tmpfiles[-1].name)
-                        shutil.copyfile(tmpfiles[-1].name, audio_path)
-
-                # elif len(events_audio_data) == 1:
-                #     tfm = sox.Transformer()
-                #     if reverb is not None:
-                #         tfm.reverb(reverberance=reverb * 100)
-                #     # TODO: do we want to normalize the final output?
-                #     tfm.build(tmpfiles[0].name, audio_path)
-                                    
-                # Make sure every single audio file has exactly the same duration 
-                # using soundfile.
+                        soundscape_audio_data = tfm.build_array(
+                                soundscape_audio_data,
+                                sample_rate_in=sample_rate_in,
+                                sample_rate_out=self.sr,
+                                channels_out=self.n_channels,
+                                bits_out=self.bitdepth
+                            )[1]
+                    soundfile.write(
+                        audio_path, soundscape_audio_data, self.sr, 
+                    )
         
         ann.sandbox.scaper.soundscape_audio_path = audio_path
         ann.sandbox.scaper.isolated_events_audio_path = isolated_events_audio_path

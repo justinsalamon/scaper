@@ -109,6 +109,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
                     allow_repeated_source=True,
                     reverb=0.1,
                     disable_sox_warnings=True,
+                    quick_pitch_time=True,
                     no_audio=False,
                     txt_path=txtfile)
     

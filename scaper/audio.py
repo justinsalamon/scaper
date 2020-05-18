@@ -47,8 +47,7 @@ def get_integrated_lufs(audio, sr, min_duration=0.5):
         loudness = meter.integrated_loudness(audio)
     except Exception as e:
         raise ScaperError(
-            'Unable to obtain LUFS for {:s}, error message:\n{:s}'.format(
-                filepath, e.__str__()))
+            'Unable to obtain LUFS, error message:\n{:s}'.format(e.__str__()))
     return loudness
 
 def match_sample_length(audio_path, duration_in_samples):
