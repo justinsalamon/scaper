@@ -1316,7 +1316,7 @@ class Scaper(object):
             used_source_files.append(source_file)
 
         # Get the duration of the source audio file
-        source_duration = sox.file_info.duration(source_file)
+        source_duration = soundfile.info(source_file).duration
 
         # If this is a background event, the event duration is the 
         # duration of the soundscape.
@@ -1721,7 +1721,8 @@ class Scaper(object):
                         # statement can be removed from the calculation of
                         # ntiles.
                         source_duration = (
-                            sox.file_info.duration(e.value['source_file']))
+                            soundfile.info(e.value['source_file']).duration
+                        )
                         ntiles = int(
                             max(self.duration // source_duration + 1, 2))
 
@@ -1737,7 +1738,9 @@ class Scaper(object):
                         with _close_temp_files(tmpfiles_internal):
                             # create internal tmpfile
                             # synthesize concatenated/trimmed background
-                            file_sr = sox.file_info.sample_rate(e.value['source_file'])
+                            file_sr = (
+                                soundfile.info(e.value['source_file']).samplerate
+                            )
                             stop_time = e.value['source_time'] + e.value['event_duration']
                             source_audio, sample_rate_in = soundfile.read(
                                 e.value['source_file'], dtype='float32',
@@ -1795,7 +1798,9 @@ class Scaper(object):
                         with _close_temp_files(tmpfiles_internal):
                             # create internal tmpfile
                             # synthesize edited foreground sound event
-                            file_sr = sox.file_info.sample_rate(e.value['source_file'])
+                            file_sr = (
+                                soundfile.info(e.value['source_file']).samplerate
+                            )
                             stop_time = e.value['source_time'] + e.value['event_duration']
                             source_audio, sample_rate_in = soundfile.read(
                                 e.value['source_file'], dtype='float32',
