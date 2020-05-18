@@ -1,5 +1,4 @@
 import sox
-from . import memsox
 import os
 import warnings
 import jams

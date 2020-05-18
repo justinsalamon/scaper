@@ -86,6 +86,8 @@ with tempfile.TemporaryDirectory() as tmpdir:
         sc.add_background(label=('choose', []),
                             source_file=('choose', []),
                             source_time=('const', 0))
+        sc.fade_in_len = 0.0
+        sc.fade_out_len = 0.0
 
         # add random number of foreground events
         n_events = np.random.randint(min_events, max_events+1)
