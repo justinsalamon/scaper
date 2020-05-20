@@ -1647,8 +1647,9 @@ class Scaper(object):
 
         Parameters
         ----------
-        audio_path : str
-            Path for saving soundscape audio file.
+        audio_path : str, or None
+            Path for saving soundscape audio file. If None, the soundscape
+            audio and sources are returned to the calling function.
         ann : jams.Annotation
             Annotation of the scaper namespace.
         reverb : float or None
@@ -1747,8 +1748,9 @@ class Scaper(object):
                                 start=int(e.value['source_time'] * file_sr),
                                 stop=int(stop_time * file_sr),
                             )
-                            audio_data = tfm.build_array(
+                            audio_data = tfm.build(
                                 source_audio,
+                                '-',
                                 sample_rate_in=sample_rate_in,
                                 sample_rate_out=self.sr,
                                 channels_out=self.n_channels,
@@ -1801,23 +1803,28 @@ class Scaper(object):
                             file_sr = (
                                 soundfile.info(e.value['source_file']).samplerate
                             )
+                            # if time stretched get actual new duration
+                            # if e.value['time_stretch'] is not None:
+                            #     stop_time = (
+                            #         e.value['source_time'] + 
+                            #         e.value['event_duration'] / e.value['time_stretch']
+                            #     )
+                            # else:
                             stop_time = e.value['source_time'] + e.value['event_duration']
+                            
                             source_audio, sample_rate_in = soundfile.read(
                                 e.value['source_file'], dtype='float32',
                                 start=int(e.value['source_time'] * file_sr),
                                 stop=int(stop_time * file_sr),
                             )
-                            audio_data = tfm.build_array(
+                            audio_data = tfm.build(
                                 source_audio,
+                                '-',
                                 sample_rate_in=sample_rate_in,
                                 sample_rate_out=self.sr,
                                 channels_out=self.n_channels,
                                 bits_out=self.bitdepth
                             )[1]
-
-                            # if time stretched get actual new duration
-                            if e.value['time_stretch'] is not None:
-                                fg_stretched_duration = audio_data.shape[0] / self.sr
 
                             # NOW compute LUFS
                             fg_lufs = get_integrated_lufs(audio_data, self.sr)
@@ -1826,7 +1833,8 @@ class Scaper(object):
                             # background
                             gain = self.ref_db + e.value['snr'] - fg_lufs
                             gain = 10 ** (gain / 20)
-                            audio_data = gain * audio_data
+                            if gain != np.inf:
+                                audio_data = gain * audio_data
 
                             # Pad with silence before/after event to match the
                             # soundscape duration
@@ -1847,7 +1855,7 @@ class Scaper(object):
                             'Unsupported event role: {:s}'.format(
                                 e.value['role']))
 
-                    if save_isolated_events:
+                    if save_isolated_events and audio_path is not None:
                         base, ext = os.path.splitext(audio_path)
                         if isolated_events_path is None:
                             event_folder = '{:s}_events'.format(base)
@@ -1866,7 +1874,7 @@ class Scaper(object):
                             # os.makedirs(..., exist_ok=True) but we test back to
                             # Python 2.7.
                             os.makedirs(event_folder)
-                            
+                        
                         soundfile.write(
                             event_audio_path, events_audio_data[-1], self.sr, 
                         )
@@ -1895,19 +1903,23 @@ class Scaper(object):
                     if reverb is not None:
                         tfm = sox.Transformer()
                         tfm.reverb(reverberance=reverb * 100)
-                        soundscape_audio_data = tfm.build_array(
+                        soundscape_audio_data = tfm.build(
                                 soundscape_audio_data,
+                                '-',
                                 sample_rate_in=sample_rate_in,
                                 sample_rate_out=self.sr,
                                 channels_out=self.n_channels,
                                 bits_out=self.bitdepth
                             )[1]
-                    soundfile.write(
-                        audio_path, soundscape_audio_data, self.sr, 
-                    )
+                    if audio_path is not None:
+                        soundfile.write(
+                            audio_path, soundscape_audio_data, self.sr, 
+                        )
         
         ann.sandbox.scaper.soundscape_audio_path = audio_path
         ann.sandbox.scaper.isolated_events_audio_path = isolated_events_audio_path
+
+        return soundscape_audio_data, events_audio_data
 
     def generate(self, audio_path, jams_path, allow_repeated_label=True,
                  allow_repeated_source=True,reverb=None, save_isolated_events=False, 
@@ -1975,6 +1987,16 @@ class Scaper(object):
             instantiation (primarily about automatic duration adjustments) are
             disabled. Not recommended other than for testing purposes.
 
+        Returns
+        -------
+        jam : jams.JAMS
+            JAMS object of instantiated soundscape.
+        soundscape_audio_data : np.ndarray
+            Audio data containing the soundscape as a numpy array.
+        events_audio_data : list of np.ndarray
+            List containing audio for each event as a numpy array. In the same
+            order as the jams.
+
         Raises
         ------
         ScaperError
@@ -2004,14 +2026,17 @@ class Scaper(object):
 
         # Generate the audio and save to disk
         if not no_audio:
-            self._generate_audio(audio_path, ann, reverb=reverb, 
+            soundscape_audio_data, events_audio_data = (
+                self._generate_audio(audio_path, ann, reverb=reverb, 
                                  save_isolated_events=save_isolated_events,
                                  isolated_events_path=isolated_events_path,
                                  disable_sox_warnings=disable_sox_warnings,
                                  quick_pitch_time=quick_pitch_time)
+            )
 
+        if jams_path is not None:
         # Finally save JAMS to disk too
-        jam.save(jams_path)
+            jam.save(jams_path)
 
         # Optionally save to CSV as well
         if txt_path is not None:
@@ -2024,3 +2049,5 @@ class Scaper(object):
             with open(txt_path, 'w') as csv_file:
                 writer = csv.writer(csv_file, delimiter=txt_sep)
                 writer.writerows(csv_data)
+        
+        return jam, soundscape_audio_data, events_audio_data

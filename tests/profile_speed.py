@@ -98,22 +98,22 @@ with tempfile.TemporaryDirectory() as tmpdir:
                             event_time=(event_time_dist, event_time_mean, event_time_std, event_time_min, event_time_max),
                             event_duration=(event_duration_dist, event_duration_min, event_duration_max),
                             snr=(snr_dist, snr_min, snr_max),
-                            pitch_shift=(pitch_dist, pitch_min, pitch_max),
-                            time_stretch=(time_stretch_dist, time_stretch_min, time_stretch_max)
+                            pitch_shift=None, #(pitch_dist, pitch_min, pitch_max),
+                            time_stretch=None, #(time_stretch_dist, time_stretch_min, time_stretch_max)
             )
         # generate
         audiofile = os.path.join(outfolder, "soundscape_unimodal{:d}.wav".format(n))
         jamsfile = os.path.join(outfolder, "soundscape_unimodal{:d}.jams".format(n))
         txtfile = os.path.join(outfolder, "soundscape_unimodal{:d}.txt".format(n))
 
-        sc.generate(audiofile, jamsfile,
+        sc.generate(None, None,
                     allow_repeated_label=True,
                     allow_repeated_source=True,
-                    reverb=0.1,
+                    reverb=None,
                     disable_sox_warnings=True,
                     quick_pitch_time=True,
                     no_audio=False,
-                    txt_path=txtfile)
+                    txt_path=None)
     
     time_taken = time.time() - start_time
     print(f'Time taken: {time_taken}')
