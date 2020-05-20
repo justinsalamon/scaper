@@ -1748,13 +1748,15 @@ class Scaper(object):
                                 start=int(e.value['source_time'] * file_sr),
                                 stop=int(stop_time * file_sr),
                             )
+                            tfm.set_output_format(
+                                file_type='raw', 
+                                channels=self.n_channels,
+                                rate=self.sr,
+                            )
                             audio_data = tfm.build(
-                                source_audio,
-                                '-',
+                                input_array=source_audio,
+                                output_filepath=None,
                                 sample_rate_in=sample_rate_in,
-                                sample_rate_out=self.sr,
-                                channels_out=self.n_channels,
-                                bits_out=self.bitdepth
                             )[1]
 
                             tile_tuple = [1 for _ in range(len(audio_data.shape))]
@@ -1817,13 +1819,15 @@ class Scaper(object):
                                 start=int(e.value['source_time'] * file_sr),
                                 stop=int(stop_time * file_sr),
                             )
+                            tfm.set_output_format(
+                                file_type='raw', 
+                                channels=self.n_channels,
+                                rate=self.sr,
+                            )
                             audio_data = tfm.build(
-                                source_audio,
-                                '-',
+                                input_array=source_audio,
+                                output_filepath=None,
                                 sample_rate_in=sample_rate_in,
-                                sample_rate_out=self.sr,
-                                channels_out=self.n_channels,
-                                bits_out=self.bitdepth
                             )[1]
 
                             # NOW compute LUFS
@@ -1903,13 +1907,15 @@ class Scaper(object):
                     if reverb is not None:
                         tfm = sox.Transformer()
                         tfm.reverb(reverberance=reverb * 100)
+                        tfm.set_output_format(
+                            file_type='raw', 
+                            channels=self.n_channels,
+                            rate=self.sr,
+                        )
                         soundscape_audio_data = tfm.build(
-                                soundscape_audio_data,
-                                '-',
+                                input_array=soundscape_audio_data,
+                                output_filepath=None,
                                 sample_rate_in=sample_rate_in,
-                                sample_rate_out=self.sr,
-                                channels_out=self.n_channels,
-                                bits_out=self.bitdepth
                             )[1]
                     if audio_path is not None:
                         soundfile.write(

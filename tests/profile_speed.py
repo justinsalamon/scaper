@@ -109,7 +109,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
         sc.generate(None, None,
                     allow_repeated_label=True,
                     allow_repeated_source=True,
-                    reverb=None,
+                    reverb=0.1,
                     disable_sox_warnings=True,
                     quick_pitch_time=True,
                     no_audio=False,
