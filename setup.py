@@ -47,6 +47,6 @@ setup(
                 'sphinx_rtd_theme',
                 'sphinx_issues',
             ],
-        'tests': ['backports.tempfile', 'pysoundfile']
+        'tests': ['backports.tempfile', 'pysoundfile', 'pytest', 'pytest-cov', 'tqdm']
     }
 )
