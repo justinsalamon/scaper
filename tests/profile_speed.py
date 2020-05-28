@@ -15,12 +15,12 @@ import subprocess
 import time
 
 # Download the audio automatically
-fix_dir = 'tests/data/'
+FIX_DIR = 'tests/data/'
 
 with tempfile.TemporaryDirectory() as tmpdir:  
-    path_to_audio = os.path.join(fix_dir, 'audio/')
+    path_to_audio = os.path.join(FIX_DIR, 'audio/')
     # OUTPUT FOLDER
-    outfolder = os.path.join(tmpdir)
+    outfolder = tmpdir
 
     # SCAPER SETTINGS
     fg_folder = os.path.join(path_to_audio, 'foreground')
@@ -66,7 +66,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
     sc.protected_labels = []
     sc.ref_db = ref_db
 
-    # Generate 1000 soundscapes using a truncated normal distribution of start times
+    # Generate 100 soundscapes using a truncated normal distribution of start times
     start_time = time.time()
 
     for n in tqdm.trange(n_soundscapes):
