@@ -1,4 +1,4 @@
-import sox
+import soxbindings as sox
 import os
 import warnings
 import jams
@@ -1732,9 +1732,9 @@ class Scaper(object):
                         # Create combiner
                         tfm = sox.Transformer()
                         # Ensure consistent sampling rate and channels
-                        # tfm.convert(samplerate=self.sr,
-                        #             n_channels=self.n_channels,
-                        #             bitdepth=self.bitdepth)
+                        tfm.convert(samplerate=self.sr,
+                                    n_channels=self.n_channels,
+                                    bitdepth=self.bitdepth)
 
                         # PROCESS BEFORE COMPUTING LUFS
                         tmpfiles_internal = []
@@ -1750,26 +1750,16 @@ class Scaper(object):
                                 start=int(e.value['source_time'] * file_sr),
                                 stop=int(stop_time * file_sr),
                             )
-                            # tfm.set_output_format(
-                            #     file_type='raw', 
-                            #     channels=self.n_channels,
-                            #     rate=self.sr,
-                            # )
-                            # audio_data = tfm.build(
-                            #     input_array=source_audio,
-                            #     output_filepath=None,
-                            #     sample_rate_in=sample_rate_in,
-                            # )[1]
+                            tfm.set_output_format(
+                                file_type='raw', 
+                                channels=self.n_channels,
+                                rate=self.sr,
+                            )
 
-                            args = tfm.build(
+                            _, audio_data, _ = tfm.build(
                                 input_array=source_audio,
                                 output_filepath=None,
                                 sample_rate_in=sample_rate_in,
-                            )
-                            audio_data, _ = soxbindings.sox(
-                                ' '.join(args),
-                                input_audio=source_audio,
-                                sample_rate_in=sample_rate_in
                             )
 
                             tile_tuple = [1 for _ in range(len(audio_data.shape))]
@@ -1791,9 +1781,9 @@ class Scaper(object):
                         # Create transformer
                         tfm = sox.Transformer()
                         # Ensure consistent sampling rate and channels
-                        # tfm.convert(samplerate=self.sr,
-                        #             n_channels=self.n_channels,
-                        #             bitdepth=self.bitdepth)
+                        tfm.convert(samplerate=self.sr,
+                                    n_channels=self.n_channels,
+                                    bitdepth=self.bitdepth)
 
                         # Pitch shift
                         if e.value['pitch_shift'] is not None:
@@ -1818,13 +1808,7 @@ class Scaper(object):
                             file_sr = (
                                 soundfile.info(e.value['source_file']).samplerate
                             )
-                            # if time stretched get actual new duration
-                            # if e.value['time_stretch'] is not None:
-                            #     stop_time = (
-                            #         e.value['source_time'] + 
-                            #         e.value['event_duration'] / e.value['time_stretch']
-                            #     )
-                            # else:
+
                             stop_time = e.value['source_time'] + e.value['event_duration']
                             
                             source_audio, sample_rate_in = soundfile.read(
@@ -1832,22 +1816,16 @@ class Scaper(object):
                                 start=int(e.value['source_time'] * file_sr),
                                 stop=int(stop_time * file_sr),
                             )
-                            # tfm.set_output_format(
-                            #     file_type='raw', 
-                            #     channels=self.n_channels,
-                            #     rate=self.sr,
-                            # )
-                            args = tfm.build(
+                            tfm.set_output_format(
+                                file_type='raw', 
+                                channels=self.n_channels,
+                                rate=self.sr,
+                            )
+                            _, audio_data, _ = tfm.build(
                                 input_array=source_audio,
                                 output_filepath=None,
                                 sample_rate_in=sample_rate_in,
                             )
-                            audio_data, _ = soxbindings.sox(
-                                ' '.join(args),
-                                input_audio=source_audio,
-                                sample_rate_in=sample_rate_in
-                            )
-
 
                             # NOW compute LUFS
                             fg_lufs = get_integrated_lufs(audio_data, self.sr)
@@ -1931,15 +1909,10 @@ class Scaper(object):
                             channels=self.n_channels,
                             rate=self.sr,
                         )
-                        args = tfm.build(
+                        _, soundscape_audio_data, _ = tfm.build(
                             input_array=soundscape_audio_data,
                             output_filepath=None,
                             sample_rate_in=sample_rate_in,
-                        )
-                        soundscape_audio_data, _ = soxbindings.sox(
-                            ' '.join(args),
-                            input_audio=soundscape_audio_data,
-                            sample_rate_in=sample_rate_in
                         )
                         
                     if audio_path is not None:
