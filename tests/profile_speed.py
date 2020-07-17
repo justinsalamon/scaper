@@ -18,9 +18,16 @@ import platform
 import psutil
 import datetime
 import math
+import multiprocessing
 
 # Download the audio automatically
 FIX_DIR = 'tests/data/'
+
+def get_git_commit_hash():
+    process = subprocess.Popen(
+        ['git', 'rev-parse', 'HEAD'], shell=False, stdout=subprocess.PIPE)
+    git_head_hash = process.communicate()[0].strip().decode('utf-8')
+    return git_head_hash
 
 def convert_size(size_bytes):
    if size_bytes == 0:
@@ -133,9 +140,11 @@ with tempfile.TemporaryDirectory() as tmpdir:
         'system': uname.system,
         'machine': uname.machine,
         'processor': uname.processor,
+        'n_cpu': multiprocessing.cpu_count(),
         'memory': convert_size(psutil.virtual_memory().total),
         'n_soundscapes': n_soundscapes,        
-        'time_taken_for_script': time_taken,
+        'time_taken': np.round(time_taken, 4),
+        'git_commit_hash': get_git_commit_hash(),
     }
 
     fieldnames = list(row.keys())
@@ -152,4 +161,4 @@ with tempfile.TemporaryDirectory() as tmpdir:
     with open(results_path, 'r') as f:
         csv_f = csv.reader(f)
         for row in csv_f:
-            print('{:<30}  {:<15}  {:<15}  {:<10} {:<10} {:<10} {:<10} {:<15} {:<15}'.format(*row))
+            print('{:<30}  {:<15}  {:<15}  {:<10} {:<10} {:<10} {:<5} {:<10} {:<15} {:<10} {:}'.format(*row))
