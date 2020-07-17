@@ -47,6 +47,9 @@ with tempfile.TemporaryDirectory() as tmpdir:
     fg_folder = os.path.join(path_to_audio, 'foreground')
     bg_folder = os.path.join(path_to_audio, 'background')
 
+    # If we parallelize this script, change this accordingly
+    n_workers = 1
+
     n_soundscapes = 100
     ref_db = -50
     duration = 10.0
@@ -141,9 +144,10 @@ with tempfile.TemporaryDirectory() as tmpdir:
         'machine': uname.machine,
         'processor': uname.processor,
         'n_cpu': multiprocessing.cpu_count(),
+        'n_workers': n_workers,
         'memory': convert_size(psutil.virtual_memory().total),
         'n_soundscapes': n_soundscapes,        
-        'time_taken': np.round(time_taken, 4),
+        'execution_time': np.round(time_taken, 4),
         'git_commit_hash': get_git_commit_hash(),
     }
 
@@ -161,4 +165,4 @@ with tempfile.TemporaryDirectory() as tmpdir:
     with open(results_path, 'r') as f:
         csv_f = csv.reader(f)
         for row in csv_f:
-            print('{:<30}  {:<15}  {:<15}  {:<10} {:<10} {:<10} {:<5} {:<10} {:<15} {:<10} {:}'.format(*row))
+            print('{:<30}  {:<15}  {:<15}  {:<10} {:<10} {:<10} {:<5} {:<10} {:<10} {:<15} {:<10} {:}'.format(*row))
