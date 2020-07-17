@@ -2,6 +2,10 @@
 
 Changelog
 ---------
+v1.3.8
+~~~~~~
+- Fixed a bug where _sample_trunc_norm returned an array in Scipy 1.5.1, but returns a scalar in Scipy 1.4.0.
+
 v1.3.7
 ~~~~~~
 - Fixed a bug where time stretched events could have a negative start time if they were longer than the soundscape duration.
