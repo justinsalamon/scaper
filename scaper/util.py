@@ -302,8 +302,11 @@ def _sample_trunc_norm(mu, sigma, trunc_min, trunc_max, random_state):
     # values for a standard normal distribution (mu=0, sigma=1), so we need
     # to recompute a and b given the user specified parameters.
     a, b = (trunc_min - mu) / float(sigma), (trunc_max - mu) / float(sigma)
-    return scipy.stats.truncnorm.rvs(a, b, mu, sigma, random_state=random_state)
-
+    sample = scipy.stats.truncnorm.rvs(a, b, mu, sigma, random_state=random_state)
+    # scipy 1.5.1 returns an array while scipy 1.4.0 returns a scalar.
+    # To maintain backwards compat we have to cast the sample to an array 
+    # then back to a scalar.
+    return np.array(sample).item() 
 
 def max_polyphony(ann):
     '''
