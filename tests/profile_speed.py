@@ -13,9 +13,23 @@ import tqdm
 import zipfile
 import subprocess
 import time
+import csv
+import platform
+import psutil
+import datetime
+import math
 
 # Download the audio automatically
 FIX_DIR = 'tests/data/'
+
+def convert_size(size_bytes):
+   if size_bytes == 0:
+       return "0B"
+   size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+   i = int(math.floor(math.log(size_bytes, 1024)))
+   p = math.pow(1024, i)
+   s = round(size_bytes / p, 2)
+   return "%s %s" % (s, size_name[i])
 
 with tempfile.TemporaryDirectory() as tmpdir:  
     path_to_audio = os.path.join(FIX_DIR, 'audio/')
@@ -108,6 +122,34 @@ with tempfile.TemporaryDirectory() as tmpdir:
                     disable_sox_warnings=True,
                     no_audio=False,
                     txt_path=txtfile)
-    
+
     time_taken = time.time() - start_time
-    print(f'Time taken: {time_taken}')
+    uname = platform.uname()
+
+    row = {
+        'time_of_run': str(datetime.datetime.now()),
+        'scaper_version': scaper.__version__,
+        'python_version': platform.python_version(),
+        'system': uname.system,
+        'machine': uname.machine,
+        'processor': uname.processor,
+        'memory': convert_size(psutil.virtual_memory().total),
+        'n_soundscapes': n_soundscapes,        
+        'time_taken_for_script': time_taken,
+    }
+
+    fieldnames = list(row.keys())
+    
+    results_path = 'tests/profile_results.csv'
+    write_header = not os.path.exists(results_path)
+
+    with open(results_path, 'a') as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        if write_header:
+            writer.writeheader()
+        writer.writerow(row)
+
+    with open(results_path, 'r') as f:
+        csv_f = csv.reader(f)
+        for row in csv_f:
+            print('{:<30}  {:<15}  {:<15}  {:<10} {:<10} {:<10} {:<10} {:<15} {:<15}'.format(*row))
