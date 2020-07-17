@@ -1,4 +1,5 @@
 import sox
+import soundfile
 import os
 import warnings
 import jams
@@ -1314,7 +1315,7 @@ class Scaper(object):
             used_source_files.append(source_file)
 
         # Get the duration of the source audio file
-        source_duration = sox.file_info.duration(source_file)
+        source_duration = soundfile.info(source_file).duration
 
         # If this is a background event, the event duration is the 
         # duration of the soundscape.
@@ -1715,7 +1716,7 @@ class Scaper(object):
                         # statement can be removed from the calculation of
                         # ntiles.
                         source_duration = (
-                            sox.file_info.duration(e.value['source_file']))
+                            soundfile.info(e.value['source_file']).duration)
                         ntiles = int(
                             max(self.duration // source_duration + 1, 2))
 
@@ -1798,8 +1799,8 @@ class Scaper(object):
                                       tmpfiles_internal[-1].name)
                             # if time stretched get actual new duration
                             if e.value['time_stretch'] is not None:
-                                fg_stretched_duration = sox.file_info.duration(
-                                    tmpfiles_internal[-1].name)
+                                fg_stretched_duration = soundfile.info(
+                                    tmpfiles_internal[-1].name).duration
 
                             # NOW compute LUFS
                             fg_lufs = get_integrated_lufs(
