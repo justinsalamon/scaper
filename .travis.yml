@@ -39,7 +39,6 @@ before_install:
       fi
     - conda install -c conda-forge ffmpeg
     - conda install -c conda-forge sox
-    - sudo apt-get install libsndfile1
     - pip install python-coveralls
     - pip install pytest-faulthandler
     - pip install pytest-cov
