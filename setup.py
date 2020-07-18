@@ -39,7 +39,7 @@ setup(
         'sox>=1.3.3',
         'jams>=0.3.2',
         'numpy>=1.13.3',
-        'pysoundfile'
+        'soundfile'
     ],
     extras_require={
         'docs': [
@@ -47,6 +47,6 @@ setup(
                 'sphinx_rtd_theme',
                 'sphinx_issues',
             ],
-        'tests': ['backports.tempfile', 'pysoundfile', 'pytest', 'pytest-cov', 'tqdm']
+        'tests': ['backports.tempfile', 'pytest', 'pytest-cov', 'tqdm']
     }
 )
