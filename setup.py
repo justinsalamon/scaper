@@ -39,7 +39,7 @@ setup(
         'sox>=1.3.3',
         'jams>=0.3.2',
         'numpy>=1.13.3',
-        'pysoundfile'
+        'soundfile'
     ],
     extras_require={
         'docs': [
