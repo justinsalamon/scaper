@@ -1715,6 +1715,9 @@ class Scaper(object):
                     # Create transformer
                     tfm = sox.Transformer()
                     # Ensure consistent sampling rate and channels
+                    # Need both a convert operation (to do the conversion),
+                    # and set_output_format (to have sox interpret the output
+                    # correctly).
                     tfm.convert(
                         samplerate=self.sr,
                         n_channels=self.n_channels,
@@ -1763,6 +1766,10 @@ class Scaper(object):
                 elif e.value['role'] == 'foreground':
                     # Create transformer
                     tfm = sox.Transformer()
+                    # Ensure consistent sampling rate and channels
+                    # Need both a convert operation (to do the conversion),
+                    # and set_output_format (to have sox interpret the output
+                    # correctly).
                     tfm.convert(
                         samplerate=self.sr,
                         n_channels=self.n_channels,
