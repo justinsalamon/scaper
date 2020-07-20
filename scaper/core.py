@@ -1698,8 +1698,8 @@ class Scaper(object):
 
         with _set_temp_logging_level(temp_logging_level):
 
-            # Array for storing all generated audio (one array for every event)
-            source_audio_arrays = []
+            # List for storing all generated audio (one array for every event)
+            event_audio_arrays = []
             isolated_events_audio_path = []
             duration_in_samples = int(self.duration * self.sr)
 
@@ -1707,20 +1707,12 @@ class Scaper(object):
 
             for i, e in enumerate(ann.data):
                 if e.value['role'] == 'background':
-                    # Concatenate background if necessary. Right now we
-                    # always concatenate the background at least once,
-                    # since the pysox combiner raises an error if you try
-                    # to call build using an input_file_list with less than
-                    # 2 elements. In the future if the combiner is updated
-                    # to accept a list of length 1, then the max(..., 2)
-                    # statement can be removed from the calculation of
-                    # ntiles.
-                    info = soundfile.info(e.value['source_file'])
-                    source_duration = info.duration
+                    # Concatenate background if necessary.
+                    source_duration = soundfile.info(e.value['source_file']).duration
                     ntiles = int(
-                        max(self.duration // source_duration + 1, 2))
+                        max(self.duration // source_duration + 1, 1))
 
-                    # Create combiner
+                    # Create transformer
                     tfm = sox.Transformer()
                     # Ensure consistent sampling rate and channels
                     tfm.convert(
@@ -1744,18 +1736,18 @@ class Scaper(object):
                         tmpfiles_internal.append(
                             tempfile.NamedTemporaryFile(
                                 suffix='.wav', delete=False))
-                        # synthesize concatenated/trimmed background
-                        source_audio_array, source_rate = soundfile.read(
+                        # read in background off disk
+                        event_audio_array, event_sample_rate = soundfile.read(
                             e.value['source_file'], always_2d=True)
-                        # tile it along the appropriate dimensions
-                        source_audio_array = np.tile(source_audio_array, (ntiles, 1))
-                        output_array = tfm.build_array(
-                            input_array=source_audio_array,
-                            sample_rate_in=source_rate
+                        # tile the background along the appropriate dimensions
+                        event_audio_array = np.tile(event_audio_array, (ntiles, 1))
+                        event_audio_array = tfm.build_array(
+                            input_array=event_audio_array,
+                            sample_rate_in=event_sample_rate
                         )
-                        # Quick hack so that LUFS computation still works
+                        # Write event_audio_array to disk so we can compute LUFS using ffmpeg
                         soundfile.write(
-                            tmpfiles_internal[-1].name, output_array.T, self.sr)
+                            tmpfiles_internal[-1].name, event_audio_array.T, self.sr)
                         # NOW compute LUFS
                         bg_lufs = get_integrated_lufs(
                             tmpfiles_internal[-1].name)
@@ -1763,10 +1755,10 @@ class Scaper(object):
                         # Normalize background to reference DB.
                         gain = self.ref_db - bg_lufs
                         gain = self.ref_db + e.value['snr'] - bg_lufs
-                        output_array = np.exp(gain * np.log(10) / 20) * output_array
+                        event_audio_array = np.exp(gain * np.log(10) / 20) * event_audio_array
 
-                        source_audio_arrays.append(
-                            output_array[:duration_in_samples])
+                        event_audio_arrays.append(
+                            event_audio_array[:duration_in_samples])
 
                 elif e.value['role'] == 'foreground':
                     # Create transformer
@@ -1808,16 +1800,15 @@ class Scaper(object):
                                 suffix='.wav', delete=False))
                         
                         # synthesize edited foreground sound event
-                        source_audio_array, source_rate = soundfile.read(
+                        event_audio_array, event_audio_rate = soundfile.read(
                             e.value['source_file'], always_2d=True)
                         # tile it along the appropriate dimensions
-                        output_array = tfm.build_array(
-                            input_array=source_audio_array,
-                            sample_rate_in=source_rate
+                        event_audio_array = tfm.build_array(
+                            input_array=event_audio_array,
+                            sample_rate_in=event_audio_rate
                         )
-                        
                         soundfile.write(
-                            tmpfiles_internal[-1].name, output_array, self.sr)
+                            tmpfiles_internal[-1].name, event_audio_array.T, self.sr)
                         # NOW compute LUFS
                         fg_lufs = get_integrated_lufs(
                             tmpfiles_internal[-1].name)
@@ -1825,17 +1816,17 @@ class Scaper(object):
                         # Normalize to specified SNR with respect to
                         # background
                         gain = self.ref_db + e.value['snr'] - fg_lufs
-                        output_array = np.exp(gain * np.log(10) / 20) * output_array
+                        event_audio_array = np.exp(gain * np.log(10) / 20) * event_audio_array
 
                         # Pad with silence before/after event to match the
                         # soundscape duration
                         prepad = int(self.sr * e.value['event_time'])
-                        postpad = max(0, duration_in_samples - (output_array.shape[0] + prepad))
-                        output_array = np.pad(output_array, ((prepad, postpad)), mode='constant')
-                        output_array = output_array[:duration_in_samples]
+                        postpad = max(0, duration_in_samples - (event_audio_array.shape[0] + prepad))
+                        event_audio_array = np.pad(event_audio_array, ((prepad, postpad)), mode='constant')
+                        event_audio_array = event_audio_array[:duration_in_samples]
 
-                        source_audio_arrays.append(
-                            output_array[:duration_in_samples])
+                        event_audio_arrays.append(
+                            event_audio_array[:duration_in_samples])
                 else:
                     raise ScaperError(
                         'Unsupported event role: {:s}'.format(
@@ -1860,7 +1851,7 @@ class Scaper(object):
                         # os.makedirs(..., exist_ok=True) but we test back to
                         # Python 2.7.
                         os.makedirs(event_folder)
-                    soundfile.write(event_audio_path, source_audio_arrays[-1], self.sr)
+                    soundfile.write(event_audio_path, event_audio_arrays[-1].T, self.sr)
                     isolated_events_audio_path.append(event_audio_path)
 
                     #TODO what do we do in this case? for now throw a warning
@@ -1872,36 +1863,24 @@ class Scaper(object):
                             "audio of the isolated events will not add up to the "
                             "mixture", ScaperWarning)
 
-            # Finally combine all the files and optionally apply reverb
-            # If we have more than one tempfile (i.e. background + at
-            # least one foreground event, we need a combiner. If there's
-            # only the background track, then we need a transformer!
-            if len(source_audio_arrays) == 0:
+            # Finally combine all the files and optionally apply reverb.
+            # If there are no events, throw a warning.
+            if len(event_audio_arrays) == 0:
                 warnings.warn(
                     "No events to synthesize (silent soundscape), no audio "
                     "saved to disk.", ScaperWarning)
-            elif len(source_audio_arrays) == 1:
-                tfm = sox.Transformer()
-                if reverb is not None:
-                    tfm.reverb(reverberance=reverb * 100)
-                # TODO: do we want to normalize the final output?
-                output_array = tfm.build_array(
-                    input_array=source_audio_arrays[0], 
-                    sample_rate_in=self.sr,
-                )
-                soundfile.write(audio_path, output_array, self.sr)
             else:                        
                 tfm = sox.Transformer()
                 if reverb is not None:
                     tfm.reverb(reverberance=reverb * 100)
                 # TODO: do we want to normalize the final output?
 
-                soundscape_audio = sum(source_audio_arrays)
-                output_array = tfm.build_array(
+                soundscape_audio = sum(event_audio_arrays)
+                soundscape_audio = tfm.build_array(
                     input_array=soundscape_audio,
                     sample_rate_in=self.sr,
                 )
-                soundfile.write(audio_path, output_array, self.sr)
+                soundfile.write(audio_path, soundscape_audio, self.sr)
                         
         ann.sandbox.scaper.soundscape_audio_path = audio_path
         ann.sandbox.scaper.isolated_events_audio_path = isolated_events_audio_path
