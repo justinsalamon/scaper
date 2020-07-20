@@ -1831,7 +1831,7 @@ class Scaper(object):
                         # soundscape duration
                         prepad = int(self.sr * e.value['event_time'])
                         postpad = max(0, duration_in_samples - (output_array.shape[0] + prepad))
-                        output_array = np.pad(output_array, ((prepad, postpad)))
+                        output_array = np.pad(output_array, ((prepad, postpad)), mode='constant')
                         output_array = output_array[:duration_in_samples]
 
                         source_audio_arrays.append(
