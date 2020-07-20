@@ -1802,7 +1802,6 @@ class Scaper(object):
                         # synthesize edited foreground sound event
                         event_audio_array, event_audio_rate = soundfile.read(
                             e.value['source_file'], always_2d=True)
-                        # tile it along the appropriate dimensions
                         event_audio_array = tfm.build_array(
                             input_array=event_audio_array,
                             sample_rate_in=event_audio_rate
