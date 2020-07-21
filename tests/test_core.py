@@ -229,7 +229,7 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
 
         # Now add in trimming!
         for _ in range(5):
-            with tempfile.TemporaryDirectory() as gen_events_path:
+            with backports.tempfile.TemporaryDirectory() as gen_events_path:
                 sc.generate(orig_wav_file.name, orig_jam_file.name,
                             disable_instantiation_warnings=True,
                             save_isolated_events=True)
@@ -245,7 +245,7 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
             
         # Double trimming
         for _ in range(2):
-            with tempfile.TemporaryDirectory() as gen_events_path:
+            with backports.tempfile.TemporaryDirectory() as gen_events_path:
                 sc.generate(orig_wav_file.name, orig_jam_file.name,
                             disable_instantiation_warnings=True,
                             save_isolated_events=True)
@@ -264,7 +264,7 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
 
         # Triple trimming
         for _ in range(2):
-            with tempfile.TemporaryDirectory() as gen_events_path:
+            with backports.tempfile.TemporaryDirectory() as gen_events_path:
                 sc.generate(orig_wav_file.name, orig_jam_file.name,
                             disable_instantiation_warnings=True,
                             save_isolated_events=True)
