@@ -80,7 +80,7 @@ def get_integrated_lufs(filepath, min_duration=0.5):
 
     """
     try:
-        duration = sox.file_info.duration(filepath)
+        duration = soundfile.info(filepath).duration
     except Exception as e:
         raise ScaperError(
             'Unable to obtain LUFS for {:s}, error message:\n{:s}'.format(
