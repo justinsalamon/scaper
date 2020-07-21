@@ -206,7 +206,7 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
             gen_wav, sr = soundfile.read(gen_wav_file.name)
             assert np.allclose(gen_wav, orig_wav, atol=atol, rtol=rtol)
 
-            # validate event audio is trimmed and sums to trimmed soundscape
+            # validate that the sum of event audio sums to trimmed soundscape
             gen_event_files = [
                 os.path.join(events_folder, x)
                 for x in sorted(os.listdir(events_folder))
