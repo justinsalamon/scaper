@@ -1760,7 +1760,6 @@ class Scaper(object):
 
                             # Normalize background to reference DB.
                             gain = self.ref_db - bg_lufs
-                            gain = self.ref_db - bg_lufs
                             event_audio = np.exp(gain * np.log(10) / 20) * event_audio
 
                             event_audio_list.append(
