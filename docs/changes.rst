@@ -2,6 +2,10 @@
 
 Changelog
 ---------
+v1.3.9
+~~~~~~
+- Fixed a bug where trim before generating soundscapes from a JAMS file with saving of isolated events resulted in incorrect soundscape audio.
+
 v1.3.8
 ~~~~~~
 - Fixed a bug where _sample_trunc_norm returned an array in Scipy 1.5.1, but returns a scalar in Scipy 1.4.0.
