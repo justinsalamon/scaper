@@ -1791,11 +1791,6 @@ class Scaper(object):
                         factor = 1.0 / float(e.value['time_stretch'])
                         tfm.tempo(factor, audio_type='s', quick=False)
 
-                    # Apply very short fade in and out
-                    # (avoid unnatural sound onsets/offsets)
-                    tfm.fade(fade_in_len=self.fade_in_len,
-                                fade_out_len=self.fade_out_len)
-
                     # PROCESS BEFORE COMPUTING LUFS
                     tmpfiles_internal = []
                     with _close_temp_files(tmpfiles_internal):
@@ -1821,6 +1816,16 @@ class Scaper(object):
                         # background
                         gain = self.ref_db + e.value['snr'] - fg_lufs
                         event_audio = np.exp(gain * np.log(10) / 20) * event_audio
+
+                        # Apply short fade in and out
+                        # (avoid unnatural sound onsets/offsets)
+                        fade_in_samples =  int(self.fade_in_len * self.sr)
+                        fade_out_samples = int(self.fade_out_len * self.sr)
+                        fade_in_window = np.sin(np.linspace(0, np.pi / 2, fade_in_samples))
+                        fade_out_window = np.sin(np.linspace(np.pi / 2, 0, fade_out_samples))
+
+                        event_audio[:fade_in_samples] *= fade_in_window
+                        event_audio[-fade_out_samples:] *= fade_out_window
 
                         # Pad with silence before/after event to match the
                         # soundscape duration
