@@ -1699,7 +1699,7 @@ class Scaper(object):
         with _set_temp_logging_level(temp_logging_level):
 
             # List for storing all generated audio (one array for every event)
-            event_audio_arrays = []
+            event_audio_list = []
             isolated_events_audio_path = []
             duration_in_samples = int(self.duration * self.sr)
 
@@ -1732,8 +1732,8 @@ class Scaper(object):
                         )
                         # Then trim the duration of the background event
                         tfm.trim(e.value['source_time'],
-                                    e.value['source_time'] +
-                                    e.value['event_duration'])
+                                 e.value['source_time'] +
+                                 e.value['event_duration'])
 
                         # PROCESS BEFORE COMPUTING LUFS
                         tmpfiles_internal = []
@@ -1743,28 +1743,28 @@ class Scaper(object):
                                 tempfile.NamedTemporaryFile(
                                     suffix='.wav', delete=False))
                             # read in background off disk
-                            event_audio_array, event_sample_rate = soundfile.read(
+                            event_audio, event_sr = soundfile.read(
                                 e.value['source_file'], always_2d=True)
                             # tile the background along the appropriate dimensions
-                            event_audio_array = np.tile(event_audio_array, (ntiles, 1))
-                            event_audio_array = tfm.build_array(
-                                input_array=event_audio_array,
-                                sample_rate_in=event_sample_rate
+                            event_audio = np.tile(event_audio, (ntiles, 1))
+                            event_audio = tfm.build_array(
+                                input_array=event_audio,
+                                sample_rate_in=event_sr
                             )
                             # Write event_audio_array to disk so we can compute LUFS using ffmpeg
                             soundfile.write(
-                                tmpfiles_internal[-1].name, event_audio_array.T, self.sr)
+                                tmpfiles_internal[-1].name, event_audio.T, self.sr)
                             # NOW compute LUFS
                             bg_lufs = get_integrated_lufs(
                                 tmpfiles_internal[-1].name)
 
                             # Normalize background to reference DB.
                             gain = self.ref_db - bg_lufs
-                            gain = self.ref_db + e.value['snr'] - bg_lufs
-                            event_audio_array = np.exp(gain * np.log(10) / 20) * event_audio_array
+                            gain = self.ref_db - bg_lufs
+                            event_audio = np.exp(gain * np.log(10) / 20) * event_audio
 
-                            event_audio_arrays.append(
-                                event_audio_array[:duration_in_samples])
+                            event_audio_list.append(
+                                event_audio[:duration_in_samples])
 
                     elif e.value['role'] == 'foreground':
                         # Create transformer
@@ -1784,8 +1784,8 @@ class Scaper(object):
                         )
                         # Trim
                         tfm.trim(e.value['source_time'],
-                                    e.value['source_time'] +
-                                    e.value['event_duration'])
+                                 e.value['source_time'] +
+                                 e.value['event_duration'])
 
                         # Pitch shift
                         if e.value['pitch_shift'] is not None:
@@ -1799,7 +1799,7 @@ class Scaper(object):
                         # Apply very short fade in and out
                         # (avoid unnatural sound onsets/offsets)
                         tfm.fade(fade_in_len=self.fade_in_len,
-                                    fade_out_len=self.fade_out_len)
+                                 fade_out_len=self.fade_out_len)
 
                         # PROCESS BEFORE COMPUTING LUFS
                         tmpfiles_internal = []
@@ -1810,14 +1810,14 @@ class Scaper(object):
                                     suffix='.wav', delete=False))
                             
                             # synthesize edited foreground sound event
-                            event_audio_array, event_audio_rate = soundfile.read(
+                            event_audio, event_sr = soundfile.read(
                                 e.value['source_file'], always_2d=True)
-                            event_audio_array = tfm.build_array(
-                                input_array=event_audio_array,
-                                sample_rate_in=event_audio_rate
+                            event_audio = tfm.build_array(
+                                input_array=event_audio,
+                                sample_rate_in=event_sr
                             )
                             soundfile.write(
-                                tmpfiles_internal[-1].name, event_audio_array.T, self.sr)
+                                tmpfiles_internal[-1].name, event_audio.T, self.sr)
                             # NOW compute LUFS
                             fg_lufs = get_integrated_lufs(
                                 tmpfiles_internal[-1].name)
@@ -1825,17 +1825,17 @@ class Scaper(object):
                             # Normalize to specified SNR with respect to
                             # background
                             gain = self.ref_db + e.value['snr'] - fg_lufs
-                            event_audio_array = np.exp(gain * np.log(10) / 20) * event_audio_array
+                            event_audio = np.exp(gain * np.log(10) / 20) * event_audio
 
                             # Pad with silence before/after event to match the
                             # soundscape duration
                             prepad = int(self.sr * e.value['event_time'])
-                            postpad = max(0, duration_in_samples - (event_audio_array.shape[0] + prepad))
-                            event_audio_array = np.pad(event_audio_array, ((prepad, postpad)), mode='constant')
-                            event_audio_array = event_audio_array[:duration_in_samples]
+                            postpad = max(0, duration_in_samples - (event_audio.shape[0] + prepad))
+                            event_audio = np.pad(event_audio, ((prepad, postpad)), mode='constant',
+                                constant_values=(0, 0))
+                            event_audio = event_audio[:duration_in_samples]
 
-                            event_audio_arrays.append(
-                                event_audio_array[:duration_in_samples])
+                            event_audio_list.append(event_audio[:duration_in_samples])
                     else:
                         raise ScaperError(
                             'Unsupported event role: {:s}'.format(
@@ -1860,7 +1860,7 @@ class Scaper(object):
                             # os.makedirs(..., exist_ok=True) but we test back to
                             # Python 2.7.
                             os.makedirs(event_folder)
-                        soundfile.write(event_audio_path, event_audio_arrays[-1].T, self.sr)
+                        soundfile.write(event_audio_path, event_audio_list[-1].T, self.sr)
                         isolated_events_audio_path.append(event_audio_path)
 
                         #TODO what do we do in this case? for now throw a warning
@@ -1874,7 +1874,7 @@ class Scaper(object):
 
                 # Finally combine all the files and optionally apply reverb.
                 # If there are no events, throw a warning.
-                if len(event_audio_arrays) == 0:
+                if len(event_audio_list) == 0:
                     warnings.warn(
                         "No events to synthesize (silent soundscape), no audio "
                         "saved to disk.", ScaperWarning)
@@ -1884,7 +1884,7 @@ class Scaper(object):
                         tfm.reverb(reverberance=reverb * 100)
                     # TODO: do we want to normalize the final output?
 
-                    soundscape_audio = sum(event_audio_arrays)
+                    soundscape_audio = sum(event_audio_list)
                     soundscape_audio = tfm.build_array(
                         input_array=soundscape_audio,
                         sample_rate_in=self.sr,
