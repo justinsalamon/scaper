@@ -165,7 +165,7 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
         pytest.raises(ScaperError, scaper.generate_from_jams, jam_file.name,
                       gen_file.name)
 
-    # Test for valid jams files
+    # Test for valid jams file
     tmpfiles = []
     with _close_temp_files(tmpfiles):
 
@@ -200,14 +200,13 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
                          time_stretch=('uniform', 0.8, 1.2))
 
 
-        def _validate_soundscape_and_event_audio(orig_wav_file, gen_wav_file):
+        def _validate_soundscape_and_event_audio(orig_wav_file, gen_wav_file, events_folder):
             # validate audio
             orig_wav, sr = soundfile.read(orig_wav_file.name)
             gen_wav, sr = soundfile.read(gen_wav_file.name)
             assert np.allclose(gen_wav, orig_wav, atol=atol, rtol=rtol)
 
             # validate event audio is trimmed and sums to trimmed soundscape
-            events_folder = gen_wav_file.name[:-4] + '_events'
             gen_event_files = [
                 os.path.join(events_folder, x)
                 for x in sorted(os.listdir(events_folder))
@@ -215,9 +214,6 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
             gen_audio = [soundfile.read(x)[0] for x in gen_event_files]
 
             assert np.allclose(gen_wav, sum(gen_audio), atol=atol, rtol=rtol)
-
-            # clean up events folder
-            shutil.rmtree(events_folder, ignore_errors=True)
 
         # generate, then generate from the jams and compare audio files
         # repeat 5 times
@@ -233,51 +229,60 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
 
         # Now add in trimming!
         for _ in range(5):
-            sc.generate(orig_wav_file.name, orig_jam_file.name,
-                        disable_instantiation_warnings=True,
-                        save_isolated_events=True)
-            scaper.trim(orig_wav_file.name, orig_jam_file.name,
-                        orig_wav_file.name, orig_jam_file.name,
-                        np.random.uniform(0, 5), np.random.uniform(5, 10))
-            scaper.generate_from_jams(orig_jam_file.name, gen_wav_file.name,
-                                      save_isolated_events=True)
+            with tempfile.TemporaryDirectory() as gen_events_path:
+                sc.generate(orig_wav_file.name, orig_jam_file.name,
+                            disable_instantiation_warnings=True,
+                            save_isolated_events=True)
+                scaper.trim(orig_wav_file.name, orig_jam_file.name,
+                            orig_wav_file.name, orig_jam_file.name,
+                            np.random.uniform(0, 5), np.random.uniform(5, 10))
+                scaper.generate_from_jams(orig_jam_file.name, gen_wav_file.name,
+                                          save_isolated_events=True, 
+                                          isolated_events_path=gen_events_path)
 
-            _validate_soundscape_and_event_audio(orig_wav_file, gen_wav_file)
+                _validate_soundscape_and_event_audio(orig_wav_file, gen_wav_file, 
+                    gen_events_path)
             
         # Double trimming
         for _ in range(2):
-            sc.generate(orig_wav_file.name, orig_jam_file.name,
-                        disable_instantiation_warnings=True,
-                        save_isolated_events=True)
-            scaper.trim(orig_wav_file.name, orig_jam_file.name,
-                        orig_wav_file.name, orig_jam_file.name,
-                        np.random.uniform(0, 2), np.random.uniform(8, 10))
-            scaper.trim(orig_wav_file.name, orig_jam_file.name,
-                        orig_wav_file.name, orig_jam_file.name,
-                        np.random.uniform(0, 2), np.random.uniform(4, 6))
-            scaper.generate_from_jams(orig_jam_file.name, gen_wav_file.name,
-                                      save_isolated_events=True)
+            with tempfile.TemporaryDirectory() as gen_events_path:
+                sc.generate(orig_wav_file.name, orig_jam_file.name,
+                            disable_instantiation_warnings=True,
+                            save_isolated_events=True)
+                scaper.trim(orig_wav_file.name, orig_jam_file.name,
+                            orig_wav_file.name, orig_jam_file.name,
+                            np.random.uniform(0, 2), np.random.uniform(8, 10))
+                scaper.trim(orig_wav_file.name, orig_jam_file.name,
+                            orig_wav_file.name, orig_jam_file.name,
+                            np.random.uniform(0, 2), np.random.uniform(4, 6))
+                scaper.generate_from_jams(orig_jam_file.name, gen_wav_file.name,
+                                          save_isolated_events=True, 
+                                          isolated_events_path=gen_events_path)
 
-            _validate_soundscape_and_event_audio(orig_wav_file, gen_wav_file)
+                _validate_soundscape_and_event_audio(orig_wav_file, gen_wav_file, 
+                    gen_events_path)
 
         # Triple trimming
         for _ in range(2):
-            sc.generate(orig_wav_file.name, orig_jam_file.name,
-                        disable_instantiation_warnings=True,
-                        save_isolated_events=True)
-            scaper.trim(orig_wav_file.name, orig_jam_file.name,
-                        orig_wav_file.name, orig_jam_file.name,
-                        np.random.uniform(0, 2), np.random.uniform(8, 10))
-            scaper.trim(orig_wav_file.name, orig_jam_file.name,
-                        orig_wav_file.name, orig_jam_file.name,
-                        np.random.uniform(0, 1), np.random.uniform(5, 6))
-            scaper.trim(orig_wav_file.name, orig_jam_file.name,
-                        orig_wav_file.name, orig_jam_file.name,
-                        np.random.uniform(0, 1), np.random.uniform(3, 4))
-            scaper.generate_from_jams(orig_jam_file.name, gen_wav_file.name,
-                                      save_isolated_events=True)
+            with tempfile.TemporaryDirectory() as gen_events_path:
+                sc.generate(orig_wav_file.name, orig_jam_file.name,
+                            disable_instantiation_warnings=True,
+                            save_isolated_events=True)
+                scaper.trim(orig_wav_file.name, orig_jam_file.name,
+                            orig_wav_file.name, orig_jam_file.name,
+                            np.random.uniform(0, 2), np.random.uniform(8, 10))
+                scaper.trim(orig_wav_file.name, orig_jam_file.name,
+                            orig_wav_file.name, orig_jam_file.name,
+                            np.random.uniform(0, 1), np.random.uniform(5, 6))
+                scaper.trim(orig_wav_file.name, orig_jam_file.name,
+                            orig_wav_file.name, orig_jam_file.name,
+                            np.random.uniform(0, 1), np.random.uniform(3, 4))
+                scaper.generate_from_jams(orig_jam_file.name, gen_wav_file.name,
+                                          save_isolated_events=True, 
+                                          isolated_events_path=gen_events_path)
 
-            _validate_soundscape_and_event_audio(orig_wav_file, gen_wav_file)
+                _validate_soundscape_and_event_audio(orig_wav_file, gen_wav_file, 
+                    gen_events_path)
 
         # Test with new FG and BG paths
         for _ in range(5):
