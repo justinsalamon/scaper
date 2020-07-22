@@ -2,7 +2,7 @@ try:
     # Check if soxbindings is installed. If it is,
     # let's use it.
     import soxbindings as sox 
-except:
+except ImportError:
     # If it isn't, fall back to sox. 
     import sox
 
