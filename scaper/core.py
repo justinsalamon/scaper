@@ -1,4 +1,11 @@
-import sox
+try:
+    # Check if soxbindings is installed. If it is,
+    # let's use it.
+    import soxbindings as sox 
+except:
+    # If it isn't, fall back to sox. 
+    import sox
+
 import soundfile
 import os
 import warnings

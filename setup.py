@@ -47,6 +47,7 @@ setup(
                 'sphinx_rtd_theme',
                 'sphinx_issues',
             ],
-        'tests': ['backports.tempfile', 'pytest', 'pytest-cov', 'tqdm']
+        'tests': ['backports.tempfile', 'pytest', 'pytest-cov', 'tqdm'],
+        'soxbindings': ['soxbindings']
     }
 )
