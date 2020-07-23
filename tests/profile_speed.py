@@ -106,7 +106,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
                             source_file=('choose', []),
                             source_time=('const', 0))
         sc.fade_in_len = 0.01
-        sc.n_channels = 2
+        sc.n_channels = 1
         sc.fade_out_len = 0.01
 
         # add random number of foreground events
@@ -122,9 +122,9 @@ with tempfile.TemporaryDirectory() as tmpdir:
                             time_stretch=(time_stretch_dist, time_stretch_min, time_stretch_max)
             )
         # generate
-        audiofile = None #os.path.join(outfolder, "soundscape_unimodal{:d}.wav".format(n))
-        jamsfile = None #os.path.join(outfolder, "soundscape_unimodal{:d}.jams".format(n))
-        txtfile = None #os.path.join(outfolder, "soundscape_unimodal{:d}.txt".format(n))
+        audiofile = os.path.join(outfolder, "soundscape_unimodal{:d}.wav".format(n))
+        jamsfile = os.path.join(outfolder, "soundscape_unimodal{:d}.jams".format(n))
+        txtfile = os.path.join(outfolder, "soundscape_unimodal{:d}.txt".format(n))
 
         sc.generate(audiofile, jamsfile,
                     allow_repeated_label=True,

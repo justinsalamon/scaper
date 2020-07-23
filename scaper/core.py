@@ -1746,6 +1746,7 @@ class Scaper(object):
                         input_array=event_audio,
                         sample_rate_in=event_sr
                     )
+                    event_audio = event_audio.reshape(-1, self.n_channels)
                     # NOW compute LUFS
                     bg_lufs = get_integrated_lufs(event_audio, event_sr)
 
@@ -1795,6 +1796,7 @@ class Scaper(object):
                         input_array=event_audio,
                         sample_rate_in=event_sr
                     )
+                    event_audio = event_audio.reshape(-1, self.n_channels)
                     # NOW compute LUFS
                     fg_lufs = get_integrated_lufs(event_audio, event_sr)
 
@@ -1876,6 +1878,7 @@ class Scaper(object):
                     input_array=soundscape_audio,
                     sample_rate_in=self.sr,
                 )
+                soundscape_audio = soundscape_audio.reshape(-1, self.n_channels)
                 if audio_path is not None:
                     soundfile.write(audio_path, soundscape_audio, self.sr)
         
