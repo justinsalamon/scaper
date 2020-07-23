@@ -1880,10 +1880,13 @@ class Scaper(object):
                     input_array=soundscape_audio,
                     sample_rate_in=self.sr,
                 )
-                soundfile.write(audio_path, soundscape_audio, self.sr)
-                        
+                if audio_path is not None:
+                    soundfile.write(audio_path, soundscape_audio, self.sr)
+        
         ann.sandbox.scaper.soundscape_audio_path = audio_path
         ann.sandbox.scaper.isolated_events_audio_path = isolated_events_audio_path
+
+        return soundscape_audio, event_audio_list
 
     def generate(self, audio_path, jams_path, allow_repeated_label=True,
                  allow_repeated_source=True,reverb=None, save_isolated_events=False, 
@@ -1974,24 +1977,33 @@ class Scaper(object):
             disable_instantiation_warnings=disable_instantiation_warnings)
         ann = jam.annotations.search(namespace='scaper')[0]
 
+        soundscape_audio = None
+        event_audio_list = None
+
         # Generate the audio and save to disk
         if not no_audio:
-            self._generate_audio(audio_path, ann, reverb=reverb, 
+            soundscape_audio, event_audio_list = self._generate_audio(
+                                 audio_path, ann, reverb=reverb, 
                                  save_isolated_events=save_isolated_events,
                                  isolated_events_path=isolated_events_path,
                                  disable_sox_warnings=disable_sox_warnings)
 
         # Finally save JAMS to disk too
-        jam.save(jams_path)
-
+        if jams_path is not None:
+            jam.save(jams_path)
+        
+        csv_data = []
+        for obs in ann.data:
+            if obs.value['role'] == 'foreground':
+                csv_data.append(
+                    [obs.time, obs.time+obs.duration, obs.value['label']])
         # Optionally save to CSV as well
         if txt_path is not None:
-            csv_data = []
-            for obs in ann.data:
-                if obs.value['role'] == 'foreground':
-                    csv_data.append(
-                        [obs.time, obs.time+obs.duration, obs.value['label']])
-
             with open(txt_path, 'w') as csv_file:
                 writer = csv.writer(csv_file, delimiter=txt_sep)
                 writer.writerows(csv_data)
+
+        return soundscape_audio, event_audio_list, jam, csv_data
+        
+
+        

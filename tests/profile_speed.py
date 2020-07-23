@@ -121,9 +121,9 @@ with tempfile.TemporaryDirectory() as tmpdir:
                             time_stretch=(time_stretch_dist, time_stretch_min, time_stretch_max)
             )
         # generate
-        audiofile = os.path.join(outfolder, "soundscape_unimodal{:d}.wav".format(n))
-        jamsfile = os.path.join(outfolder, "soundscape_unimodal{:d}.jams".format(n))
-        txtfile = os.path.join(outfolder, "soundscape_unimodal{:d}.txt".format(n))
+        audiofile = None #os.path.join(outfolder, "soundscape_unimodal{:d}.wav".format(n))
+        jamsfile = None #os.path.join(outfolder, "soundscape_unimodal{:d}.jams".format(n))
+        txtfile = None #os.path.join(outfolder, "soundscape_unimodal{:d}.txt".format(n))
 
         sc.generate(audiofile, jamsfile,
                     allow_repeated_label=True,
