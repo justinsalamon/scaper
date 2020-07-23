@@ -1708,7 +1708,9 @@ class Scaper(object):
             for i, e in enumerate(ann.data):
                 if e.value['role'] == 'background':
                     # Concatenate background if necessary.
-                    source_duration = soundfile.info(e.value['source_file']).duration
+                    audio_info = soundfile.info(e.value['source_file'])
+                    source_duration = audio_info.duration
+                    event_sr = audio_info.samplerate
                     ntiles = int(
                         max(self.duration // source_duration + 1, 1))
 
@@ -1727,39 +1729,31 @@ class Scaper(object):
                         rate=self.sr,
                         channels=self.n_channels
                     )
-                    # Then trim the duration of the background event
-                    tfm.trim(e.value['source_time'],
-                                e.value['source_time'] +
-                                e.value['event_duration'])
+
+                    # Figure out start and end in samples for 
+                    # "trimming"
+                    start_sample = int(e.value['source_time'] * event_sr)
+                    end_sample = start_sample + int(e.value['event_duration'] * event_sr)
 
                     # PROCESS BEFORE COMPUTING LUFS
-                    tmpfiles_internal = []
-                    with _close_temp_files(tmpfiles_internal):
-                        # create internal tmpfile
-                        tmpfiles_internal.append(
-                            tempfile.NamedTemporaryFile(
-                                suffix='.wav', delete=False))
-                        # read in background off disk
-                        event_audio, event_sr = soundfile.read(
-                            e.value['source_file'], always_2d=True)
-                        # tile the background along the appropriate dimensions
-                        event_audio = np.tile(event_audio, (ntiles, 1))
-                        event_audio = tfm.build_array(
-                            input_array=event_audio,
-                            sample_rate_in=event_sr
-                        )
-                        # Write event_audio_array to disk so we can compute LUFS using ffmpeg
-                        soundfile.write(
-                            tmpfiles_internal[-1].name, event_audio.T, self.sr)
-                        # NOW compute LUFS
-                        bg_lufs = get_integrated_lufs(
-                            tmpfiles_internal[-1].name)
+                    # read in background off disk
+                    event_audio, event_sr = soundfile.read(
+                        e.value['source_file'], always_2d=True,
+                        start=start_sample, stop=end_sample)
+                    # tile the background along the appropriate dimensions
+                    event_audio = np.tile(event_audio, (ntiles, 1))
+                    event_audio = tfm.build_array(
+                        input_array=event_audio,
+                        sample_rate_in=event_sr
+                    )
+                    # NOW compute LUFS
+                    bg_lufs = get_integrated_lufs(event_audio, event_sr)
 
-                        # Normalize background to reference DB.
-                        gain = self.ref_db - bg_lufs
-                        event_audio = np.exp(gain * np.log(10) / 20) * event_audio
+                    # Normalize background to reference DB.
+                    gain = self.ref_db - bg_lufs
+                    event_audio = np.exp(gain * np.log(10) / 20) * event_audio
 
-                        event_audio_list.append(event_audio[:duration_in_samples])
+                    event_audio_list.append(event_audio[:duration_in_samples])
 
                 elif e.value['role'] == 'foreground':
                     # Create transformer
@@ -1795,42 +1789,39 @@ class Scaper(object):
                     # (avoid unnatural sound onsets/offsets)
                     tfm.fade(fade_in_len=self.fade_in_len,
                                 fade_out_len=self.fade_out_len)
-
-                    # PROCESS BEFORE COMPUTING LUFS
-                    tmpfiles_internal = []
-                    with _close_temp_files(tmpfiles_internal):
-                        # create internal tmpfile
-                        tmpfiles_internal.append(
-                            tempfile.NamedTemporaryFile(
-                                suffix='.wav', delete=False))
                         
-                        # synthesize edited foreground sound event
-                        event_audio, event_sr = soundfile.read(
-                            e.value['source_file'], always_2d=True)
-                        event_audio = tfm.build_array(
-                            input_array=event_audio,
-                            sample_rate_in=event_sr
-                        )
-                        soundfile.write(
-                            tmpfiles_internal[-1].name, event_audio.T, self.sr)
-                        # NOW compute LUFS
-                        fg_lufs = get_integrated_lufs(
-                            tmpfiles_internal[-1].name)
+                    # Figure out start and end in samples for 
+                    # "trimming"
+                    start_sample = int(e.value['source_time'] * event_sr)
+                    end_sample = start_sample + int(e.value['event_duration'] * event_sr)
 
-                        # Normalize to specified SNR with respect to
-                        # background
-                        gain = self.ref_db + e.value['snr'] - fg_lufs
-                        event_audio = np.exp(gain * np.log(10) / 20) * event_audio
+                    # PROCESS BEFORE COMPUTING LUFS                        
+                    # synthesize edited foreground sound event
+                    
+                    event_audio, event_sr = soundfile.read(
+                        e.value['source_file'], always_2d=True,
+                        start=start_sample, stop=end_sample)
+                    event_audio = tfm.build_array(
+                        input_array=event_audio,
+                        sample_rate_in=event_sr
+                    )
+                    # NOW compute LUFS
+                    fg_lufs = get_integrated_lufs(event_audio, event_sr)
 
-                        # Pad with silence before/after event to match the
-                        # soundscape duration
-                        prepad = int(self.sr * e.value['event_time'])
-                        postpad = max(0, duration_in_samples - (event_audio.shape[0] + prepad))
-                        event_audio = np.pad(event_audio, ((prepad, postpad)), mode='constant',
-                            constant_values=(0, 0))
-                        event_audio = event_audio[:duration_in_samples]
+                    # Normalize to specified SNR with respect to
+                    # background
+                    gain = self.ref_db + e.value['snr'] - fg_lufs
+                    event_audio = np.exp(gain * np.log(10) / 20) * event_audio
 
-                        event_audio_list.append(event_audio[:duration_in_samples])
+                    # Pad with silence before/after event to match the
+                    # soundscape duration
+                    prepad = int(self.sr * e.value['event_time'])
+                    postpad = max(0, duration_in_samples - (event_audio.shape[0] + prepad))
+                    event_audio = np.pad(event_audio, ((prepad, postpad)), mode='constant',
+                        constant_values=(0, 0))
+                    event_audio = event_audio[:duration_in_samples]
+
+                    event_audio_list.append(event_audio[:duration_in_samples])
                 else:
                     raise ScaperError(
                         'Unsupported event role: {:s}'.format(

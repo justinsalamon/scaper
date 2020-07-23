@@ -36,10 +36,11 @@ setup(
             "Programming Language :: Python :: 3.6",
         ],
     install_requires=[
-        'sox==1.4.0b0',
+        'sox>=1.4.0',
         'jams>=0.3.2',
         'numpy>=1.13.3',
-        'soundfile'
+        'soundfile',
+        'pyloudnorm'
     ],
     extras_require={
         'docs': [

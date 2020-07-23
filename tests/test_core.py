@@ -213,7 +213,7 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
             ]
             gen_audio = [soundfile.read(x)[0] for x in gen_event_files]
 
-            assert np.allclose(gen_wav, sum(gen_audio), atol=atol, rtol=rtol)
+            assert np.allclose(gen_wav, sum(gen_audio), atol=1e-4, rtol=rtol)
 
         # generate, then generate from the jams and compare audio files
         # repeat 5 times

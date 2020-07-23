@@ -2,6 +2,11 @@
 
 Changelog
 ---------
+v1.4.0
+~~~~~~
+- Sped up Scaper considerably by swapping many sox operations for numpy operations.
+- This is the last version that will support Python 2.7 and Python 3.4.
+
 v1.3.9
 ~~~~~~
 - Fixed a bug where trim before generating soundscapes from a JAMS file with saving of isolated events resulted in incorrect soundscape audio.

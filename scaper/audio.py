@@ -12,6 +12,7 @@ import soundfile
 import tempfile
 from .scaper_exceptions import ScaperError
 from .util import _close_temp_files
+import pyloudnorm
 
 
 def r128stats(filepath):
@@ -55,9 +56,11 @@ def r128stats(filepath):
     return stats_dict
 
 
-def get_integrated_lufs(filepath, min_duration=0.5):
+def get_integrated_lufs(audio_array, samplerate, min_duration=0.5,
+                        filter_class='K-weighting', block_size=0.400):
     """
-    Returns the integrated LUFS for an audiofile.
+    Returns the integrated LUFS for a numpy array containing
+    audio samples.
 
     For files shorter than 400 ms ffmpeg returns a constant integrated LUFS
     value of -70.0. To avoid this, files shorter than min_duration (by default
@@ -66,45 +69,40 @@ def get_integrated_lufs(filepath, min_duration=0.5):
 
     Parameters
     ----------
-    filepath : str
-        Path to audio file for computing LUFS
+    audio_array : np.ndarray
+        numpy array containing samples or path to audio file for computing LUFS
+    samplerate : int
+        Sample rate of audio, for computing duration
     min_duration : float
         Minimum required duration for computing LUFS value. Files shorter than
         this are self-concatenated until their duration reaches this value
         for the purpose of computing the integrated LUFS. Caution: if you set
         min_duration < 0.4, a constant LUFS value of -70.0 will be returned for
         all files shorter than 400 ms.
+    filter_class : str
+        Class of weighting filter used.
+        - 'K-weighting' (default)
+        - 'Fenton/Lee 1'
+        - 'Fenton/Lee 2'
+        - 'Dash et al.'
+    block_size : float 
+        Gating block size in seconds. Defaults to 0.400.
 
     Returns
     -------
+    loudness
+        Loudness in terms of LUFS 
 
     """
-    try:
-        duration = soundfile.info(filepath).duration
-    except Exception as e:
-        raise ScaperError(
-            'Unable to obtain LUFS for {:s}, error message:\n{:s}'.format(
-                filepath, e.__str__()))
-
+    duration = audio_array.shape[0] / float(samplerate)
     if duration < min_duration:
-        # compute how many concatenations we require
-        n_tiles = int(np.ceil(min_duration / duration))
-
-        # Concatenate audio to itself, save to temp file and get LUFS
-        tmpfiles = []
-        with _close_temp_files(tmpfiles):
-            concat_file = tempfile.NamedTemporaryFile(suffix='.wav',
-                                                      delete=False)
-            tmpfiles.append(concat_file)
-
-            cbn = sox.Combiner()
-            cbn.build([filepath] * n_tiles, concat_file.name, 'concatenate')
-
-            loudness_stats = r128stats(concat_file.name)
-    else:
-        loudness_stats = r128stats(filepath)
-
-    return loudness_stats['I']
+        ntiles = int(np.ceil(min_duration / duration))
+        audio_array = np.tile(audio_array, (ntiles, 1))
+    meter = pyloudnorm.Meter(
+        samplerate, filter_class=filter_class, block_size=block_size
+    )
+    loudness = meter.integrated_loudness(audio_array.T)
+    return loudness
 
 
 def match_sample_length(audio_path, duration_in_samples):
