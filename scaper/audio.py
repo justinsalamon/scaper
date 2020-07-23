@@ -101,7 +101,7 @@ def get_integrated_lufs(audio_array, samplerate, min_duration=0.5,
     meter = pyloudnorm.Meter(
         samplerate, filter_class=filter_class, block_size=block_size
     )
-    loudness = meter.integrated_loudness(audio_array.T)
+    loudness = meter.integrated_loudness(audio_array)
     return loudness
 
 

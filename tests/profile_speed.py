@@ -106,6 +106,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
                             source_file=('choose', []),
                             source_time=('const', 0))
         sc.fade_in_len = 0.01
+        sc.n_channels = 2
         sc.fade_out_len = 0.01
 
         # add random number of foreground events

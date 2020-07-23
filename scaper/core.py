@@ -1771,11 +1771,6 @@ class Scaper(object):
                         rate=self.sr,
                         channels=self.n_channels
                     )
-                    # Trim
-                    tfm.trim(e.value['source_time'],
-                                e.value['source_time'] +
-                                e.value['event_duration'])
-
                     # Pitch shift
                     if e.value['pitch_shift'] is not None:
                         tfm.pitch(e.value['pitch_shift'])
@@ -1812,8 +1807,8 @@ class Scaper(object):
                     # (avoid unnatural sound onsets/offsets)
                     fade_in_samples =  int(self.fade_in_len * self.sr)
                     fade_out_samples = int(self.fade_out_len * self.sr)
-                    fade_in_window = np.sin(np.linspace(0, np.pi / 2, fade_in_samples))
-                    fade_out_window = np.sin(np.linspace(np.pi / 2, 0, fade_out_samples))
+                    fade_in_window = np.sin(np.linspace(0, np.pi / 2, fade_in_samples))[..., None]
+                    fade_out_window = np.sin(np.linspace(np.pi / 2, 0, fade_out_samples))[..., None]
 
                     event_audio[:fade_in_samples] *= fade_in_window
                     event_audio[-fade_out_samples:] *= fade_out_window
@@ -1822,7 +1817,8 @@ class Scaper(object):
                     # soundscape duration
                     prepad = int(self.sr * e.value['event_time'])
                     postpad = max(0, duration_in_samples - (event_audio.shape[0] + prepad))
-                    event_audio = np.pad(event_audio, ((prepad, postpad)), mode='constant',
+                    
+                    event_audio = np.pad(event_audio, ((prepad, postpad), (0, 0)), mode='constant',
                         constant_values=(0, 0))
                     event_audio = event_audio[:duration_in_samples]
 
@@ -1888,20 +1884,23 @@ class Scaper(object):
 
         return soundscape_audio, event_audio_list
 
-    def generate(self, audio_path, jams_path, allow_repeated_label=True,
+    def generate(self, audio_path=None, jams_path=None, allow_repeated_label=True,
                  allow_repeated_source=True,reverb=None, save_isolated_events=False, 
                  isolated_events_path=None, disable_sox_warnings=True, no_audio=False, 
                  txt_path=None, txt_sep='\t', disable_instantiation_warnings=False):
         '''
         Generate a soundscape based on the current specification and save to
-        disk as both an audio file and a JAMS file describing the soundscape.
+        disk as both an audio file and a JAMS file describing the soundscape, or
+        return numpy arrays containing the audio samples.
 
         Parameters
         ----------
-        audio_path : str
-            Path for saving soundscape audio
-        jams_path : str
-            Path for saving soundscape jams
+        audio_path : str or None
+            Path for saving soundscape audio. If None, the audio is not saved 
+            and is returned only.
+        jams_path : str or None
+            Path for saving soundscape jams. If None, the jams file is not saved
+            to disk and is returned.
         allow_repeated_label : bool
             When True (default) the same label can be used more than once
             in a soundscape instantiation. When False every label can
@@ -1949,6 +1948,22 @@ class Scaper(object):
             When True (default is False), warnings stemming from event
             instantiation (primarily about automatic duration adjustments) are
             disabled. Not recommended other than for testing purposes.
+
+        Returns
+        -------
+        soundscape_audio : np.ndarray
+            A numpy array containing the audio samples of the generated soundscape.
+            Has shape (n_samples, n_channels). The sampling rate is the same as the
+            Scaper scene.
+        event_audio_list : list[np.ndarray]
+            A list of numpy arrays of shape (n_samples, n_channels) which sum up to
+            soundscape_audio, before reverb (if reverb is applied). The sampling rate
+            is the same as the Scaper scene.
+        jam : JAMS object
+            A JAMS object containing a scaper annotation representing the
+            instantiated soundscape.
+        csv_data : list
+            List containing the data that can be written to CSV.
 
         Raises
         ------
@@ -2002,8 +2017,4 @@ class Scaper(object):
             with open(txt_path, 'w') as csv_file:
                 writer = csv.writer(csv_file, delimiter=txt_sep)
                 writer.writerows(csv_data)
-
-        return soundscape_audio, event_audio_list, jam, csv_data
-        
-
-        
+        return soundscape_audio, event_audio_list, jam, csv_data  
