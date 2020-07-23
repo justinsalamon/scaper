@@ -978,7 +978,7 @@ def test_scaper_instantiate_event():
     instantiated_event = sc._instantiate_event(
         fg_event10, disable_instantiation_warnings=True)
     assert instantiated_event.source_time == 0
-    assert instantiated_event.event_duration == 0.806236
+    assert np.allclose(instantiated_event.event_duration, 0.806236, atol=1e-5)
 
     # repeated label when not allowed throws error
     sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
