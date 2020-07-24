@@ -200,7 +200,8 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
                          time_stretch=('uniform', 0.8, 1.2))
 
 
-        def _validate_soundscape_and_event_audio(orig_wav_file, gen_wav_file, events_folder):
+        def _validate_soundscape_and_event_audio(orig_wav_file, gen_wav_file, 
+                                                 gen_events_path, orig_events_path):
             # validate audio
             orig_wav, sr = soundfile.read(orig_wav_file.name)
             gen_wav, sr = soundfile.read(gen_wav_file.name)
@@ -208,11 +209,14 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
 
             # validate that the sum of event audio sums to trimmed soundscape
             gen_event_files = [
-                os.path.join(events_folder, x)
-                for x in sorted(os.listdir(events_folder))
+                os.path.join(gen_events_path, x)
+                for x in sorted(os.listdir(gen_events_path))
             ]
             gen_audio = [soundfile.read(x)[0] for x in gen_event_files]
 
+            # Trim does not currently support trimming isolated events, but if/when
+            # we add that functionality, this test should be updated to test that
+            # as well, using the files in orig_events_path (currently unused).
             assert np.allclose(gen_wav, sum(gen_audio), atol=atol, rtol=rtol)
 
         # generate, then generate from the jams and compare audio files
@@ -229,10 +233,16 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
 
         # Now add in trimming!
         for _ in range(5):
-            with backports.tempfile.TemporaryDirectory() as gen_events_path:
+            with backports.tempfile.TemporaryDirectory() as isolated_events_path:
+                orig_events_path = os.path.join(isolated_events_path, 'original')
+                gen_events_path = os.path.join(isolated_events_path, 'generated')
+                os.makedirs(orig_events_path)
+                os.makedirs(gen_events_path)
+
                 sc.generate(orig_wav_file.name, orig_jam_file.name,
                             disable_instantiation_warnings=True,
-                            save_isolated_events=True)
+                            save_isolated_events=True, 
+                            isolated_events_path=orig_events_path)
                 scaper.trim(orig_wav_file.name, orig_jam_file.name,
                             orig_wav_file.name, orig_jam_file.name,
                             np.random.uniform(0, 5), np.random.uniform(5, 10))
@@ -241,14 +251,20 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
                                           isolated_events_path=gen_events_path)
 
                 _validate_soundscape_and_event_audio(orig_wav_file, gen_wav_file, 
-                    gen_events_path)
+                    gen_events_path, orig_events_path)
             
         # Double trimming
         for _ in range(2):
-            with backports.tempfile.TemporaryDirectory() as gen_events_path:
+            with backports.tempfile.TemporaryDirectory() as isolated_events_path:
+                orig_events_path = os.path.join(isolated_events_path, 'original')
+                gen_events_path = os.path.join(isolated_events_path, 'generated')
+                os.makedirs(orig_events_path)
+                os.makedirs(gen_events_path)
+
                 sc.generate(orig_wav_file.name, orig_jam_file.name,
                             disable_instantiation_warnings=True,
-                            save_isolated_events=True)
+                            save_isolated_events=True, 
+                            isolated_events_path=orig_events_path)
                 scaper.trim(orig_wav_file.name, orig_jam_file.name,
                             orig_wav_file.name, orig_jam_file.name,
                             np.random.uniform(0, 2), np.random.uniform(8, 10))
@@ -260,14 +276,20 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
                                           isolated_events_path=gen_events_path)
 
                 _validate_soundscape_and_event_audio(orig_wav_file, gen_wav_file, 
-                    gen_events_path)
+                    gen_events_path, orig_events_path)
 
         # Triple trimming
         for _ in range(2):
-            with backports.tempfile.TemporaryDirectory() as gen_events_path:
+            with backports.tempfile.TemporaryDirectory() as isolated_events_path:
+                orig_events_path = os.path.join(isolated_events_path, 'original')
+                gen_events_path = os.path.join(isolated_events_path, 'generated')
+                os.makedirs(orig_events_path)
+                os.makedirs(gen_events_path)
+
                 sc.generate(orig_wav_file.name, orig_jam_file.name,
                             disable_instantiation_warnings=True,
-                            save_isolated_events=True)
+                            save_isolated_events=True, 
+                            isolated_events_path=orig_events_path)
                 scaper.trim(orig_wav_file.name, orig_jam_file.name,
                             orig_wav_file.name, orig_jam_file.name,
                             np.random.uniform(0, 2), np.random.uniform(8, 10))
@@ -282,7 +304,7 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
                                           isolated_events_path=gen_events_path)
 
                 _validate_soundscape_and_event_audio(orig_wav_file, gen_wav_file, 
-                    gen_events_path)
+                    gen_events_path, orig_events_path)
 
         # Test with new FG and BG paths
         for _ in range(5):
