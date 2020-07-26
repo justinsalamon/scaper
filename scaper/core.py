@@ -194,7 +194,7 @@ def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
                     tfm.trim(sliceop['slice_start'], sliceop['slice_end'])
                     tfm.build(audio_file, tmpfiles[-1].name)
                     # Copy result back to original file
-                    shutil.copyfile(tmpfiles[-1].name, audio_outfile)
+                    shutil.copyfile(tmpfiles[-1].name, audio_file)
 
     # Optionally save new jams file
     if jams_outfile is not None:
