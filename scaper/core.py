@@ -1757,6 +1757,8 @@ class Scaper(object):
                     event_audio_list.append(event_audio[:duration_in_samples])
 
                 elif e.value['role'] == 'foreground':
+                    audio_info = soundfile.info(e.value['source_file'])
+                    event_sr = audio_info.samplerate
                     # Create transformer
                     tfm = sox.Transformer()
                     # Ensure consistent sampling rate and channels
@@ -1812,8 +1814,10 @@ class Scaper(object):
                     fade_in_window = np.sin(np.linspace(0, np.pi / 2, fade_in_samples))[..., None]
                     fade_out_window = np.sin(np.linspace(np.pi / 2, 0, fade_out_samples))[..., None]
 
-                    event_audio[:fade_in_samples] *= fade_in_window
-                    event_audio[-fade_out_samples:] *= fade_out_window
+                    if fade_in_samples > 0:
+                        event_audio[:fade_in_samples] *= fade_in_window
+                    if fade_out_samples > 0:
+                        event_audio[-fade_out_samples:] *= fade_out_window
 
                     # Pad with silence before/after event to match the
                     # soundscape duration
