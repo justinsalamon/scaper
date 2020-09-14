@@ -102,6 +102,7 @@ def get_integrated_lufs(audio_array, samplerate, min_duration=0.5,
         samplerate, filter_class=filter_class, block_size=block_size
     )
     loudness = meter.integrated_loudness(audio_array)
+    loudness = max(loudness, -70)
     return loudness
 
 

@@ -1801,7 +1801,6 @@ class Scaper(object):
                     event_audio = event_audio.reshape(-1, self.n_channels)
                     # NOW compute LUFS
                     fg_lufs = get_integrated_lufs(event_audio, event_sr)
-
                     # Normalize to specified SNR with respect to
                     # background
                     gain = self.ref_db + e.value['snr'] - fg_lufs
