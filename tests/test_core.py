@@ -1268,21 +1268,23 @@ def _create_scaper_with_random_seed(seed):
 
 def test_generate_audio():
     for sr in SAMPLE_RATES:
-        REG_WAV_PATH = TEST_PATHS[sr]['REG'].wav
-        REG_BGONLY_WAV_PATH = TEST_PATHS[sr]['REG_BGONLY'].wav
-        REG_REVERB_WAV_PATH = TEST_PATHS[sr]['REG_REVERB'].wav
-        _test_generate_audio(sr, REG_WAV_PATH, REG_BGONLY_WAV_PATH, REG_REVERB_WAV_PATH)
+        for n_ch in range(1, 3):
+            REG_WAV_PATH = TEST_PATHS[sr]['REG'].wav
+            REG_BGONLY_WAV_PATH = TEST_PATHS[sr]['REG_BGONLY'].wav
+            REG_REVERB_WAV_PATH = TEST_PATHS[sr]['REG_REVERB'].wav
+            _test_generate_audio(sr, REG_WAV_PATH, REG_BGONLY_WAV_PATH, REG_REVERB_WAV_PATH, n_ch)
 
 
-def _test_generate_audio(SR, REG_WAV_PATH, REG_BGONLY_WAV_PATH, REG_REVERB_WAV_PATH, atol=1e-4, rtol=1e-8):
+def _test_generate_audio(SR, REG_WAV_PATH, REG_BGONLY_WAV_PATH, REG_REVERB_WAV_PATH, N_CHANNELS, atol=1e-4, rtol=1e-8):
     # Regression test: same spec, same audio (not this will fail if we update
     # any of the audio processing techniques used (e.g. change time stretching
     # algorithm.
     sc = scaper.Scaper(10.0, fg_path=FG_PATH, bg_path=BG_PATH)
     sc.ref_db = -50
     sc.sr = SR
+    sc.n_channels = N_CHANNELS
 
-    print("TEST SR: {}".format(SR))
+    print("TEST SR: {}, # OF CHANNELS: {}".format(SR, N_CHANNELS))
 
     # background
     sc.add_background(
@@ -1340,24 +1342,27 @@ def _test_generate_audio(SR, REG_WAV_PATH, REG_BGONLY_WAV_PATH, REG_REVERB_WAV_P
         sc._generate_audio(wav_file.name, jam.annotations[0])
 
         # validate audio
-        wav, sr = soundfile.read(wav_file.name)
-        regwav, sr = soundfile.read(REG_WAV_PATH)
-        assert np.allclose(wav, regwav, atol=atol, rtol=rtol)
+        wav, sr = soundfile.read(wav_file.name, always_2d=True)
+        regwav, sr = soundfile.read(REG_WAV_PATH, always_2d=True)
+        for ch in range(wav.shape[-1]):
+            assert np.allclose(wav[:, ch, None], regwav, atol=atol, rtol=rtol)
 
         # with reverb
         sc._generate_audio(wav_file.name, jam.annotations[0], reverb=0.2)
         # validate audio
-        wav, sr = soundfile.read(wav_file.name)
-        regwav, sr = soundfile.read(REG_REVERB_WAV_PATH)
-        assert np.allclose(wav, regwav, atol=atol, rtol=rtol)
+        wav, sr = soundfile.read(wav_file.name, always_2d=True)
+        regwav, sr = soundfile.read(REG_REVERB_WAV_PATH, always_2d=True)
+        for ch in range(wav.shape[-1]):
+            assert np.allclose(wav[:, ch, None], regwav, atol=atol, rtol=rtol)
 
         # Don't disable sox warnings (just to cover line)
         sc._generate_audio(wav_file.name, jam.annotations[0],
                            disable_sox_warnings=False)
         # validate audio
-        wav, sr = soundfile.read(wav_file.name)
-        regwav, sr = soundfile.read(REG_WAV_PATH)
-        assert np.allclose(wav, regwav, atol=atol, rtol=rtol)
+        wav, sr = soundfile.read(wav_file.name, always_2d=True)
+        regwav, sr = soundfile.read(REG_WAV_PATH, always_2d=True)
+        for ch in range(wav.shape[-1]):
+            assert np.allclose(wav[:, ch, None], regwav, atol=atol, rtol=rtol)
 
         # namespace must be scaper
         jam.annotations[0].namespace = 'tag_open'
@@ -1393,9 +1398,10 @@ def _test_generate_audio(SR, REG_WAV_PATH, REG_BGONLY_WAV_PATH, REG_REVERB_WAV_P
         jam = sc._instantiate(disable_instantiation_warnings=True, reverb=reverb)
         sc._generate_audio(wav_file.name, jam.annotations[0], reverb=reverb)
         # validate audio
-        wav, sr = soundfile.read(wav_file.name)
-        regwav, sr = soundfile.read(REG_BGONLY_WAV_PATH)
-        assert np.allclose(wav, regwav, atol=atol, rtol=rtol)
+        wav, sr = soundfile.read(wav_file.name, always_2d=True)
+        regwav, sr = soundfile.read(REG_BGONLY_WAV_PATH, always_2d=True)
+        for ch in range(wav.shape[-1]):
+            assert np.allclose(wav[:, ch, None], regwav, atol=atol, rtol=rtol)
 
 
 def create_scaper_scene_without_random_seed():

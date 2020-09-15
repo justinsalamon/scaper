@@ -1748,9 +1748,13 @@ class Scaper(object):
                             input_array=event_audio,
                             sample_rate_in=event_sr
                         )
+                        event_audio = event_audio.reshape(-1, self.n_channels)
                         # Write event_audio_array to disk so we can compute LUFS using ffmpeg
                         soundfile.write(
-                            tmpfiles_internal[-1].name, event_audio.T, self.sr)
+                            tmpfiles_internal[-1].name, 
+                            event_audio.mean(axis=-1, keepdims=True), 
+                            self.sr
+                        )
                         # NOW compute LUFS
                         bg_lufs = get_integrated_lufs(
                             tmpfiles_internal[-1].name)
@@ -1806,8 +1810,13 @@ class Scaper(object):
                             input_array=event_audio,
                             sample_rate_in=event_sr
                         )
+                        event_audio = event_audio.reshape(-1, self.n_channels)
+
                         soundfile.write(
-                            tmpfiles_internal[-1].name, event_audio.T, self.sr)
+                            tmpfiles_internal[-1].name, 
+                            event_audio.mean(axis=-1, keepdims=True), 
+                            self.sr
+                        )
                         # NOW compute LUFS
                         fg_lufs = get_integrated_lufs(
                             tmpfiles_internal[-1].name)
@@ -1821,8 +1830,8 @@ class Scaper(object):
                         # (avoid unnatural sound onsets/offsets)
                         fade_in_samples =  int(self.fade_in_len * self.sr)
                         fade_out_samples = int(self.fade_out_len * self.sr)
-                        fade_in_window = np.sin(np.linspace(0, np.pi / 2, fade_in_samples))
-                        fade_out_window = np.sin(np.linspace(np.pi / 2, 0, fade_out_samples))
+                        fade_in_window = np.sin(np.linspace(0, np.pi / 2, fade_in_samples))[..., None]
+                        fade_out_window = np.sin(np.linspace(np.pi / 2, 0, fade_out_samples))[..., None]
 
                         event_audio[:fade_in_samples] *= fade_in_window
                         event_audio[-fade_out_samples:] *= fade_out_window
@@ -1831,8 +1840,8 @@ class Scaper(object):
                         # soundscape duration
                         prepad = int(self.sr * e.value['event_time'])
                         postpad = max(0, duration_in_samples - (event_audio.shape[0] + prepad))
-                        event_audio = np.pad(event_audio, ((prepad, postpad)), mode='constant',
-                            constant_values=(0, 0))
+                        event_audio = np.pad(event_audio, ((prepad, postpad), (0, 0)), 
+                            mode='constant', constant_values=(0, 0))
                         event_audio = event_audio[:duration_in_samples]
 
                         event_audio_list.append(event_audio[:duration_in_samples])
@@ -1889,6 +1898,7 @@ class Scaper(object):
                     input_array=soundscape_audio,
                     sample_rate_in=self.sr,
                 )
+                soundscape_audio = soundscape_audio.reshape(-1, self.n_channels)
                 soundfile.write(audio_path, soundscape_audio, self.sr)
                         
         ann.sandbox.scaper.soundscape_audio_path = audio_path
