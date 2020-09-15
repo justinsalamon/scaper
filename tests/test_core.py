@@ -1344,16 +1344,18 @@ def _test_generate_audio(SR, REG_WAV_PATH, REG_BGONLY_WAV_PATH, REG_REVERB_WAV_P
         # validate audio
         wav, sr = soundfile.read(wav_file.name, always_2d=True)
         regwav, sr = soundfile.read(REG_WAV_PATH, always_2d=True)
-        for ch in range(wav.shape[-1]):
-            assert np.allclose(wav[:, ch, None], regwav, atol=atol, rtol=rtol)
+        # TODO: Add multi-channel regression data.
+        if N_CHANNELS == 1:
+            assert np.allclose(wav, regwav, atol=atol, rtol=rtol)
 
         # with reverb
         sc._generate_audio(wav_file.name, jam.annotations[0], reverb=0.2)
         # validate audio
         wav, sr = soundfile.read(wav_file.name, always_2d=True)
         regwav, sr = soundfile.read(REG_REVERB_WAV_PATH, always_2d=True)
-        for ch in range(wav.shape[-1]):
-            assert np.allclose(wav[:, ch, None], regwav, atol=atol, rtol=rtol)
+        # TODO: Add multi-channel regression data.
+        if N_CHANNELS == 1:
+            assert np.allclose(wav, regwav, atol=atol, rtol=rtol)
 
         # Don't disable sox warnings (just to cover line)
         sc._generate_audio(wav_file.name, jam.annotations[0],
@@ -1361,8 +1363,9 @@ def _test_generate_audio(SR, REG_WAV_PATH, REG_BGONLY_WAV_PATH, REG_REVERB_WAV_P
         # validate audio
         wav, sr = soundfile.read(wav_file.name, always_2d=True)
         regwav, sr = soundfile.read(REG_WAV_PATH, always_2d=True)
-        for ch in range(wav.shape[-1]):
-            assert np.allclose(wav[:, ch, None], regwav, atol=atol, rtol=rtol)
+        # TODO: Add multi-channel regression data.
+        if N_CHANNELS == 1:
+            assert np.allclose(wav, regwav, atol=atol, rtol=rtol)
 
         # namespace must be scaper
         jam.annotations[0].namespace = 'tag_open'
@@ -1400,8 +1403,9 @@ def _test_generate_audio(SR, REG_WAV_PATH, REG_BGONLY_WAV_PATH, REG_REVERB_WAV_P
         # validate audio
         wav, sr = soundfile.read(wav_file.name, always_2d=True)
         regwav, sr = soundfile.read(REG_BGONLY_WAV_PATH, always_2d=True)
-        for ch in range(wav.shape[-1]):
-            assert np.allclose(wav[:, ch, None], regwav, atol=atol, rtol=rtol)
+        # TODO: Add multi-channel regression data.
+        if N_CHANNELS == 1:
+            assert np.allclose(wav, regwav, atol=atol, rtol=rtol)
 
 
 def create_scaper_scene_without_random_seed():

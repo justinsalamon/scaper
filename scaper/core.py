@@ -1752,7 +1752,7 @@ class Scaper(object):
                         # Write event_audio_array to disk so we can compute LUFS using ffmpeg
                         soundfile.write(
                             tmpfiles_internal[-1].name, 
-                            event_audio.mean(axis=-1, keepdims=True), 
+                            event_audio,
                             self.sr
                         )
                         # NOW compute LUFS
@@ -1814,7 +1814,7 @@ class Scaper(object):
 
                         soundfile.write(
                             tmpfiles_internal[-1].name, 
-                            event_audio.mean(axis=-1, keepdims=True), 
+                            event_audio,
                             self.sr
                         )
                         # NOW compute LUFS
@@ -1869,7 +1869,7 @@ class Scaper(object):
                         # os.makedirs(..., exist_ok=True) but we test back to
                         # Python 2.7.
                         os.makedirs(event_folder)
-                    soundfile.write(event_audio_path, event_audio_list[-1].T, self.sr)
+                    soundfile.write(event_audio_path, event_audio_list[-1], self.sr)
                     isolated_events_audio_path.append(event_audio_path)
 
                     #TODO what do we do in this case? for now throw a warning
