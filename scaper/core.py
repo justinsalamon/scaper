@@ -1892,7 +1892,6 @@ class Scaper(object):
                 if reverb is not None:
                     tfm.reverb(reverberance=reverb * 100)
                 # TODO: do we want to normalize the final output?
-
                 soundscape_audio = sum(event_audio_list)
                 soundscape_audio = tfm.build_array(
                     input_array=soundscape_audio,

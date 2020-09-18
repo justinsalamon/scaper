@@ -217,7 +217,8 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
             # Trim does not currently support trimming isolated events, but if/when
             # we add that functionality, this test should be updated to test that
             # as well, using the files in orig_events_path (currently unused).
-            assert np.allclose(gen_wav, sum(gen_audio), atol=atol, rtol=rtol)
+            # atol = 1e-4, to match test_generate_isolated_events
+            assert np.allclose(gen_wav, sum(gen_audio), atol=1e-4, rtol=rtol)
 
         # generate, then generate from the jams and compare audio files
         # repeat 5 times
