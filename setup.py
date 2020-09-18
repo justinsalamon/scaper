@@ -37,9 +37,10 @@ setup(
         ],
     install_requires=[
         'sox==1.4.0b0',
+        'pyristent==0.14.0',
         'jams>=0.3.2',
         'numpy>=1.13.3',
-        'soundfile'
+        'soundfile',
     ],
     extras_require={
         'docs': [
