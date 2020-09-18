@@ -6,7 +6,6 @@ v1.4.0
 ~~~~~~
 - Operations on all files happen in-memory now, via new PySox features (build_array) and numpy operations for applying fades.
 - Scaper is faster now due to the in-memory changes.
-- This will be the last release to support Python 2.7 and 3.4.
 
 v1.3.9
 ~~~~~~
