@@ -218,7 +218,7 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
             # we add that functionality, this test should be updated to test that
             # as well, using the files in orig_events_path (currently unused).
             # atol = 1e-4, to match test_generate_isolated_events
-            assert np.allclose(gen_wav, sum(gen_audio), atol=1e-4, rtol=rtol)
+            assert np.allclose(gen_wav, sum(gen_audio), atol=1e-8, rtol=rtol)
 
         # generate, then generate from the jams and compare audio files
         # repeat 5 times
@@ -1578,7 +1578,7 @@ def _test_generate_isolated_events(SR, isolated_events_path=None, atol=1e-4, rto
             isolated_audio.append(_isolated_sandbox_audio)
 
         # the sum of the isolated audio should sum to the soundscape
-        assert np.allclose(sum(isolated_audio), soundscape_audio, atol=1e-4, rtol=1e-8)
+        assert np.allclose(sum(isolated_audio), soundscape_audio, atol=1e-8, rtol=1e-8)
 
         jam = sc._instantiate(disable_instantiation_warnings=True)
 

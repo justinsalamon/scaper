@@ -1869,7 +1869,7 @@ class Scaper(object):
                         # os.makedirs(..., exist_ok=True) but we test back to
                         # Python 2.7.
                         os.makedirs(event_folder)
-                    soundfile.write(event_audio_path, event_audio_list[-1], self.sr)
+                    soundfile.write(event_audio_path, event_audio_list[-1], self.sr, subtype='PCM_32')
                     isolated_events_audio_path.append(event_audio_path)
 
                     #TODO what do we do in this case? for now throw a warning
@@ -1898,7 +1898,7 @@ class Scaper(object):
                     sample_rate_in=self.sr,
                 )
                 soundscape_audio = soundscape_audio.reshape(-1, self.n_channels)
-                soundfile.write(audio_path, soundscape_audio, self.sr)
+                soundfile.write(audio_path, soundscape_audio, self.sr, subtype='PCM_32')
                         
         ann.sandbox.scaper.soundscape_audio_path = audio_path
         ann.sandbox.scaper.isolated_events_audio_path = isolated_events_audio_path
