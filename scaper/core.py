@@ -1764,6 +1764,7 @@ class Scaper(object):
             temp_logging_level = logging.getLogger().level
 
         # List for storing all generated audio (one array for every event)
+        soundscape_audio = None
         event_audio_list = []
 
         with _set_temp_logging_level(temp_logging_level):
