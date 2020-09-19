@@ -107,8 +107,9 @@ def generate_from_jams(jams_infile,
             to audio I/O setting this parameter to False may help with debugging.
     txt_path: str or None
             Path for saving a simplified annotation in a space separated format
-            [onset  offset  label]. Good for loading labels in e.g. Audacity. If
-            None, does not save txt annotation to disk.
+            [onset  offset  label] where onset and offset are in seconds. Good
+            for loading labels in e.g. Audacity. If None, does not save txt
+            annotation to disk.
     txt_sep: str
         The separator to use when saving a simplified annotation as a text
         file (default is tab for compatibility with Audacity label files).
@@ -123,7 +124,7 @@ def generate_from_jams(jams_infile,
         The JAMS object containing the full soundscape annotation.
     annotation_list : list
         A simplified annotation in a space-separated format
-        [onset  offset  label].
+        [onset  offset  label] where onset and offset are in seconds.
     event_audio_list: list
         A list of np.ndarrays containing the audio samples of every
         individual background and foreground sound event. Events are listed
@@ -252,7 +253,6 @@ def generate_from_jams(jams_infile,
             writer = csv.writer(csv_file, delimiter=txt_sep)
             writer.writerows(annotation_list)
 
-    # Return
     return soundscape_audio, soundscape_jam, annotation_list, event_audio_list
 
 
@@ -2048,8 +2048,9 @@ class Scaper(object):
             later synthesis via `generate_from_jams()`.
         txt_path: str or None
             Path for saving a simplified annotation in a space separated format
-            [onset  offset  label]. Good for loading labels in e.g. Audacity. If
-            None, does not save txt annotation to disk.
+            [onset  offset  label] where onset and offset are in seconds. Good
+            for loading labels in e.g. Audacity. If None, does not save txt
+            annotation to disk.
         txt_sep: str
             The separator to use when saving a simplified annotation as a text
             file (default is tab for compatibility with Audacity label files).
@@ -2068,7 +2069,7 @@ class Scaper(object):
             The JAMS object containing the full soundscape annotation.
         annotation_list : list
             A simplified annotation in a space-separated format
-            [onset  offset  label].
+            [onset  offset  label] where onset and offset are in seconds.
         event_audio_list: list
             A list of np.ndarrays containing the audio samples of every
             individual background and foreground sound event. Events are listed
