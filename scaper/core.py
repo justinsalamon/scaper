@@ -1,4 +1,5 @@
 import sox
+import soundfile
 import os
 import warnings
 import jams
@@ -1314,7 +1315,7 @@ class Scaper(object):
             used_source_files.append(source_file)
 
         # Get the duration of the source audio file
-        source_duration = sox.file_info.duration(source_file)
+        source_duration = soundfile.info(source_file).duration
 
         # If this is a background event, the event duration is the 
         # duration of the soundscape.
@@ -1697,204 +1698,208 @@ class Scaper(object):
 
         with _set_temp_logging_level(temp_logging_level):
 
-            # Array for storing all tmp files (one for every event)
-            tmpfiles = []
-            with _close_temp_files(tmpfiles):
-                isolated_events_audio_path = []
+            # List for storing all generated audio (one array for every event)
+            event_audio_list = []
+            isolated_events_audio_path = []
+            duration_in_samples = int(self.duration * self.sr)
 
-                role_counter = {'background': 0, 'foreground': 0}
+            role_counter = {'background': 0, 'foreground': 0}
 
-                for i, e in enumerate(ann.data):
-                    if e.value['role'] == 'background':
-                        # Concatenate background if necessary. Right now we
-                        # always concatenate the background at least once,
-                        # since the pysox combiner raises an error if you try
-                        # to call build using an input_file_list with less than
-                        # 2 elements. In the future if the combiner is updated
-                        # to accept a list of length 1, then the max(..., 2)
-                        # statement can be removed from the calculation of
-                        # ntiles.
-                        source_duration = (
-                            sox.file_info.duration(e.value['source_file']))
-                        ntiles = int(
-                            max(self.duration // source_duration + 1, 2))
+            for i, e in enumerate(ann.data):
+                if e.value['role'] == 'background':
+                    # Concatenate background if necessary.
+                    source_duration = soundfile.info(e.value['source_file']).duration
+                    ntiles = int(
+                        max(self.duration // source_duration + 1, 1))
 
-                        # Create combiner
-                        cmb = sox.Combiner()
-                        # Ensure consistent sampling rate and channels
-                        cmb.convert(samplerate=self.sr,
-                                    n_channels=self.n_channels,
-                                    bitdepth=None)
-                        # Then trim the duration of the background event
-                        cmb.trim(e.value['source_time'],
-                                 e.value['source_time'] +
-                                 e.value['event_duration'])
-
-                        # PROCESS BEFORE COMPUTING LUFS
-                        tmpfiles_internal = []
-                        with _close_temp_files(tmpfiles_internal):
-                            # create internal tmpfile
-                            tmpfiles_internal.append(
-                                tempfile.NamedTemporaryFile(
-                                    suffix='.wav', delete=False))
-                            # synthesize concatenated/trimmed background
-                            cmb.build(
-                                [e.value['source_file']] * ntiles,
-                                tmpfiles_internal[-1].name, 'concatenate')
-                            # NOW compute LUFS
-                            bg_lufs = get_integrated_lufs(
-                                tmpfiles_internal[-1].name)
-
-                            # Normalize background to reference DB.
-                            gain = self.ref_db - bg_lufs
-
-                            # Use transformer to adapt gain
-                            tfm = sox.Transformer()
-                            tfm.gain(gain_db=gain, normalize=False)
-
-                            # Prepare tmp file for output
-                            tmpfiles.append(
-                                tempfile.NamedTemporaryFile(
-                                    suffix='.wav', delete=False))
-
-                            tfm.build(tmpfiles_internal[-1].name,
-                                      tmpfiles[-1].name)
-
-                    elif e.value['role'] == 'foreground':
-                        # Create transformer
-                        tfm = sox.Transformer()
-                        # Ensure consistent sampling rate and channels
-                        tfm.convert(samplerate=self.sr,
-                                    n_channels=self.n_channels,
-                                    bitdepth=None)
-                        # Trim
-                        tfm.trim(e.value['source_time'],
-                                 e.value['source_time'] +
-                                 e.value['event_duration'])
-
-                        # Pitch shift
-                        if e.value['pitch_shift'] is not None:
-                            tfm.pitch(e.value['pitch_shift'])
-
-                        # Time stretch
-                        if e.value['time_stretch'] is not None:
-                            factor = 1.0 / float(e.value['time_stretch'])
-                            tfm.tempo(factor, audio_type='s', quick=False)
-
-                        # Apply very short fade in and out
-                        # (avoid unnatural sound onsets/offsets)
-                        tfm.fade(fade_in_len=self.fade_in_len,
-                                 fade_out_len=self.fade_out_len)
-
-                        # PROCESS BEFORE COMPUTING LUFS
-                        tmpfiles_internal = []
-                        with _close_temp_files(tmpfiles_internal):
-                            # create internal tmpfile
-                            tmpfiles_internal.append(
-                                tempfile.NamedTemporaryFile(
-                                    suffix='.wav', delete=False))
-                            # synthesize edited foreground sound event
-                            tfm.build(e.value['source_file'],
-                                      tmpfiles_internal[-1].name)
-                            # if time stretched get actual new duration
-                            if e.value['time_stretch'] is not None:
-                                fg_stretched_duration = sox.file_info.duration(
-                                    tmpfiles_internal[-1].name)
-
-                            # NOW compute LUFS
-                            fg_lufs = get_integrated_lufs(
-                                tmpfiles_internal[-1].name)
-
-                            # Normalize to specified SNR with respect to
-                            # background
-                            tfm = sox.Transformer()
-                            gain = self.ref_db + e.value['snr'] - fg_lufs
-                            tfm.gain(gain_db=gain, normalize=False)
-
-                            # Pad with silence before/after event to match the
-                            # soundscape duration
-                            prepad = e.value['event_time']
-                            if e.value['time_stretch'] is None:
-                                postpad = max(
-                                    0, self.duration - (
-                                            e.value['event_time'] +
-                                            e.value['event_duration']))
-                            else:
-                                postpad = max(
-                                    0, self.duration - (
-                                            e.value['event_time'] +
-                                            fg_stretched_duration))
-                            tfm.pad(prepad, postpad)
-
-                            # Finally save result to a tmp file
-                            tmpfiles.append(
-                                tempfile.NamedTemporaryFile(
-                                    suffix='.wav', delete=False))
-                            tfm.build(tmpfiles_internal[-1].name,
-                                      tmpfiles[-1].name)
-                    else:
-                        raise ScaperError(
-                            'Unsupported event role: {:s}'.format(
-                                e.value['role']))
-
-                    if save_isolated_events:
-                        base, ext = os.path.splitext(audio_path)
-                        if isolated_events_path is None:
-                            event_folder = '{:s}_events'.format(base)
-                        else:
-                            event_folder = isolated_events_path
-
-                        _role_count = role_counter[e.value['role']]
-                        event_audio_path = os.path.join(
-                            event_folder, 
-                            '{:s}{:d}_{:s}{:s}'.format(
-                                e.value['role'], _role_count, e.value['label'], ext))
-                        role_counter[e.value['role']] += 1
-                        
-                        if not os.path.exists(event_folder):
-                            # In Python 3.2 and above we could do 
-                            # os.makedirs(..., exist_ok=True) but we test back to
-                            # Python 2.7.
-                            os.makedirs(event_folder)
-                        shutil.copy(tmpfiles[-1].name, event_audio_path)
-                        isolated_events_audio_path.append(event_audio_path)
-
-                        #TODO what do we do in this case? for now throw a warning
-                        if reverb is not None:
-                            warnings.warn(
-                                "Reverb is on and save_isolated_events is True. Reverberation "
-                                "is applied to the mixture but not output "
-                                "source files. In this case the sum of the "
-                                "audio of the isolated events will not add up to the "
-                                "mixture", ScaperWarning)
-
-                # Finally combine all the files and optionally apply reverb
-                # If we have more than one tempfile (i.e. background + at
-                # least one foreground event, we need a combiner. If there's
-                # only the background track, then we need a transformer!
-                if len(tmpfiles) == 0:
-                    warnings.warn(
-                        "No events to synthesize (silent soundscape), no audio "
-                        "saved to disk.", ScaperWarning)
-                elif len(tmpfiles) == 1:
+                    # Create transformer
                     tfm = sox.Transformer()
+                    # Ensure consistent sampling rate and channels
+                    # Need both a convert operation (to do the conversion),
+                    # and set_output_format (to have sox interpret the output
+                    # correctly).
+                    tfm.convert(
+                        samplerate=self.sr,
+                        n_channels=self.n_channels,
+                        bitdepth=None
+                    )
+                    tfm.set_output_format(
+                        rate=self.sr,
+                        channels=self.n_channels
+                    )
+                    # Then trim the duration of the background event
+                    tfm.trim(e.value['source_time'],
+                                e.value['source_time'] +
+                                e.value['event_duration'])
+
+                    # PROCESS BEFORE COMPUTING LUFS
+                    tmpfiles_internal = []
+                    with _close_temp_files(tmpfiles_internal):
+                        # create internal tmpfile
+                        tmpfiles_internal.append(
+                            tempfile.NamedTemporaryFile(
+                                suffix='.wav', delete=False))
+                        # read in background off disk
+                        event_audio, event_sr = soundfile.read(
+                            e.value['source_file'], always_2d=True)
+                        # tile the background along the appropriate dimensions
+                        event_audio = np.tile(event_audio, (ntiles, 1))
+                        event_audio = tfm.build_array(
+                            input_array=event_audio,
+                            sample_rate_in=event_sr
+                        )
+                        event_audio = event_audio.reshape(-1, self.n_channels)
+                        # Write event_audio_array to disk so we can compute LUFS using ffmpeg
+                        soundfile.write(
+                            tmpfiles_internal[-1].name, 
+                            event_audio,
+                            self.sr
+                        )
+                        # NOW compute LUFS
+                        bg_lufs = get_integrated_lufs(
+                            tmpfiles_internal[-1].name)
+
+                        # Normalize background to reference DB.
+                        gain = self.ref_db - bg_lufs
+                        event_audio = np.exp(gain * np.log(10) / 20) * event_audio
+
+                        event_audio_list.append(event_audio[:duration_in_samples])
+
+                elif e.value['role'] == 'foreground':
+                    # Create transformer
+                    tfm = sox.Transformer()
+                    # Ensure consistent sampling rate and channels
+                    # Need both a convert operation (to do the conversion),
+                    # and set_output_format (to have sox interpret the output
+                    # correctly).
+                    tfm.convert(
+                        samplerate=self.sr,
+                        n_channels=self.n_channels,
+                        bitdepth=None
+                    )
+                    tfm.set_output_format(
+                        rate=self.sr,
+                        channels=self.n_channels
+                    )
+                    # Trim
+                    tfm.trim(e.value['source_time'],
+                                e.value['source_time'] +
+                                e.value['event_duration'])
+
+                    # Pitch shift
+                    if e.value['pitch_shift'] is not None:
+                        tfm.pitch(e.value['pitch_shift'])
+
+                    # Time stretch
+                    if e.value['time_stretch'] is not None:
+                        factor = 1.0 / float(e.value['time_stretch'])
+                        tfm.tempo(factor, audio_type='s', quick=False)
+
+                    # PROCESS BEFORE COMPUTING LUFS
+                    tmpfiles_internal = []
+                    with _close_temp_files(tmpfiles_internal):
+                        # create internal tmpfile
+                        tmpfiles_internal.append(
+                            tempfile.NamedTemporaryFile(
+                                suffix='.wav', delete=False))
+                        
+                        # synthesize edited foreground sound event
+                        event_audio, event_sr = soundfile.read(
+                            e.value['source_file'], always_2d=True)
+                        event_audio = tfm.build_array(
+                            input_array=event_audio,
+                            sample_rate_in=event_sr
+                        )
+                        event_audio = event_audio.reshape(-1, self.n_channels)
+
+                        soundfile.write(
+                            tmpfiles_internal[-1].name, 
+                            event_audio,
+                            self.sr
+                        )
+                        # NOW compute LUFS
+                        fg_lufs = get_integrated_lufs(
+                            tmpfiles_internal[-1].name)
+
+                        # Normalize to specified SNR with respect to
+                        # background
+                        gain = self.ref_db + e.value['snr'] - fg_lufs
+                        event_audio = np.exp(gain * np.log(10) / 20) * event_audio
+
+                        # Apply short fade in and out
+                        # (avoid unnatural sound onsets/offsets)
+                        fade_in_samples =  int(self.fade_in_len * self.sr)
+                        fade_out_samples = int(self.fade_out_len * self.sr)
+                        fade_in_window = np.sin(np.linspace(0, np.pi / 2, fade_in_samples))[..., None]
+                        fade_out_window = np.sin(np.linspace(np.pi / 2, 0, fade_out_samples))[..., None]
+
+                        event_audio[:fade_in_samples] *= fade_in_window
+                        event_audio[-fade_out_samples:] *= fade_out_window
+
+                        # Pad with silence before/after event to match the
+                        # soundscape duration
+                        prepad = int(self.sr * e.value['event_time'])
+                        postpad = max(0, duration_in_samples - (event_audio.shape[0] + prepad))
+                        event_audio = np.pad(event_audio, ((prepad, postpad), (0, 0)), 
+                            mode='constant', constant_values=(0, 0))
+                        event_audio = event_audio[:duration_in_samples]
+
+                        event_audio_list.append(event_audio[:duration_in_samples])
+                else:
+                    raise ScaperError(
+                        'Unsupported event role: {:s}'.format(
+                            e.value['role']))
+
+                if save_isolated_events:
+                    base, ext = os.path.splitext(audio_path)
+                    if isolated_events_path is None:
+                        event_folder = '{:s}_events'.format(base)
+                    else:
+                        event_folder = isolated_events_path
+
+                    _role_count = role_counter[e.value['role']]
+                    event_audio_path = os.path.join(
+                        event_folder, 
+                        '{:s}{:d}_{:s}{:s}'.format(
+                            e.value['role'], _role_count, e.value['label'], ext))
+                    role_counter[e.value['role']] += 1
+                    
+                    if not os.path.exists(event_folder):
+                        # In Python 3.2 and above we could do 
+                        # os.makedirs(..., exist_ok=True) but we test back to
+                        # Python 2.7.
+                        os.makedirs(event_folder)
+                    soundfile.write(event_audio_path, event_audio_list[-1], self.sr, subtype='PCM_32')
+                    isolated_events_audio_path.append(event_audio_path)
+
+                    #TODO what do we do in this case? for now throw a warning
                     if reverb is not None:
-                        tfm.reverb(reverberance=reverb * 100)
-                    # TODO: do we want to normalize the final output?
-                    tfm.build(tmpfiles[0].name, audio_path)
-                else:                        
-                    cmb = sox.Combiner()
-                    if reverb is not None:
-                        cmb.reverb(reverberance=reverb * 100)
-                    # TODO: do we want to normalize the final output?
-                    cmb.build([t.name for t in tmpfiles], audio_path, 'mix')
-                
-                # Make sure every single audio file has exactly the same duration 
-                # using soundfile.
-                duration_in_samples = int(self.duration * self.sr)
-                for _audio_file in [audio_path] + isolated_events_audio_path:
-                    match_sample_length(_audio_file, duration_in_samples)
-        
+                        warnings.warn(
+                            "Reverb is on and save_isolated_events is True. Reverberation "
+                            "is applied to the mixture but not output "
+                            "source files. In this case the sum of the "
+                            "audio of the isolated events will not add up to the "
+                            "mixture", ScaperWarning)
+
+            # Finally combine all the files and optionally apply reverb.
+            # If there are no events, throw a warning.
+            if len(event_audio_list) == 0:
+                warnings.warn(
+                    "No events to synthesize (silent soundscape), no audio "
+                    "saved to disk.", ScaperWarning)
+            else:                        
+                tfm = sox.Transformer()
+                if reverb is not None:
+                    tfm.reverb(reverberance=reverb * 100)
+                # TODO: do we want to normalize the final output?
+                soundscape_audio = sum(event_audio_list)
+                soundscape_audio = tfm.build_array(
+                    input_array=soundscape_audio,
+                    sample_rate_in=self.sr,
+                )
+                soundscape_audio = soundscape_audio.reshape(-1, self.n_channels)
+                soundfile.write(audio_path, soundscape_audio, self.sr, subtype='PCM_32')
+                        
         ann.sandbox.scaper.soundscape_audio_path = audio_path
         ann.sandbox.scaper.isolated_events_audio_path = isolated_events_audio_path
 
