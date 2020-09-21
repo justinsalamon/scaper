@@ -198,14 +198,18 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
         # Create all necessary temp files
         orig_wav_file = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
         orig_jam_file = tempfile.NamedTemporaryFile(suffix='.jams', delete=True)
+        orig_txt_file = tempfile.NamedTemporaryFile(suffix='.txt', delete=True)
 
         gen_wav_file = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
         gen_jam_file = tempfile.NamedTemporaryFile(suffix='.jams', delete=True)
+        gen_txt_file = tempfile.NamedTemporaryFile(suffix='.txt', delete=True)
 
         tmpfiles.append(orig_wav_file)
         tmpfiles.append(orig_jam_file)
+        tmpfiles.append(orig_txt_file)
         tmpfiles.append(gen_wav_file)
         tmpfiles.append(gen_jam_file)
+        tmpfiles.append(gen_txt_file)
 
         # --- Define scaper --- *
         sc = scaper.Scaper(10, FG_PATH, BG_PATH)
@@ -225,8 +229,10 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
                          pitch_shift=('uniform', -1, 1),
                          time_stretch=('uniform', 0.8, 1.2))
 
-        def _validate_soundscape_and_event_audio(orig_wav_file, gen_wav_file, 
-                                                 gen_events_path, orig_events_path):
+        def _validate_soundscape_and_event_audio(orig_wav_file,
+                                                 gen_wav_file,
+                                                 gen_events_path,
+                                                 orig_events_path):
             # validate audio
             orig_wav, sr = soundfile.read(orig_wav_file.name)
             gen_wav, sr = soundfile.read(gen_wav_file.name)
@@ -247,14 +253,21 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
         # generate, then generate from the jams and compare audio files
         # repeat 5 times
         for _ in range(5):
-            sc.generate(orig_wav_file.name, orig_jam_file.name,
+            sc.generate(audio_path=orig_wav_file.name,
+                        jams_path=orig_jam_file.name,
+                        txt_path=orig_txt_file.name,
                         disable_instantiation_warnings=True)
-            scaper.generate_from_jams(orig_jam_file.name, gen_wav_file.name)
+            scaper.generate_from_jams(orig_jam_file.name,
+                                      audio_outfile=gen_wav_file.name,
+                                      txt_path=gen_txt_file.name)
 
             # validate audio
             orig_wav, sr = soundfile.read(orig_wav_file.name)
             gen_wav, sr = soundfile.read(gen_wav_file.name)
             assert np.allclose(gen_wav, orig_wav, atol=atol, rtol=rtol)
+
+            # validate txt
+            _compare_txt_annotation(orig_txt_file.name, gen_txt_file.name)
 
         # Now add in trimming!
         for _ in range(5):
@@ -264,19 +277,28 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
                 os.makedirs(orig_events_path)
                 os.makedirs(gen_events_path)
 
-                sc.generate(orig_wav_file.name, orig_jam_file.name,
+                sc.generate(audio_path=orig_wav_file.name,
+                            jams_path=orig_jam_file.name,
+                            txt_path=orig_txt_file.name,
                             disable_instantiation_warnings=True,
                             save_isolated_events=True, 
                             isolated_events_path=orig_events_path)
+
                 scaper.trim(orig_wav_file.name, orig_jam_file.name,
                             orig_wav_file.name, orig_jam_file.name,
                             np.random.uniform(0, 5), np.random.uniform(5, 10))
-                scaper.generate_from_jams(orig_jam_file.name, gen_wav_file.name,
+
+                scaper.generate_from_jams(orig_jam_file.name,
+                                          audio_outfile=gen_wav_file.name,
+                                          txt_path=gen_txt_file.name,
                                           save_isolated_events=True, 
                                           isolated_events_path=gen_events_path)
 
                 _validate_soundscape_and_event_audio(orig_wav_file, gen_wav_file, 
                     gen_events_path, orig_events_path)
+
+                # TODO
+                # _compare_txt_annotation(orig_txt_file.name, gen_txt_file.name)
             
         # Double trimming
         for _ in range(2):
@@ -286,22 +308,29 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
                 os.makedirs(orig_events_path)
                 os.makedirs(gen_events_path)
 
-                sc.generate(orig_wav_file.name, orig_jam_file.name,
+                sc.generate(audio_path=orig_wav_file.name,
+                            jams_path=orig_jam_file.name,
+                            txt_path=orig_txt_file.name,
                             disable_instantiation_warnings=True,
                             save_isolated_events=True, 
                             isolated_events_path=orig_events_path)
+
                 scaper.trim(orig_wav_file.name, orig_jam_file.name,
                             orig_wav_file.name, orig_jam_file.name,
                             np.random.uniform(0, 2), np.random.uniform(8, 10))
                 scaper.trim(orig_wav_file.name, orig_jam_file.name,
                             orig_wav_file.name, orig_jam_file.name,
                             np.random.uniform(0, 2), np.random.uniform(4, 6))
+
                 scaper.generate_from_jams(orig_jam_file.name, gen_wav_file.name,
                                           save_isolated_events=True, 
                                           isolated_events_path=gen_events_path)
 
                 _validate_soundscape_and_event_audio(orig_wav_file, gen_wav_file, 
                     gen_events_path, orig_events_path)
+
+                # TODO
+                # _compare_txt_annotation(orig_txt_file.name, gen_txt_file.name)
 
         # Triple trimming
         for _ in range(2):
@@ -311,10 +340,13 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
                 os.makedirs(orig_events_path)
                 os.makedirs(gen_events_path)
 
-                sc.generate(orig_wav_file.name, orig_jam_file.name,
+                sc.generate(audio_path=orig_wav_file.name,
+                            jams_path=orig_jam_file.name,
+                            txt_path=orig_txt_file.name,
                             disable_instantiation_warnings=True,
                             save_isolated_events=True, 
                             isolated_events_path=orig_events_path)
+
                 scaper.trim(orig_wav_file.name, orig_jam_file.name,
                             orig_wav_file.name, orig_jam_file.name,
                             np.random.uniform(0, 2), np.random.uniform(8, 10))
@@ -324,6 +356,7 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
                 scaper.trim(orig_wav_file.name, orig_jam_file.name,
                             orig_wav_file.name, orig_jam_file.name,
                             np.random.uniform(0, 1), np.random.uniform(3, 4))
+
                 scaper.generate_from_jams(orig_jam_file.name, gen_wav_file.name,
                                           save_isolated_events=True, 
                                           isolated_events_path=gen_events_path)
@@ -331,19 +364,32 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
                 _validate_soundscape_and_event_audio(orig_wav_file, gen_wav_file, 
                     gen_events_path, orig_events_path)
 
+                # TODO
+                # _compare_txt_annotation(orig_txt_file.name, gen_txt_file.name)
+
         # Test with new FG and BG paths
         for _ in range(5):
-            sc.generate(orig_wav_file.name, orig_jam_file.name,
+            sc.generate(audio_path=orig_wav_file.name,
+                        jams_path=orig_jam_file.name,
+                        txt_path=orig_txt_file.name,
                         disable_instantiation_warnings=True)
-            scaper.generate_from_jams(orig_jam_file.name, gen_wav_file.name,
-                                      fg_path=ALT_FG_PATH, bg_path=ALT_BG_PATH)
+
+            scaper.generate_from_jams(orig_jam_file.name,
+                                      audio_outfile=gen_wav_file.name,
+                                      txt_path=gen_txt_file.name,
+                                      fg_path=ALT_FG_PATH,
+                                      bg_path=ALT_BG_PATH)
             # validate audio
             orig_wav, sr = soundfile.read(orig_wav_file.name)
             gen_wav, sr = soundfile.read(gen_wav_file.name)
             assert np.allclose(gen_wav, orig_wav, atol=atol, rtol=rtol)
 
+            # validate txt
+            _compare_txt_annotation(orig_txt_file.name, gen_txt_file.name)
+
         # Ensure jam file saved correctly
-        scaper.generate_from_jams(orig_jam_file.name, gen_wav_file.name,
+        scaper.generate_from_jams(orig_jam_file.name,
+                                  audio_outfile=gen_wav_file.name,
                                   jams_outfile=gen_jam_file.name)
         orig_jam = jams.load(orig_jam_file.name)
         gen_jam = jams.load(gen_jam_file.name)
