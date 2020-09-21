@@ -149,6 +149,32 @@ def _compare_scaper_jams(jam, regjam):
                 assert v[k] == regv[k]
 
 
+def _compare_txt_annotation(orig_txt_file, gen_txt_file):
+
+    # read in both files
+    txt_data = []
+    with open(orig_txt_file) as file:
+        reader = csv.reader(file, delimiter='\t')
+        for row in reader:
+            txt_data.append(row)
+    txt_data = np.asarray(txt_data)
+
+    gen_txt_data = []
+    with open(gen_txt_file) as file:
+        reader = csv.reader(file, delimiter='\t')
+        for row in reader:
+            gen_txt_data.append(row)
+    gen_txt_data = np.asarray(gen_txt_data)
+
+    # compare start and end times
+    assert np.allclose([float(x) for x in txt_data[:, 0]],
+                       [float(x) for x in gen_txt_data[:, 0]])
+    assert np.allclose([float(x) for x in txt_data[:, 1]],
+                       [float(x) for x in gen_txt_data[:, 1]])
+    # compare labels
+    assert (txt_data[:, 2] == gen_txt_data[:, 2]).all()
+
+
 def test_generate_from_jams(atol=1e-5, rtol=1e-8):
 
     # Test for invalid jams: no annotations
@@ -198,7 +224,6 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
                          snr=('uniform', 10, 20),
                          pitch_shift=('uniform', -1, 1),
                          time_stretch=('uniform', 0.8, 1.2))
-
 
         def _validate_soundscape_and_event_audio(orig_wav_file, gen_wav_file, 
                                                  gen_events_path, orig_events_path):
@@ -1675,28 +1700,7 @@ def _test_generate(SR, REG_WAV_PATH, REG_JAM_PATH, REG_TXT_PATH, atol=1e-4, rtol
         _compare_scaper_jams(jam, regjam)
 
         # validate txt
-        # read in both files
-        txt_data = []
-        with open(txt_file.name) as file:
-            reader = csv.reader(file, delimiter='\t')
-            for row in reader:
-                txt_data.append(row)
-        txt_data = np.asarray(txt_data)
-
-        regtxt_data = []
-        with open(REG_TXT_PATH) as file:
-            reader = csv.reader(file, delimiter='\t')
-            for row in reader:
-                regtxt_data.append(row)
-        regtxt_data = np.asarray(regtxt_data)
-
-        # compare start and end times
-        assert np.allclose([float(x) for x in txt_data[:, 0]],
-                           [float(x) for x in regtxt_data[:, 0]])
-        assert np.allclose([float(x) for x in txt_data[:, 1]],
-                           [float(x) for x in regtxt_data[:, 1]])
-        # compare labels
-        assert (txt_data[:, 2] == regtxt_data[:, 2]).all()
+        _compare_txt_annotation(txt_file.name, REG_TXT_PATH)
 
         # reverb value must be in (0, 1) range
         for reverb in [-1, 2]:
