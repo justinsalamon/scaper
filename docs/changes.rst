@@ -2,6 +2,12 @@
 
 Changelog
 ---------
+1.5.0
+~~~~~
+- Scaper now returns the generated audio and annotations directly in memory, allowing you to skip any/all file I/O!
+- Saving the audio and annotations to disk is still supported, but is now optional.
+- While this update modifies the API of several functions, it should still be backwards compatible.
+
 v1.4.0
 ~~~~~~
 - Operations on all files happen in-memory now, via new PySox features (build_array) and numpy operations for applying fades.
