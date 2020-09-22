@@ -1783,8 +1783,7 @@ def _test_generate(SR, REG_WAV_PATH, REG_JAM_PATH, REG_TXT_PATH, atol=1e-4, rtol
 
 
 def test_generate_return_api():
-    # for sr in SAMPLE_RATES:
-    for sr in [44100]:
+    for sr in SAMPLE_RATES:
         REG_WAV_PATH, REG_JAM_PATH, REG_TXT_PATH = TEST_PATHS[sr]['REG']
         _test_generate_return_api(sr, REG_WAV_PATH, REG_JAM_PATH, REG_TXT_PATH)
 
