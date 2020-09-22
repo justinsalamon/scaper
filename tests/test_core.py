@@ -11,7 +11,6 @@ import os
 import numpy as np
 import soundfile
 import jams
-import csv
 import numbers
 from collections import namedtuple
 from copy import deepcopy
@@ -273,20 +272,36 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
         # generate, then generate from the jams and compare audio files
         # repeat 5 times
         for _ in range(5):
-            sc.generate(audio_path=orig_wav_file.name,
-                        jams_path=orig_jam_file.name,
-                        txt_path=orig_txt_file.name,
-                        disable_instantiation_warnings=True)
-            scaper.generate_from_jams(orig_jam_file.name,
-                                      audio_outfile=gen_wav_file.name,
-                                      txt_path=gen_txt_file.name)
+            (soundscape_audio, soundscape_jam, annotation_list, event_audio_list) = \
+                sc.generate(audio_path=orig_wav_file.name,
+                            jams_path=orig_jam_file.name,
+                            txt_path=orig_txt_file.name,
+                            disable_instantiation_warnings=True)
 
-            # validate audio
+            (fj_soundscape_audio, fj_soundscape_jam, fj_annotation_list, fj_event_audio_list) = \
+                scaper.generate_from_jams(orig_jam_file.name,
+                                          audio_outfile=gen_wav_file.name,
+                                          jams_outfile=gen_jam_file.name,
+                                          txt_path=gen_txt_file.name)
+
+            # validate return API
+            assert np.allclose(soundscape_audio, fj_soundscape_audio)
+            _compare_scaper_jams(soundscape_jam, fj_soundscape_jam)
+            _compare_txt_annotation(annotation_list, fj_annotation_list)
+            for event, fj_event in zip(event_audio_list, fj_event_audio_list):
+                assert np.allclose(event, fj_event, atol=1e-8, rtol=rtol)
+
+            # validate soundscape audio
             orig_wav, sr = soundfile.read(orig_wav_file.name)
             gen_wav, sr = soundfile.read(gen_wav_file.name)
             assert np.allclose(gen_wav, orig_wav, atol=atol, rtol=rtol)
 
-            # validate txt
+            # validate jams
+            orig_jam = jams.load(orig_jam_file.name)
+            gen_jam = jams.load(gen_jam_file.name)
+            _compare_scaper_jams(orig_jam, gen_jam)
+
+            # validate annotation txt
             _compare_txt_annotation(orig_txt_file.name, gen_txt_file.name)
 
         # Now add in trimming!
@@ -389,22 +404,44 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
 
         # Test with new FG and BG paths
         for _ in range(5):
-            sc.generate(audio_path=orig_wav_file.name,
+            (soundscape_audio, soundscape_jam, annotation_list, event_audio_list) = \
+                sc.generate(audio_path=orig_wav_file.name,
                         jams_path=orig_jam_file.name,
                         txt_path=orig_txt_file.name,
                         disable_instantiation_warnings=True)
 
-            scaper.generate_from_jams(orig_jam_file.name,
+            (fj_soundscape_audio, fj_soundscape_jam, fj_annotation_list, fj_event_audio_list) = \
+                scaper.generate_from_jams(orig_jam_file.name,
                                       audio_outfile=gen_wav_file.name,
                                       txt_path=gen_txt_file.name,
                                       fg_path=ALT_FG_PATH,
                                       bg_path=ALT_BG_PATH)
-            # validate audio
+
+            # validate return API
+            assert np.allclose(soundscape_audio, fj_soundscape_audio)
+            # TODO: can't compare jams due to change in FG/BG
+            # In the future update jam comparison such that any item can be
+            # excluded from the comparison on demand, which would allow for this
+            # test here.
+            # _compare_scaper_jams(soundscape_jam, fj_soundscape_jam)
+            _compare_txt_annotation(annotation_list, fj_annotation_list)
+            for event, fj_event in zip(event_audio_list, fj_event_audio_list):
+                assert np.allclose(event, fj_event, atol=1e-8, rtol=rtol)
+
+            # validate soundscape audio
             orig_wav, sr = soundfile.read(orig_wav_file.name)
             gen_wav, sr = soundfile.read(gen_wav_file.name)
             assert np.allclose(gen_wav, orig_wav, atol=atol, rtol=rtol)
 
-            # validate txt
+            # TODO: can't compare jams due to change in FG/BG
+            # In the future update jam comparison such that any item can be
+            # excluded from the comparison on demand, which would allow for this
+            # test here.
+            # orig_jam = jams.load(orig_jam_file.name)
+            # gen_jam = jams.load(gen_jam_file.name)
+            # _compare_scaper_jams(orig_jam, gen_jam)
+
+            # validate annotation txt
             _compare_txt_annotation(orig_txt_file.name, gen_txt_file.name)
 
         # Ensure jam file saved correctly
