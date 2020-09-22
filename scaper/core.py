@@ -48,12 +48,22 @@ constants directly).
 '''
 
 
-def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
-                       jams_outfile=None, save_isolated_events=False, 
-                       isolated_events_path=None):
+def generate_from_jams(jams_infile,
+                       audio_outfile=None,
+                       fg_path=None,
+                       bg_path=None,
+                       jams_outfile=None,
+                       save_isolated_events=False,
+                       isolated_events_path=None,
+                       disable_sox_warnings=True,
+                       txt_path=None,
+                       txt_sep='\t'):
     '''
-    Generate a soundscape based on an existing scaper JAMS file and save to
-    disk.
+    Generate a soundscape based on an existing scaper JAMS file and return as
+    an audio file, a JAMS annotation, a simplified annotation list, and a
+    list containing the audio samples of each individual background and
+    foreground event. If output paths are provided, these objects will also
+    be saved to disk.
 
     Parameters
     ----------
@@ -91,6 +101,36 @@ def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
     isolated_events_path : str
         Path to folder for saving isolated events. If None, defaults to
         `<audio_outfile parent folder>/<audio_outfile name>_events`.
+    disable_sox_warnings : bool
+            When True (default), warnings from the pysox module are suppressed
+            unless their level is ``'CRITICAL'``. If you're experiencing issues related
+            to audio I/O setting this parameter to False may help with debugging.
+    txt_path: str or None
+            Path for saving a simplified annotation in a space separated format
+            [onset  offset  label] where onset and offset are in seconds. Good
+            for loading labels in e.g. Audacity. If None, does not save txt
+            annotation to disk.
+    txt_sep: str
+        The separator to use when saving a simplified annotation as a text
+        file (default is tab for compatibility with Audacity label files).
+        Only relevant if txt_path is not None.
+
+    Returns
+    -------
+    soundscape_audio : np.ndarray
+        The audio samples of the generated soundscape. Returns None if
+        no_audio=True.
+    soundscape_jam: jams.JAMS
+        The JAMS object containing the full soundscape annotation.
+    annotation_list : list
+        A simplified annotation in a space-separated format
+        [onset  offset  label] where onset and offset are in seconds.
+    event_audio_list: list
+        A list of np.ndarrays containing the audio samples of every
+        individual background and foreground sound event. Events are listed
+        in the same order in which they appear in the jams annotations data
+        list, and can be matched with:
+        `for obs, event_audio in zip(ann.data, event_audio_list): ...`.
 
     Raises
     ------
@@ -100,15 +140,15 @@ def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
         namespace.
 
     '''
-    jam = jams.load(jams_infile)
-    anns = jam.search(namespace='scaper')
+    soundscape_jam = jams.load(jams_infile)
+    anns = soundscape_jam.search(namespace='scaper')
 
     if len(anns) == 0:
         raise ScaperError(
             'JAMS file does not contain any annotation with namespace '
             'scaper.')
 
-    ann = jam.annotations.search(namespace='scaper')[0]
+    ann = soundscape_jam.annotations.search(namespace='scaper')[0]
 
     # Update paths
     if fg_path is None:
@@ -172,10 +212,11 @@ def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
 
     # Cast ann.sandbox.scaper to a Sandbox object
     ann.sandbox.scaper = jams.Sandbox(**ann.sandbox.scaper)
-    sc._generate_audio(audio_outfile, ann, reverb=reverb, 
-                       save_isolated_events=save_isolated_events, 
-                       isolated_events_path=isolated_events_path,
-                       disable_sox_warnings=True)
+    soundscape_audio, event_audio_list = \
+        sc._generate_audio(audio_outfile, ann, reverb=reverb,
+                           save_isolated_events=save_isolated_events,
+                           isolated_events_path=isolated_events_path,
+                           disable_sox_warnings=disable_sox_warnings)
 
     # If there are slice (trim) operations, need to perform them!
     # Need to add this logic for the isolated events too.
@@ -198,7 +239,21 @@ def generate_from_jams(jams_infile, audio_outfile, fg_path=None, bg_path=None,
 
     # Optionally save new jams file
     if jams_outfile is not None:
-        jam.save(jams_outfile)
+        soundscape_jam.save(jams_outfile)
+
+    # Create annotation list
+    annotation_list = []
+    for obs in ann.data:
+        if obs.value['role'] == 'foreground':
+            annotation_list.append(
+                [obs.time, obs.time + obs.duration, obs.value['label']])
+
+    if txt_path is not None:
+        with open(txt_path, 'w') as csv_file:
+            writer = csv.writer(csv_file, delimiter=txt_sep)
+            writer.writerows(annotation_list)
+
+    return soundscape_audio, soundscape_jam, annotation_list, event_audio_list
 
 
 def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
@@ -280,6 +335,7 @@ def trim(audio_infile, jams_infile, audio_outfile, jams_outfile, start_time,
                 tfm.build(audio_infile, tmpfiles[-1].name)
                 # Copy result back to original file
                 shutil.copyfile(tmpfiles[-1].name, audio_outfile)
+
 
 def _get_value_from_dist(dist_tuple, random_state):
     '''
@@ -1675,6 +1731,17 @@ class Scaper(object):
             When True (default), warnings from the pysox module are suppressed
             unless their level is ``'CRITICAL'``.
 
+        Returns
+        -------
+        soundscape_audio : np.ndarray
+            The audio samples of the generated soundscape
+        event_audio_list: list
+            A list of np.ndarrays containing the audio samples of every
+            individual background and foreground sound event. Events are listed
+            in the same order in which they appear in the jams annotations data
+            list, and can be matched with:
+            `for obs, event_audio in zip(ann.data, event_audio_list): ...`.
+
         Raises
         ------
         ScaperError
@@ -1696,10 +1763,12 @@ class Scaper(object):
         else:
             temp_logging_level = logging.getLogger().level
 
+        # List for storing all generated audio (one array for every event)
+        soundscape_audio = None
+        event_audio_list = []
+
         with _set_temp_logging_level(temp_logging_level):
 
-            # List for storing all generated audio (one array for every event)
-            event_audio_list = []
             isolated_events_audio_path = []
             duration_in_samples = int(self.duration * self.sr)
 
@@ -1886,7 +1955,7 @@ class Scaper(object):
             if len(event_audio_list) == 0:
                 warnings.warn(
                     "No events to synthesize (silent soundscape), no audio "
-                    "saved to disk.", ScaperWarning)
+                    "generated.", ScaperWarning)
             else:                        
                 tfm = sox.Transformer()
                 if reverb is not None:
@@ -1898,25 +1967,46 @@ class Scaper(object):
                     sample_rate_in=self.sr,
                 )
                 soundscape_audio = soundscape_audio.reshape(-1, self.n_channels)
-                soundfile.write(audio_path, soundscape_audio, self.sr, subtype='PCM_32')
-                        
+
+                # Save to disk if output path provided
+                if audio_path is not None:
+                    soundfile.write(audio_path, soundscape_audio, self.sr, subtype='PCM_32')
+
+        # Document output paths
         ann.sandbox.scaper.soundscape_audio_path = audio_path
         ann.sandbox.scaper.isolated_events_audio_path = isolated_events_audio_path
 
-    def generate(self, audio_path, jams_path, allow_repeated_label=True,
-                 allow_repeated_source=True,reverb=None, save_isolated_events=False, 
-                 isolated_events_path=None, disable_sox_warnings=True, no_audio=False, 
-                 txt_path=None, txt_sep='\t', disable_instantiation_warnings=False):
-        '''
-        Generate a soundscape based on the current specification and save to
-        disk as both an audio file and a JAMS file describing the soundscape.
+        # Return audio for in-memory processing
+        return soundscape_audio, event_audio_list
+
+    def generate(self,
+                 audio_path=None,
+                 jams_path=None,
+                 allow_repeated_label=True,
+                 allow_repeated_source=True,
+                 reverb=None,
+                 save_isolated_events=False,
+                 isolated_events_path=None,
+                 disable_sox_warnings=True,
+                 no_audio=False,
+                 txt_path=None,
+                 txt_sep='\t',
+                 disable_instantiation_warnings=False):
+        """
+        Generate a soundscape based on the current specification and return as
+        an audio file, a JAMS annotation, a simplified annotation list, and a
+        list containing the audio samples of each individual background and
+        foreground event. If output paths are provided, these objects will also
+        be saved to disk.
 
         Parameters
         ----------
         audio_path : str
-            Path for saving soundscape audio
+            Path for saving soundscape audio to disk. If None, does not save
+            audio to disk.
         jams_path : str
-            Path for saving soundscape jams
+            Path for saving soundscape jams annotation to disk. If None, does
+            not save JAMS to disk.
         allow_repeated_label : bool
             When True (default) the same label can be used more than once
             in a soundscape instantiation. When False every label can
@@ -1945,18 +2035,23 @@ class Scaper(object):
             or `background0_park.wav`.
         isolated_events_path : str
             Path to folder for saving isolated events. If None, defaults to
-            `<audio_path parent folder>/<audio_path name>_events`.
+            `<audio_path parent folder>/<audio_path name>_events`. Only relevant
+            if save_isolated_events=True.
         disable_sox_warnings : bool
             When True (default), warnings from the pysox module are suppressed
             unless their level is ``'CRITICAL'``. If you're experiencing issues related 
             to audio I/O setting this parameter to False may help with debugging.
         no_audio : bool
-            If true only generates a JAMS file and no audio is saved to disk.
+            If True this function will only generates a JAMS file but will not
+            generate any audio (neither in memory nor saved to disk). Useful for
+            efficiently generating a large number of soundscape JAMS for
+            later synthesis via `generate_from_jams()`.
         txt_path: str or None
-            If not None, in addition to the JAMS file output a simplified
-            annotation in a space separated format [onset  offset  label],
-            saved to the provided path (good for loading labels in audacity).
-        test_sep: str
+            Path for saving a simplified annotation in a space separated format
+            [onset  offset  label] where onset and offset are in seconds. Good
+            for loading labels in e.g. Audacity. If None, does not save txt
+            annotation to disk.
+        txt_sep: str
             The separator to use when saving a simplified annotation as a text
             file (default is tab for compatibility with Audacity label files).
             Only relevant if txt_path is not None.
@@ -1965,6 +2060,23 @@ class Scaper(object):
             instantiation (primarily about automatic duration adjustments) are
             disabled. Not recommended other than for testing purposes.
 
+        Returns
+        -------
+        soundscape_audio : np.ndarray
+            The audio samples of the generated soundscape. Returns None if
+            no_audio=True.
+        soundscape_jam: jams.JAMS
+            The JAMS object containing the full soundscape annotation.
+        annotation_list : list
+            A simplified annotation in a space-separated format
+            [onset  offset  label] where onset and offset are in seconds.
+        event_audio_list: list
+            A list of np.ndarrays containing the audio samples of every
+            individual background and foreground sound event. Events are listed
+            in the same order in which they appear in the jams annotations data
+            list, and can be matched with:
+            `for obs, event_audio in zip(ann.data, event_audio_list): ...`.
+
         Raises
         ------
         ScaperError
@@ -1972,11 +2084,13 @@ class Scaper(object):
 
         See Also
         --------
+        Scaper.generate_from_jams
+
         Scaper._instantiate
 
         Scaper._generate_audio
 
-        '''
+        """
         # Check parameter validity
         if reverb is not None:
             if not (0 <= reverb <= 1):
@@ -1985,31 +2099,38 @@ class Scaper(object):
                     'None.')
 
         # Create specific instance of a soundscape based on the spec
-        jam = self._instantiate(
+        soundscape_jam = self._instantiate(
             allow_repeated_label=allow_repeated_label,
             allow_repeated_source=allow_repeated_source,
             reverb=reverb,
             disable_instantiation_warnings=disable_instantiation_warnings)
-        ann = jam.annotations.search(namespace='scaper')[0]
+        ann = soundscape_jam.annotations.search(namespace='scaper')[0]
+
+        soundscape_audio, event_audio_list = None, None
 
         # Generate the audio and save to disk
         if not no_audio:
-            self._generate_audio(audio_path, ann, reverb=reverb, 
-                                 save_isolated_events=save_isolated_events,
-                                 isolated_events_path=isolated_events_path,
-                                 disable_sox_warnings=disable_sox_warnings)
+            soundscape_audio, event_audio_list = \
+                self._generate_audio(audio_path, ann, reverb=reverb,
+                                     save_isolated_events=save_isolated_events,
+                                     isolated_events_path=isolated_events_path,
+                                     disable_sox_warnings=disable_sox_warnings)
 
-        # Finally save JAMS to disk too
-        jam.save(jams_path)
+        # Save JAMS to disk too
+        if jams_path is not None:
+            soundscape_jam.save(jams_path)
 
-        # Optionally save to CSV as well
+        # Create annotation list
+        annotation_list = []
+        for obs in ann.data:
+            if obs.value['role'] == 'foreground':
+                annotation_list.append(
+                    [obs.time, obs.time + obs.duration, obs.value['label']])
+
         if txt_path is not None:
-            csv_data = []
-            for obs in ann.data:
-                if obs.value['role'] == 'foreground':
-                    csv_data.append(
-                        [obs.time, obs.time+obs.duration, obs.value['label']])
-
             with open(txt_path, 'w') as csv_file:
                 writer = csv.writer(csv_file, delimiter=txt_sep)
-                writer.writerows(csv_data)
+                writer.writerows(annotation_list)
+
+        # Return
+        return soundscape_audio, soundscape_jam, annotation_list, event_audio_list
