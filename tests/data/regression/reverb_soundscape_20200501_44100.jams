@@ -1,19 +1,24 @@
 {
-  "file_metadata": {
-    "artist": "",
-    "jams_version": "0.3.3",
-    "identifiers": {},
-    "duration": 10.0,
-    "title": "",
-    "release": ""
-  },
   "annotations": [
     {
+      "annotation_metadata": {
+        "curator": {
+          "name": "",
+          "email": ""
+        },
+        "annotator": {},
+        "version": "",
+        "corpus": "",
+        "annotation_tools": "",
+        "annotation_rules": "",
+        "validation": "",
+        "data_source": ""
+      },
+      "namespace": "scaper",
       "data": [
         {
-          "confidence": 1.0,
-          "duration": 10.0,
           "time": 0.0,
+          "duration": 10.0,
           "value": {
             "label": "park",
             "source_file": "tests/data/audio/background/park/268903__yonts__city-park-tel-aviv-israel.wav",
@@ -24,12 +29,12 @@
             "role": "background",
             "pitch_shift": null,
             "time_stretch": null
-          }
+          },
+          "confidence": 1.0
         },
         {
-          "confidence": 1.0,
-          "duration": 5.0,
           "time": 2.0,
+          "duration": 5.0,
           "value": {
             "label": "siren",
             "source_file": "tests/data/audio/foreground/siren/69-Siren-1.wav",
@@ -40,109 +45,48 @@
             "role": "foreground",
             "pitch_shift": null,
             "time_stretch": null
-          }
+          },
+          "confidence": 1.0
         },
         {
-          "confidence": 1.0,
-          "duration": 0.687506,
           "time": 5.0,
+          "duration": 0.6875056689342404,
           "value": {
             "label": "car_horn",
             "source_file": "tests/data/audio/foreground/car_horn/17-CAR-Rolls-Royce-Horn.wav",
             "source_time": 0,
             "event_time": 5,
-            "event_duration": 0.687506,
+            "event_duration": 0.6875056689342404,
             "snr": 20,
             "role": "foreground",
             "pitch_shift": 1,
             "time_stretch": null
-          }
+          },
+          "confidence": 1.0
         },
         {
-          "confidence": 1.0,
-          "duration": 0.9674831999999999,
           "time": 7.0,
+          "duration": 0.9674829931972788,
           "value": {
             "label": "human_voice",
             "source_file": "tests/data/audio/foreground/human_voice/42-Human-Vocal-Voice-taxi-2_edit.wav",
             "source_time": 0,
             "event_time": 7,
-            "event_duration": 0.806236,
+            "event_duration": 0.806235827664399,
             "snr": 10,
             "role": "foreground",
             "pitch_shift": null,
             "time_stretch": 1.2
-          }
+          },
+          "confidence": 1.0
         }
       ],
-      "time": 0,
-      "annotation_metadata": {
-        "corpus": "",
-        "validation": "",
-        "annotation_rules": "",
-        "curator": {
-          "name": "",
-          "email": ""
-        },
-        "annotation_tools": "",
-        "data_source": "",
-        "version": "",
-        "annotator": {}
-      },
-      "duration": 10.0,
       "sandbox": {
         "scaper": {
-          "allow_repeated_source": true,
-          "fade_out_len": 0.01,
-          "bg_path": "tests/data/audio/background",
+          "duration": 10.0,
           "original_duration": 10.0,
-          "reverb": 0.2,
-          "polyphony_max": 2,
-          "polyphony_gini": 0.5422979845375607,
-          "fg_labels": [
-            "car_horn",
-            "human_voice",
-            "siren"
-          ],
-          "n_events": 3,
-          "scaper_version": "1.3.6",
-          "fade_in_len": 0.01,
-          "n_channels": 1,
           "fg_path": "tests/data/audio/foreground",
-          "protected_labels": [],
-          "ref_db": -50,
-          "bg_spec": [
-            [
-              [
-                "const",
-                "park"
-              ],
-              [
-                "const",
-                "tests/data/audio/background/park/268903__yonts__city-park-tel-aviv-israel.wav"
-              ],
-              [
-                "const",
-                0
-              ],
-              [
-                "const",
-                0
-              ],
-              [
-                "const",
-                10.0
-              ],
-              [
-                "const",
-                0
-              ],
-              "background",
-              null,
-              null
-            ]
-          ],
-          "soundscape_audio_path": "tests/data/regression/reverb_soundscape_20200501_44100.wav",
+          "bg_path": "tests/data/audio/background",
           "fg_spec": [
             [
               [
@@ -238,19 +182,75 @@
               ]
             ]
           ],
-          "sr": 44100,
-          "allow_repeated_label": true,
+          "bg_spec": [
+            [
+              [
+                "const",
+                "park"
+              ],
+              [
+                "const",
+                "tests/data/audio/background/park/268903__yonts__city-park-tel-aviv-israel.wav"
+              ],
+              [
+                "const",
+                0
+              ],
+              [
+                "const",
+                0
+              ],
+              [
+                "const",
+                10.0
+              ],
+              [
+                "const",
+                0
+              ],
+              "background",
+              null,
+              null
+            ]
+          ],
+          "fg_labels": [
+            "car_horn",
+            "human_voice",
+            "siren"
+          ],
           "bg_labels": [
             "park",
             "restaurant",
             "street"
           ],
-          "duration": 10.0,
+          "protected_labels": [],
+          "sr": 44100,
+          "ref_db": -50,
+          "n_channels": 1,
+          "fade_in_len": 0.01,
+          "fade_out_len": 0.01,
+          "n_events": 3,
+          "polyphony_max": 2,
+          "polyphony_gini": 0.5422979845375607,
+          "allow_repeated_label": true,
+          "allow_repeated_source": true,
+          "reverb": 0.2,
+          "scaper_version": "1.6.1",
+          "soundscape_audio_path": "tests/data/regression/reverb_soundscape_20200501_44100.wav",
           "isolated_events_audio_path": []
         }
       },
-      "namespace": "scaper"
+      "time": 0,
+      "duration": 10.0
     }
   ],
+  "file_metadata": {
+    "title": "",
+    "artist": "",
+    "release": "",
+    "duration": 10.0,
+    "identifiers": {},
+    "jams_version": "0.3.4"
+  },
   "sandbox": {}
 }
