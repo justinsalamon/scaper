@@ -1822,15 +1822,8 @@ class Scaper(object):
                             sample_rate_in=event_sr
                         )
                         event_audio = event_audio.reshape(-1, self.n_channels)
-                        # Write event_audio_array to disk so we can compute LUFS using ffmpeg
-                        soundfile.write(
-                            tmpfiles_internal[-1].name, 
-                            event_audio,
-                            self.sr
-                        )
                         # NOW compute LUFS
-                        bg_lufs = get_integrated_lufs(
-                            tmpfiles_internal[-1].name)
+                        bg_lufs = get_integrated_lufs(event_audio, self.sr)
 
                         # Normalize background to reference DB.
                         gain = self.ref_db - bg_lufs
@@ -1885,15 +1878,9 @@ class Scaper(object):
                             sample_rate_in=event_sr
                         )
                         event_audio = event_audio.reshape(-1, self.n_channels)
-
-                        soundfile.write(
-                            tmpfiles_internal[-1].name, 
-                            event_audio,
-                            self.sr
-                        )
+                        
                         # NOW compute LUFS
-                        fg_lufs = get_integrated_lufs(
-                            tmpfiles_internal[-1].name)
+                        fg_lufs = get_integrated_lufs(event_audio, self.sr)
 
                         # Normalize to specified SNR with respect to
                         # background

@@ -41,6 +41,7 @@ setup(
         'jams>=0.3.2',
         'numpy>=1.13.3',
         "soxbindings>=1.2.0;platform_system!='Windows'",
+        'pyloudnorm',
         'soundfile',
     ],
     extras_require={
