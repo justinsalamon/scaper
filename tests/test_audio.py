@@ -34,7 +34,7 @@ def test_get_integrated_lufs():
     for af, li in zip(audiofiles, lufsi):
         audio, sr = sf.read(af)
         i = get_integrated_lufs(audio, sr)
-        assert i == li
+        assert np.allclose(i, li)
 
 def change_format_and_subtype(audio_path):
     audio, sr = sf.read(audio_path)
