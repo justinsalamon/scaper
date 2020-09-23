@@ -40,7 +40,7 @@ setup(
         'pyrsistent==0.15.4',
         'jams>=0.3.2',
         'numpy>=1.13.3',
-        "soxbindings==1.2.0b0;platform_system!='Windows'",
+        "soxbindings>=1.2.0;platform_system!='Windows'",
         'soundfile',
     ],
     extras_require={

@@ -5,7 +5,7 @@ Changelog
 v1.6.0
 ~~~~~~
 - Uses soxbindings when installing on Linux or MacOS, which results in better performance.
-- Adds explicit support for Python 3.7 and 3.8.
+- Adds explicit support for Python 3.7 and 3.8. Drops support for Python 2.7 and 3.4.
 
 v1.5.1
 ~~~~~~
