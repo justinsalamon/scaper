@@ -1951,6 +1951,58 @@ def _generate_soundscape_with_short_background(background_file, audio_path, jams
 
         sc.generate(audio_path, jams_path)
 
+def test_scaper_generate_with_fade():
+    # Test scaper generate with different fade lengths
+    # Works by using a fade of 0 at first then comparing
+    # samples of the event using different fades.
+
+    fade_lens = [0, 0.01, 0.05, 0.1]
+    outputs = {}
+
+    for fade_in in fade_lens:
+        for fade_out in fade_lens:
+            sc = scaper.Scaper(0.2, FG_PATH, BG_PATH, random_state=0)
+            sc.sr = 16000
+            sc.ref_db = -20
+
+            sc.fade_in_len = fade_in
+            sc.fade_out_len = fade_out
+
+            sc.add_event(
+                label=('const', 'siren'),
+                source_file=('choose', []),
+                source_time=('uniform', 0, 10),
+                event_time=('const', 0),
+                event_duration=('const', 0.2),
+                snr=('uniform', -5, 5),
+                pitch_shift=('uniform', -1, 1),
+                time_stretch=('uniform', 0.8, 1.2))
+
+            _, _, _, event_audio_list = sc.generate()
+
+            outputs[(fade_in, fade_out)] = event_audio_list[0]
+    
+    no_fade = outputs[(0, 0)]
+    for key, val in outputs.items():
+        fade_in, fade_out = key
+        fade_in_samples, fade_out_samples = (
+            int(fade_in * sc.sr), int(fade_out * sc.sr)
+        )
+        # Compare first fade_in_samples with no_fade
+        if fade_in_samples > 0:
+            ratio = val[:fade_in_samples] / no_fade[:fade_in_samples]
+            fade_in_window = np.sin(
+                np.linspace(0, np.pi / 2, fade_in_samples))[..., None]
+            mask = np.invert(np.isnan(ratio))
+            assert np.allclose(ratio[mask], fade_in_window[mask])
+        
+        if fade_out_samples > 0:
+            ratio = val[-fade_out_samples:] / no_fade[-fade_out_samples:]
+            fade_out_window = np.sin(
+                np.linspace(np.pi / 2, 0, fade_out_samples))[..., None]
+            # Ignore points where the signal has no energy
+            mask = np.invert(np.isnan(ratio))
+            assert np.allclose(ratio[mask], fade_out_window[mask])
 
 def test_scaper_with_short_background():
     SHORT_BG_FILE = os.path.join(

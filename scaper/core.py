@@ -1897,13 +1897,15 @@ class Scaper(object):
 
                         # Apply short fade in and out
                         # (avoid unnatural sound onsets/offsets)
-                        fade_in_samples =  int(self.fade_in_len * self.sr)
-                        fade_out_samples = int(self.fade_out_len * self.sr)
-                        fade_in_window = np.sin(np.linspace(0, np.pi / 2, fade_in_samples))[..., None]
-                        fade_out_window = np.sin(np.linspace(np.pi / 2, 0, fade_out_samples))[..., None]
+                        if self.fade_in_len > 0:
+                            fade_in_samples =  int(self.fade_in_len * self.sr)
+                            fade_in_window = np.sin(np.linspace(0, np.pi / 2, fade_in_samples))[..., None]
+                            event_audio[:fade_in_samples] *= fade_in_window
 
-                        event_audio[:fade_in_samples] *= fade_in_window
-                        event_audio[-fade_out_samples:] *= fade_out_window
+                        if self.fade_out_len > 0:
+                            fade_out_samples = int(self.fade_out_len * self.sr)
+                            fade_out_window = np.sin(np.linspace(np.pi / 2, 0, fade_out_samples))[..., None]
+                            event_audio[-fade_out_samples:] *= fade_out_window
 
                         # Pad with silence before/after event to match the
                         # soundscape duration

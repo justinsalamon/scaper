@@ -2,8 +2,13 @@
 
 Changelog
 ---------
-1.5.0
-~~~~~
+v1.5.1
+~~~~~~
+- Fixes a bug with fade in and out lengths are set to 0.
+- This is the last version to support Python 2.7 and 3.4.
+
+v1.5.0
+~~~~~~
 - Scaper now returns the generated audio and annotations directly in memory, allowing you to skip any/all file I/O!
 - Saving the audio and annotations to disk is still supported, but is now optional.
 - While this update modifies the API of several functions, it should still be backwards compatible.
