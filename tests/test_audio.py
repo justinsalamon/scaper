@@ -21,10 +21,10 @@ HUMANVOICE_FILE = (
     '42-Human-Vocal-Voice-all-aboard_edit.wav')
 DOGBARK_FILE = 'tests/data/lufs/dogbark.wav'
 
-SIREN_LUFS_I = -23.0
-CARHORN_LUFS_I = -13.3
-HUMANVOICE_LUFS_I = -20.0
-DOGBARK_LUFS_I = -11.0  # for x4 concatenated file
+SIREN_LUFS_I = -23.071089944980127
+CARHORN_LUFS_I = -13.66146520099299
+HUMANVOICE_LUFS_I = -20.061513106500225 
+DOGBARK_LUFS_I = -11.1952428800271  # for x4 concatenated file
 
 def test_get_integrated_lufs():
     # test correct functionality
