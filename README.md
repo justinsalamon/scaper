@@ -23,22 +23,26 @@ In IEEE Workshop on Applications of Signal Processing to Audio and Acoustics (WA
 ## Installation
 
 ### Non-python dependencies
-Scaper has two non-python dependencies:
-- SoX: http://sox.sourceforge.net/
+Scaper has one non-python dependency:
 - FFmpeg: https://ffmpeg.org/
 
+If you are installing Scaper on Windows, you will also need:
+- SoX: http://sox.sourceforge.net/
+
+If you are installing on Linux/macOS, the SoX dependency is taken care of via 
+[SoxBindings](https://github.com/pseeth/soxbindings).
+
 #### Linux/macOS
-If you're using [Anaconda](https://www.anaconda.com/distribution/) (or [miniconda](https://docs.conda.io/en/latest/miniconda.html)) to manage your python environment (recommended), you can install these dependencies using `conda` on macOS/Linux:
+If you're using [Anaconda](https://www.anaconda.com/distribution/) (or [miniconda](https://docs.conda.io/en/latest/miniconda.html)) to manage your python environment (recommended), you can install FFmpeg using `conda` on macOS/Linux:
 
 ```
-conda install -c conda-forge sox ffmpeg
+conda install -c conda-forge ffmpeg
 ```
 
 #### macOS
-On macOS these can be installed using [homebrew](https://brew.sh/):
+On macOS FFmpeg can be installed using [homebrew](https://brew.sh/):
 
 ```
-brew install sox
 brew install ffmpeg
 ```
 
@@ -46,7 +50,6 @@ brew install ffmpeg
 On linux you can use your distribution's package manager, e.g. on Ubuntu (15.04 "Vivid Vervet" or newer):
 
 ```
-sudo apt-get install sox
 sudo apt-get install ffmpeg
 ```
 NOTE: on earlier versions of Ubuntu [ffmpeg may point to a Libav binary](http://stackoverflow.com/a/9477756/2007700) which is not the correct binary. If you are using Anaconda, you can install the correct version as described earlier by calling `conda install -c conda-forge ffmpeg`. Otherwise, you can [obtain a static binary from the ffmpeg website](https://ffmpeg.org/download.html).

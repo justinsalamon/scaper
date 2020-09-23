@@ -5,19 +5,21 @@ Installation instructions
 
 Non-python dependencies
 -----------------------
-Scaper has two non-python dependencies:
-
-- SoX: http://sox.sourceforge.net/
+Scaper has one non-python dependency:
 - FFmpeg: https://ffmpeg.org/
 
-On macOS these can be installed using `homebrew <https://brew.sh/>`_:
+If you are installing Scaper on Windows, you will also need:
+- SoX: http://sox.sourceforge.net/
 
->>> brew install sox
->>> install ffmpeg
+If you are installing on Linux/macOS, the SoX dependency is taken care of via 
+[SoxBindings](https://github.com/pseeth/soxbindings).
+
+On macOS ffmpeg can be installed using `homebrew <https://brew.sh/>`_:
+
+>>> brew install ffmpeg
 
 On linux you can use your distribution's package manager, e.g. on Ubuntu (15.04 "Vivid Vervet" or newer):
 
->>> sudo apt-get install sox
 >>> sudo apt-get install ffmpeg
 
 NOTE: on earlier versions of Ubuntu `ffmpeg may point to a Libav binary <http://stackoverflow.com/a/9477756/2007700>`_
@@ -27,7 +29,7 @@ which is not the correct binary. If you are using anaconda, you can install the 
 
 Otherwise, you can `obtain a static binary from the ffmpeg website <https://ffmpeg.org/download.html>`_.
 
-On windows you can use the provided installation binaries:
+On Windows you can use the provided installation binaries:
 
 - SoX: https://sourceforge.net/projects/sox/files/sox/
 - FFmpeg: https://ffmpeg.org/download.html#build-windows
