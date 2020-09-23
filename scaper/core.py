@@ -1,7 +1,7 @@
 try:
     import soxbindings as sox 
-except:
-    import sox
+except: # pragma: no cover
+    import sox # pragma: no cover
 import soundfile
 import os
 import warnings
