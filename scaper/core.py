@@ -30,7 +30,6 @@ from .util import max_polyphony
 from .util import polyphony_gini
 from .util import is_real_number, is_real_array
 from .audio import get_integrated_lufs
-from .audio import match_sample_length
 from .version import version as scaper_version
 
 SUPPORTED_DIST = {"const": _sample_const,
@@ -1799,10 +1798,6 @@ class Scaper(object):
                         rate=self.sr,
                         channels=self.n_channels
                     )
-                    # Then trim the duration of the background event
-                    tfm.trim(e.value['source_time'],
-                                e.value['source_time'] +
-                                e.value['event_duration'])
 
                     # PROCESS BEFORE COMPUTING LUFS
                     tmpfiles_internal = []
@@ -1811,11 +1806,17 @@ class Scaper(object):
                         tmpfiles_internal.append(
                             tempfile.NamedTemporaryFile(
                                 suffix='.wav', delete=False))
-                        # read in background off disk
+                        # read in background off disk, using start and stop 
+                        # to only read the necessary audio
+                        event_sr = soundfile.info(e.value['source_file']).samplerate
+                        start = int(e.value['source_time'] * event_sr)
+                        stop = int((e.value['source_time'] + e.value['event_duration']) * event_sr)
                         event_audio, event_sr = soundfile.read(
-                            e.value['source_file'], always_2d=True)
+                            e.value['source_file'], always_2d=True,
+                            start=start, stop=stop)
                         # tile the background along the appropriate dimensions
                         event_audio = np.tile(event_audio, (ntiles, 1))
+                        event_audio = event_audio[:stop]
                         event_audio = tfm.build_array(
                             input_array=event_audio,
                             sample_rate_in=event_sr
@@ -1853,10 +1854,6 @@ class Scaper(object):
                         rate=self.sr,
                         channels=self.n_channels
                     )
-                    # Trim
-                    tfm.trim(e.value['source_time'],
-                                e.value['source_time'] +
-                                e.value['event_duration'])
 
                     # Pitch shift
                     if e.value['pitch_shift'] is not None:
@@ -1875,9 +1872,14 @@ class Scaper(object):
                             tempfile.NamedTemporaryFile(
                                 suffix='.wav', delete=False))
                         
-                        # synthesize edited foreground sound event
+                        # synthesize edited foreground sound event, 
+                        # doing the trim via soundfile
+                        event_sr = soundfile.info(e.value['source_file']).samplerate
+                        start = int(e.value['source_time'] * event_sr)
+                        stop = int((e.value['source_time'] + e.value['event_duration']) * event_sr)
                         event_audio, event_sr = soundfile.read(
-                            e.value['source_file'], always_2d=True)
+                            e.value['source_file'], always_2d=True,
+                            start=start, stop=stop)
                         event_audio = tfm.build_array(
                             input_array=event_audio,
                             sample_rate_in=event_sr
