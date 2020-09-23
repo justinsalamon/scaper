@@ -28,7 +28,6 @@ before_install:
     - conda create -q -n test-environment "python=$TRAVIS_PYTHON_VERSION" $deps
     - source activate test-environment
     - pip install -U pip
-    - conda install -c conda-forge sox
     - pip install python-coveralls
     - pip install pytest-faulthandler
     - pip install pytest-cov
