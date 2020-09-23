@@ -4,10 +4,10 @@ notifications:
     email: false
 
 python:
-    - "2.7"
-    - "3.4"
     - "3.5"
     - "3.6"
+    - "3.7"
+    - "3.8"
 
 addons:
   apt:
@@ -16,11 +16,7 @@ addons:
     - libsndfile1
 
 before_install:
-    - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-          wget http://repo.continuum.io/miniconda/Miniconda2-4.3.21-Linux-x86_64.sh -O miniconda.sh;
-      else
-          wget http://repo.continuum.io/miniconda/Miniconda3-4.3.21-Linux-x86_64.sh -O miniconda.sh;
-      fi
+    - wget http://repo.continuum.io/miniconda/Miniconda3-4.3.21-Linux-x86_64.sh -O miniconda.sh;
     - bash miniconda.sh -b -p $HOME/miniconda
     - export PATH="$HOME/miniconda/bin:$PATH"
     - hash -r
@@ -31,12 +27,6 @@ before_install:
     - deps='pip numpy scipy'
     - conda create -q -n test-environment "python=$TRAVIS_PYTHON_VERSION" $deps
     - source activate test-environment
-    - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-          pip install pytest==4.6.0 PyYAML==4.2b4 pytest-faulthandler==1.6.0;
-      fi
-    - if [[ "$TRAVIS_PYTHON_VERSION" == "3.4" ]]; then
-          pip install pytest==4.6.0 PyYAML==4.2b4 pytest-faulthandler==1.6.0;
-      fi
     - conda install -c conda-forge ffmpeg
     - conda install -c conda-forge sox
     - pip install python-coveralls

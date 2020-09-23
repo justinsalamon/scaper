@@ -1,4 +1,7 @@
-import sox
+try:
+    import soxbindings as sox 
+except:
+    import sox
 import soundfile
 import os
 import warnings
