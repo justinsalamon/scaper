@@ -12,7 +12,7 @@ If you are installing Scaper on Windows, you will also need:
 - SoX: http://sox.sourceforge.net/
 
 On Linux/macOS SoX is replaced by [SoxBindings](https://github.com/pseeth/soxbindings) which is significantly 
-faster, giving better overall performance in Scaper. On these platforms SoxBindings is installed automatically 
+faster, giving better runtime performance in Scaper. On these platforms SoxBindings is installed automatically 
 when calling `pip install scaper` (see below).
 
 On macOS ffmpeg can be installed using `homebrew <https://brew.sh/>`_:

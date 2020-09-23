@@ -29,7 +29,7 @@ Scaper has one non-python dependency:
 If you are installing Scaper on Windows, you will also need:
 - SoX: http://sox.sourceforge.net/
 
-On Linux/macOS SoX is replaced by [SoxBindings](https://github.com/pseeth/soxbindings) which is significantly faster, giving better overall performance in Scaper. On these platforms SoxBindings is installed automatically when calling `pip install scaper` (see below).
+On Linux/macOS SoX is replaced by [SoxBindings](https://github.com/pseeth/soxbindings) which is significantly faster, giving better runtime performance in Scaper. On these platforms SoxBindings is installed automatically when calling `pip install scaper` (see below).
 
 #### Linux/macOS
 If you're using [Anaconda](https://www.anaconda.com/distribution/) (or [miniconda](https://docs.conda.io/en/latest/miniconda.html)) to manage your python environment (recommended), you can install FFmpeg using `conda` on macOS/Linux:
