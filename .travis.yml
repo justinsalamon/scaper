@@ -29,6 +29,7 @@ before_install:
     - source activate test-environment
     - conda install -c conda-forge ffmpeg
     - conda install -c conda-forge sox
+    - pip install wheel
     - pip install python-coveralls
     - pip install pytest-faulthandler
     - pip install pytest-cov
