@@ -30,7 +30,6 @@ from .util import max_polyphony
 from .util import polyphony_gini
 from .util import is_real_number, is_real_array
 from .audio import get_integrated_lufs
-from .audio import match_sample_length
 from .version import version as scaper_version
 
 SUPPORTED_DIST = {"const": _sample_const,
