@@ -2,6 +2,11 @@
 
 Changelog
 ---------
+v1.6.1
+~~~~~~
+- Trimming now happens on read, rather than after read. This prevents the entire file from being loaded into memory. This is helpful for long source audio files.
+- This change also updates the regression data, so this version of Scaper will generate slightly different audio than prior versions of Scaper.
+
 v1.6.0
 ~~~~~~
 - Uses soxbindings when installing on Linux or MacOS, which results in better performance.

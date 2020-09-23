@@ -2045,5 +2045,4 @@ def test_scaper_with_short_background():
         # should be the same
         audio1, sr = soundfile.read(wav1_file.name)
         audio2, sr = soundfile.read(wav2_file.name)
-
         assert np.allclose(audio1, audio2)
