@@ -40,7 +40,7 @@ setup(
         'pyrsistent==0.15.4',
         'jams>=0.3.2',
         'numpy>=1.13.3',
-        "soxbindings>=1.2.1;platform_system!='Windows'",
+        "soxbindings>=1.2.2;platform_system!='Windows'",
         'pyloudnorm',
         'soundfile',
     ],
