@@ -21,7 +21,7 @@ before_install:
     - export PATH="$HOME/miniconda/bin:$PATH"
     - hash -r
     - conda config --set always_yes yes --set changeps1 no
-#    - conda update -q conda
+    - conda update -q conda
     - conda info -a
 #    - deps='pip atlas numpy scipy sphinx nose six future pep8 matplotlib decorator'
     - deps='pip numpy scipy'
