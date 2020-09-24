@@ -20,10 +20,10 @@ def get_integrated_lufs(audio_array, samplerate, min_duration=0.5,
     Returns the integrated LUFS for a numpy array containing
     audio samples.
 
-    For files shorter than 400 ms ffmpeg returns a constant integrated LUFS
-    value of -70.0. To avoid this, files shorter than min_duration (by default
-    500 ms) are self-concatenated until min_duration is reached and the
-    LUFS value is computed for the concatenated file.
+    For files shorter than 400 ms pyloudnorm throws an error. To avoid this, 
+    files shorter than min_duration (by default 500 ms) are self-concatenated 
+    until min_duration is reached and the LUFS value is computed for the 
+    concatenated file.
 
     Parameters
     ----------
@@ -59,7 +59,8 @@ def get_integrated_lufs(audio_array, samplerate, min_duration=0.5,
         samplerate, filter_class=filter_class, block_size=block_size
     )
     loudness = meter.integrated_loudness(audio_array)
-    loudness = max(loudness, -70)
+    # silent audio gives -inf, so need to put a lower bound.
+    loudness = max(loudness, -70) 
     return loudness
 
 

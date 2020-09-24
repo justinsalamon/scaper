@@ -4,9 +4,10 @@ Changelog
 ---------
 v1.6.2
 ~~~~~~
-- Switching from FFMpeg LUFS calculation to pyloudnorm for better performance.
+- Switching from FFMpeg LUFS calculation to pyloudnorm for better performance: runtime is reduced by approximately 30%
 - The loudness calculation between FFMpeg LUFS and pyloudnorm is slightly different so this version will generate marginally different audio data compared to previous versions: the change is not perceptible, but np.allclose() tests on audio from previous versions of Scaper may fail.
 - This change updates the regression data for Scaper's regression tests.
+- This release used soxbindings 1.2.2 and pyloudnorm 0.1.0.
 
 v1.6.1
 ~~~~~~
