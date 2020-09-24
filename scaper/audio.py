@@ -1,18 +1,15 @@
 # CREATED: 4/23/17 15:37 by Justin Salamon <justin.salamon@nyu.edu>
 
-'''
+"""
 Utility functions for audio processing using FFMPEG (beyond sox). Based on:
 https://github.com/mathos/neg23/
-'''
+"""
 
-import subprocess
-import sox
 import numpy as np
 import pyloudnorm
 import soundfile
-import tempfile
 from .scaper_exceptions import ScaperError
-from .util import _close_temp_files
+
 
 def get_integrated_lufs(audio_array, samplerate, min_duration=0.5,
                         filter_class='K-weighting', block_size=0.400):
@@ -104,5 +101,5 @@ def match_sample_length(audio_path, duration_in_samples):
 
         audio = np.pad(audio, pad_width, 'constant')
 
-    soundfile.write(audio_path, audio, sr, 
-        subtype=audio_info.subtype, format=audio_info.format)
+    soundfile.write(audio_path, audio, sr,
+                    subtype=audio_info.subtype, format=audio_info.format)
