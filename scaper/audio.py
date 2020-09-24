@@ -1,10 +1,5 @@
 # CREATED: 4/23/17 15:37 by Justin Salamon <justin.salamon@nyu.edu>
 
-"""
-Utility functions for audio processing using FFMPEG (beyond sox). Based on:
-https://github.com/mathos/neg23/
-"""
-
 import numpy as np
 import pyloudnorm
 import soundfile
