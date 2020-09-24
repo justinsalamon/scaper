@@ -1975,7 +1975,8 @@ class Scaper(object):
                         warnings.warn(
                             'Scale factor for peak normalization is extreme '
                             '(<0.05), actual event SNR values in the soundscape '
-                            'audio may not match their specified values.'
+                            'audio may not match their specified values.',
+                            ScaperWarning
                         )
 
                 # Apply effects and reshape
@@ -1998,20 +1999,24 @@ class Scaper(object):
                     else:
                         event_folder = isolated_events_path
 
-                    _role_count = role_counter[e.value['role']]
-                    event_audio_path = os.path.join(
-                        event_folder,
-                        '{:s}{:d}_{:s}{:s}'.format(
-                            e.value['role'], _role_count, e.value['label'], ext))
-                    role_counter[e.value['role']] += 1
-
                     if not os.path.exists(event_folder):
                         # In Python 3.2 and above we could do
                         # os.makedirs(..., exist_ok=True) but we test back to
                         # Python 2.7.
                         os.makedirs(event_folder)
-                    soundfile.write(event_audio_path, event_audio_list[-1], self.sr, subtype='PCM_32')
-                    isolated_events_audio_path.append(event_audio_path)
+
+                    iso_idx = 0
+                    for i, e in enumerate(ann.data):
+                        _role_count = role_counter[e.value['role']]
+                        event_audio_path = os.path.join(
+                            event_folder,
+                            '{:s}{:d}_{:s}{:s}'.format(
+                                e.value['role'], _role_count, e.value['label'], ext))
+                        role_counter[e.value['role']] += 1
+
+                        soundfile.write(event_audio_path, event_audio_list[iso_idx], self.sr, subtype='PCM_32')
+                        isolated_events_audio_path.append(event_audio_path)
+                        iso_idx += 1
 
                     # TODO what do we do in this case? for now throw a warning
                     if reverb is not None:
