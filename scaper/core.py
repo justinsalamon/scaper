@@ -30,6 +30,7 @@ from .util import max_polyphony
 from .util import polyphony_gini
 from .util import is_real_number, is_real_array
 from .audio import get_integrated_lufs
+from .audio import peak_normalize
 from .version import version as scaper_version
 
 SUPPORTED_DIST = {"const": _sample_const,
@@ -214,7 +215,7 @@ def generate_from_jams(jams_infile,
 
     # Cast ann.sandbox.scaper to a Sandbox object
     ann.sandbox.scaper = jams.Sandbox(**ann.sandbox.scaper)
-    soundscape_audio, event_audio_list = \
+    soundscape_audio, event_audio_list, scale_factor = \
         sc._generate_audio(audio_outfile, ann, reverb=reverb,
                            save_isolated_events=save_isolated_events,
                            isolated_events_path=isolated_events_path,
@@ -1696,8 +1697,14 @@ class Scaper(object):
         # Return
         return jam
 
-    def _generate_audio(self, audio_path, ann, reverb=None,
-                        save_isolated_events=False, isolated_events_path=None,
+    def _generate_audio(self,
+                        audio_path,
+                        ann,
+                        reverb=None,
+                        fix_clipping=False,
+                        peak_normalization=False,
+                        save_isolated_events=False,
+                        isolated_events_path=None,
                         disable_sox_warnings=True):
         '''
         Generate audio based on a scaper annotation and save to disk.
@@ -1713,6 +1720,19 @@ class Scaper(object):
             (no reverberation) and 1 (maximum reverberation). Use None
             (default) to prevent the soundscape from going through the reverb
             module at all.
+        fix_clipping: bool
+            When True (default=False), checks the soundscape audio for clipping
+            (abs(sample) > 1). If so, the soundscape waveform is peak normalized,
+            i.e., scaled such that max(abs(soundscape_audio)) = 1. The audio for
+            each isolated event is also scaled accordingly. Note: this will change
+            the actual value of `ref_db` in the generated audio. The scaling
+            factor that was used is returned.
+        peak_normalization : bool
+            When True (default=False), normalize the generated soundscape audio
+            such that max(abs(soundscape_audio)) = 1. The audio for
+            each isolated event is also scaled accordingly. Note: this will change
+            the actual value of `ref_db` in the generated audio. The scaling
+            factor that was used is returned.
         save_isolated_events : bool
             If True, this will save the isolated foreground events and
             backgrounds in a directory adjacent to the generated soundscape
@@ -1743,6 +1763,11 @@ class Scaper(object):
             in the same order in which they appear in the jams annotations data
             list, and can be matched with:
             `for obs, event_audio in zip(ann.data, event_audio_list): ...`.
+        scale_factor : float
+            If peak_normalization is True, or fix_clipping is True and the
+            soundscape audio needs to be scaled to avoid clipping, scale_factor
+            is the value used to scale the soundscape audio and the audio of the
+            isolated events. None otherwise.
 
         Raises
         ------
@@ -1768,6 +1793,7 @@ class Scaper(object):
         # List for storing all generated audio (one array for every event)
         soundscape_audio = None
         event_audio_list = []
+        scale_factor = None
 
         with _set_temp_logging_level(temp_logging_level):
 
@@ -1913,37 +1939,6 @@ class Scaper(object):
                         'Unsupported event role: {:s}'.format(
                             e.value['role']))
 
-                if save_isolated_events:
-                    base, ext = os.path.splitext(audio_path)
-                    if isolated_events_path is None:
-                        event_folder = '{:s}_events'.format(base)
-                    else:
-                        event_folder = isolated_events_path
-
-                    _role_count = role_counter[e.value['role']]
-                    event_audio_path = os.path.join(
-                        event_folder, 
-                        '{:s}{:d}_{:s}{:s}'.format(
-                            e.value['role'], _role_count, e.value['label'], ext))
-                    role_counter[e.value['role']] += 1
-                    
-                    if not os.path.exists(event_folder):
-                        # In Python 3.2 and above we could do 
-                        # os.makedirs(..., exist_ok=True) but we test back to
-                        # Python 2.7.
-                        os.makedirs(event_folder)
-                    soundfile.write(event_audio_path, event_audio_list[-1], self.sr, subtype='PCM_32')
-                    isolated_events_audio_path.append(event_audio_path)
-
-                    #TODO what do we do in this case? for now throw a warning
-                    if reverb is not None:
-                        warnings.warn(
-                            "Reverb is on and save_isolated_events is True. Reverberation "
-                            "is applied to the mixture but not output "
-                            "source files. In this case the sum of the "
-                            "audio of the isolated events will not add up to the "
-                            "mixture", ScaperWarning)
-
             # Finally combine all the files and optionally apply reverb.
             # If there are no events, throw a warning.
             if len(event_audio_list) == 0:
@@ -1954,24 +1949,85 @@ class Scaper(object):
                 tfm = sox.Transformer()
                 if reverb is not None:
                     tfm.reverb(reverberance=reverb * 100)
-                # TODO: do we want to normalize the final output?
+
+                # Sum all events to get soundscape audio
                 soundscape_audio = sum(event_audio_list)
+
+                # Check for clipping and fix [optional]
+                max_sample = np.max(np.abs(soundscape_audio))
+                clipping = max_sample > 1
+                if clipping:
+                    warnings.warn('Soundscape audio is clipping!',
+                                  ScaperWarning)
+
+                if peak_normalization or (clipping and fix_clipping):
+
+                    # normalize soundscape audio and scale event audio
+                    soundscape_audio, event_audio_list, scale_factor = \
+                        peak_normalize(soundscape_audio, event_audio_list)
+
+                    warnings.warn(
+                        'Peak normalization applied (scale factor = {})'.format(
+                            scale_factor),
+                        ScaperWarning)
+
+                    if scale_factor < 0.05:
+                        warnings.warn(
+                            'Scale factor for peak normalization is extreme '
+                            '(<0.05), actual event SNR values in the soundscape '
+                            'audio may not match their specified values.'
+                        )
+
+                # Apply effects and reshape
                 soundscape_audio = tfm.build_array(
                     input_array=soundscape_audio,
                     sample_rate_in=self.sr,
                 )
                 soundscape_audio = soundscape_audio.reshape(-1, self.n_channels)
 
-                # Save to disk if output path provided
+                # Optionally save soundscape audio to disk
                 if audio_path is not None:
-                    soundfile.write(audio_path, soundscape_audio, self.sr, subtype='PCM_32')
+                    soundfile.write(audio_path, soundscape_audio, self.sr,
+                                    subtype='PCM_32')
+
+                # Optionally save isolated events to disk
+                if save_isolated_events:
+                    base, ext = os.path.splitext(audio_path)
+                    if isolated_events_path is None:
+                        event_folder = '{:s}_events'.format(base)
+                    else:
+                        event_folder = isolated_events_path
+
+                    _role_count = role_counter[e.value['role']]
+                    event_audio_path = os.path.join(
+                        event_folder,
+                        '{:s}{:d}_{:s}{:s}'.format(
+                            e.value['role'], _role_count, e.value['label'], ext))
+                    role_counter[e.value['role']] += 1
+
+                    if not os.path.exists(event_folder):
+                        # In Python 3.2 and above we could do
+                        # os.makedirs(..., exist_ok=True) but we test back to
+                        # Python 2.7.
+                        os.makedirs(event_folder)
+                    soundfile.write(event_audio_path, event_audio_list[-1], self.sr, subtype='PCM_32')
+                    isolated_events_audio_path.append(event_audio_path)
+
+                    # TODO what do we do in this case? for now throw a warning
+                    if reverb is not None:
+                        warnings.warn(
+                            "Reverb is on and save_isolated_events is True. Reverberation "
+                            "is applied to the mixture but not output "
+                            "source files. In this case the sum of the "
+                            "audio of the isolated events will not add up to the "
+                            "mixture", ScaperWarning)
 
         # Document output paths
         ann.sandbox.scaper.soundscape_audio_path = audio_path
         ann.sandbox.scaper.isolated_events_audio_path = isolated_events_audio_path
 
         # Return audio for in-memory processing
-        return soundscape_audio, event_audio_list
+        return soundscape_audio, event_audio_list, scale_factor
 
     def generate(self,
                  audio_path=None,
@@ -1979,6 +2035,8 @@ class Scaper(object):
                  allow_repeated_label=True,
                  allow_repeated_source=True,
                  reverb=None,
+                 fix_clipping=False,
+                 peak_normalization=False,
                  save_isolated_events=False,
                  isolated_events_path=None,
                  disable_sox_warnings=True,
@@ -2014,6 +2072,23 @@ class Scaper(object):
             (no reverberation) and 1 (maximum reverberation). Use None
             (default) to prevent the soundscape from going through the reverb
             module at all.
+        fix_clipping: bool
+            When True (default=False), checks the soundscape audio for clipping
+            (abs(sample) > 1). If so, the soundscape waveform is peak normalized,
+            i.e., scaled such that max(abs(soundscape_audio)) = 1. The audio for
+            each isolated event is also scaled accordingly. Note: this will change
+            the actual value of `ref_db` in the generated audio. The updated
+            `ref_db` value will be stored in the JAMS annotation. The SNR of
+            foreground events with respect to the background is unaffected except
+            when extreme scaling is required to prevent clipping.
+        peak_normalization : bool
+            When True (default=False), normalize the generated soundscape audio
+            such that max(abs(soundscape_audio)) = 1. The audio for
+            each isolated event is also scaled accordingly. Note: this will change
+            the actual value of `ref_db` in the generated audio. The updated
+            `ref_db` value will be stored in the JAMS annotation. The SNR of
+            foreground events with respect to the background is unaffected except
+            when extreme scaling is required to achieve peak normalization.
         save_isolated_events : bool
             If True, this will save the isolated foreground events and
             backgrounds in a directory adjacent to the generated soundscape
@@ -2104,11 +2179,14 @@ class Scaper(object):
 
         # Generate the audio and save to disk
         if not no_audio:
-            soundscape_audio, event_audio_list = \
-                self._generate_audio(audio_path, ann, reverb=reverb,
+            soundscape_audio, event_audio_list, scale_factor = \
+                self._generate_audio(audio_path, ann,
+                                     reverb=reverb,
                                      save_isolated_events=save_isolated_events,
                                      isolated_events_path=isolated_events_path,
-                                     disable_sox_warnings=disable_sox_warnings)
+                                     disable_sox_warnings=disable_sox_warnings,
+                                     fix_clipping=fix_clipping,
+                                     peak_normalization=peak_normalization)
 
         # Save JAMS to disk too
         if jams_path is not None:
