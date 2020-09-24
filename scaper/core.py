@@ -1800,8 +1800,6 @@ class Scaper(object):
             isolated_events_audio_path = []
             duration_in_samples = int(self.duration * self.sr)
 
-            role_counter = {'background': 0, 'foreground': 0}
-
             for i, e in enumerate(ann.data):
                 if e.value['role'] == 'background':
                     # Concatenate background if necessary.
@@ -1966,16 +1964,23 @@ class Scaper(object):
                     soundscape_audio, event_audio_list, scale_factor = \
                         peak_normalize(soundscape_audio, event_audio_list)
 
-                    warnings.warn(
-                        'Peak normalization applied (scale factor = {})'.format(
-                            scale_factor),
-                        ScaperWarning)
+                    ref_db_drop = 20 * np.log10(scale_factor)
+
+                    if clipping and fix_clipping:
+                        warnings.warn(
+                            'Peak normalization applied to fix clipping with '
+                            'scale factor = {}. The actual ref_db of the '
+                            'generated soundscape audio will be lower by '
+                            'approximately {:.2f}dB with respect to the target '
+                            'ref_db of {})'.format(
+                                scale_factor, ref_db_drop, self.ref_db),
+                            ScaperWarning)
 
                     if scale_factor < 0.05:
                         warnings.warn(
                             'Scale factor for peak normalization is extreme '
-                            '(<0.05), actual event SNR values in the soundscape '
-                            'audio may not match their specified values.',
+                            '(<0.05), event SNR values in the generated soundscape '
+                            'audio may not perfectly match their specified values.',
                             ScaperWarning
                         )
 
@@ -2006,6 +2011,7 @@ class Scaper(object):
                         os.makedirs(event_folder)
 
                     iso_idx = 0
+                    role_counter = {'background': 0, 'foreground': 0}
                     for i, e in enumerate(ann.data):
                         _role_count = role_counter[e.value['role']]
                         event_audio_path = os.path.join(
