@@ -215,7 +215,9 @@ def generate_from_jams(jams_infile,
 
     # Cast ann.sandbox.scaper to a Sandbox object
     ann.sandbox.scaper = jams.Sandbox(**ann.sandbox.scaper)
-    soundscape_audio, event_audio_list, scale_factor = \
+
+    # Generate audio
+    soundscape_audio, event_audio_list, scale_factor, ref_db_change = \
         sc._generate_audio(audio_outfile, ann, reverb=reverb,
                            save_isolated_events=save_isolated_events,
                            isolated_events_path=isolated_events_path,
@@ -1687,6 +1689,21 @@ class Scaper(object):
             scaper_version=scaper_version,
             soundscape_audio_path=None,
             isolated_events_audio_path=[])
+            # # Adding generate parameters that aren't already stored:
+            # audio_path=None,
+            # jams_path=None,
+            # fix_clipping=None,
+            # peak_normalization=None,
+            # save_isolated_events=None,
+            # isolated_events_path=None,
+            # disable_sox_warnings=disable_instantiation_warnings,
+            # no_audio=None,
+            # txt_path=None,
+            # txt_sep=None,
+            # disable_instantiation_warnings=disable_instantiation_warnings,
+            # peak_normalization_scale_factor=None,
+            # ref_db_change=None,
+            # ref_db_generated=None)
 
         # Add annotation to jams
         jam.annotations.append(ann)
@@ -1767,7 +1784,11 @@ class Scaper(object):
             If peak_normalization is True, or fix_clipping is True and the
             soundscape audio needs to be scaled to avoid clipping, scale_factor
             is the value used to scale the soundscape audio and the audio of the
-            isolated events. None otherwise.
+            isolated events. Otherwise will return 1.0.
+        ref_db_change : float
+            The change (in dB) to the soundscape audio's ref_db if peak
+            normalization is applied to fix clipping or because the user
+            specified it. Otherwise will return 0.
 
         Raises
         ------
@@ -1793,7 +1814,8 @@ class Scaper(object):
         # List for storing all generated audio (one array for every event)
         soundscape_audio = None
         event_audio_list = []
-        scale_factor = None
+        scale_factor = 1.0
+        ref_db_change = 0
 
         with _set_temp_logging_level(temp_logging_level):
 
@@ -1964,16 +1986,16 @@ class Scaper(object):
                     soundscape_audio, event_audio_list, scale_factor = \
                         peak_normalize(soundscape_audio, event_audio_list)
 
-                    ref_db_drop = 20 * np.log10(scale_factor)
+                    ref_db_change = 20 * np.log10(scale_factor)
 
                     if clipping and fix_clipping:
                         warnings.warn(
                             'Peak normalization applied to fix clipping with '
                             'scale factor = {}. The actual ref_db of the '
-                            'generated soundscape audio will be lower by '
+                            'generated soundscape audio will change by '
                             'approximately {:.2f}dB with respect to the target '
                             'ref_db of {})'.format(
-                                scale_factor, ref_db_drop, self.ref_db),
+                                scale_factor, ref_db_change, self.ref_db),
                             ScaperWarning)
 
                     if scale_factor < 0.05:
@@ -2034,11 +2056,14 @@ class Scaper(object):
                             "mixture", ScaperWarning)
 
         # Document output paths
+        # TODO: this is redundant with data stored in ann.sandbox.scaper.generate,
+        #  but we're keeping it here for now for backwards compatibility e.g. with
+        #  FUSS. Eventually we should remove this from here.
         ann.sandbox.scaper.soundscape_audio_path = audio_path
         ann.sandbox.scaper.isolated_events_audio_path = isolated_events_audio_path
 
         # Return audio for in-memory processing
-        return soundscape_audio, event_audio_list, scale_factor
+        return soundscape_audio, event_audio_list, scale_factor, ref_db_change
 
     def generate(self,
                  audio_path=None,
@@ -2189,8 +2214,10 @@ class Scaper(object):
         soundscape_audio, event_audio_list = None, None
 
         # Generate the audio and save to disk
+        scale_factor = 1.0
+        ref_db_change = 0
         if not no_audio:
-            soundscape_audio, event_audio_list, scale_factor = \
+            soundscape_audio, event_audio_list, scale_factor, ref_db_change = \
                 self._generate_audio(audio_path, ann,
                                      reverb=reverb,
                                      save_isolated_events=save_isolated_events,
@@ -2198,6 +2225,26 @@ class Scaper(object):
                                      disable_sox_warnings=disable_sox_warnings,
                                      fix_clipping=fix_clipping,
                                      peak_normalization=peak_normalization)
+
+        # TODO: Stick to heavy handed overwriting for now, in the future we
+        #  should consolidate this with what happens inside _instantiate().
+        # ann.sandbox.scaper.audio_path = audio_path,
+        # ann.sandbox.scaper.jams_path = jams_path,
+        # ann.sandbox.scaper.allow_repeated_label = allow_repeated_label,
+        # ann.sandbox.scaper.allow_repeated_source = allow_repeated_source,
+        # ann.sandbox.scaper.reverb = reverb,
+        # ann.sandbox.scaper.fix_clipping = fix_clipping,
+        # ann.sandbox.scaper.peak_normalization = peak_normalization,
+        # ann.sandbox.scaper.save_isolated_events = save_isolated_events,
+        # ann.sandbox.scaper.isolated_events_path = isolated_events_path,
+        # ann.sandbox.scaper.disable_sox_warnings = disable_instantiation_warnings,
+        # ann.sandbox.scaper.no_audio = no_audio,
+        # ann.sandbox.scaper.txt_path = txt_path,
+        # ann.sandbox.scaper.txt_sep = txt_sep,
+        # ann.sandbox.scaper.disable_instantiation_warnings = disable_instantiation_warnings,
+        # ann.sandbox.scaper.peak_normalization_scale_factor = scale_factor,
+        # ann.sandbox.scaper.ref_db_change = ref_db_change
+        # ann.sandbox.scaper.ref_db_generated = self.ref_db + ref_db_change
 
         # Save JAMS to disk too
         if jams_path is not None:
