@@ -210,15 +210,21 @@ def generate_from_jams(jams_infile,
     sc.fade_in_len = ann.sandbox.scaper['fade_in_len']
     sc.fade_out_len = ann.sandbox.scaper['fade_out_len']
 
-    # Generate audio and save to disk
+    # Pull generation parameters from annotation
     reverb = ann.sandbox.scaper['reverb']
+    fix_clipping = ann.sandbox.scaper['fix_clipping']
+    peak_normalization = ann.sandbox.scaper['peak_normalization']
 
     # Cast ann.sandbox.scaper to a Sandbox object
     ann.sandbox.scaper = jams.Sandbox(**ann.sandbox.scaper)
 
     # Generate audio
     soundscape_audio, event_audio_list, scale_factor, ref_db_change = \
-        sc._generate_audio(audio_outfile, ann, reverb=reverb,
+        sc._generate_audio(audio_outfile,
+                           ann,
+                           reverb=reverb,
+                           fix_clipping=fix_clipping,
+                           peak_normalization=peak_normalization,
                            save_isolated_events=save_isolated_events,
                            isolated_events_path=isolated_events_path,
                            disable_sox_warnings=disable_sox_warnings)
@@ -1688,22 +1694,22 @@ class Scaper(object):
             reverb=reverb,
             scaper_version=scaper_version,
             soundscape_audio_path=None,
-            isolated_events_audio_path=[])
-            # # Adding generate parameters that aren't already stored:
-            # audio_path=None,
-            # jams_path=None,
-            # fix_clipping=None,
-            # peak_normalization=None,
-            # save_isolated_events=None,
-            # isolated_events_path=None,
-            # disable_sox_warnings=disable_instantiation_warnings,
-            # no_audio=None,
-            # txt_path=None,
-            # txt_sep=None,
-            # disable_instantiation_warnings=disable_instantiation_warnings,
-            # peak_normalization_scale_factor=None,
-            # ref_db_change=None,
-            # ref_db_generated=None)
+            isolated_events_audio_path=[],
+            # Initialize missing generate parameters
+            audio_path=None,
+            jams_path=None,
+            fix_clipping=None,
+            peak_normalization=None,
+            save_isolated_events=None,
+            isolated_events_path=None,
+            disable_sox_warnings=None,
+            no_audio=None,
+            txt_path=None,
+            txt_sep=None,
+            disable_instantiation_warnings=None,
+            peak_normalization_scale_factor=None,
+            ref_db_change=None,
+            ref_db_generated=None)
 
         # Add annotation to jams
         jam.annotations.append(ann)
@@ -2228,23 +2234,24 @@ class Scaper(object):
 
         # TODO: Stick to heavy handed overwriting for now, in the future we
         #  should consolidate this with what happens inside _instantiate().
-        # ann.sandbox.scaper.audio_path = audio_path,
-        # ann.sandbox.scaper.jams_path = jams_path,
-        # ann.sandbox.scaper.allow_repeated_label = allow_repeated_label,
-        # ann.sandbox.scaper.allow_repeated_source = allow_repeated_source,
-        # ann.sandbox.scaper.reverb = reverb,
-        # ann.sandbox.scaper.fix_clipping = fix_clipping,
-        # ann.sandbox.scaper.peak_normalization = peak_normalization,
-        # ann.sandbox.scaper.save_isolated_events = save_isolated_events,
-        # ann.sandbox.scaper.isolated_events_path = isolated_events_path,
-        # ann.sandbox.scaper.disable_sox_warnings = disable_instantiation_warnings,
-        # ann.sandbox.scaper.no_audio = no_audio,
-        # ann.sandbox.scaper.txt_path = txt_path,
-        # ann.sandbox.scaper.txt_sep = txt_sep,
-        # ann.sandbox.scaper.disable_instantiation_warnings = disable_instantiation_warnings,
-        # ann.sandbox.scaper.peak_normalization_scale_factor = scale_factor,
-        # ann.sandbox.scaper.ref_db_change = ref_db_change
-        # ann.sandbox.scaper.ref_db_generated = self.ref_db + ref_db_change
+        # print("THIS!!!", allow_repeated_label, type(allow_repeated_label))
+        ann.sandbox.scaper.audio_path = audio_path
+        ann.sandbox.scaper.jams_path = jams_path
+        ann.sandbox.scaper.allow_repeated_label = allow_repeated_label
+        ann.sandbox.scaper.allow_repeated_source = allow_repeated_source
+        ann.sandbox.scaper.reverb = reverb
+        ann.sandbox.scaper.fix_clipping = fix_clipping
+        ann.sandbox.scaper.peak_normalization = peak_normalization
+        ann.sandbox.scaper.save_isolated_events = save_isolated_events
+        ann.sandbox.scaper.isolated_events_path = isolated_events_path
+        ann.sandbox.scaper.disable_sox_warnings = disable_sox_warnings
+        ann.sandbox.scaper.no_audio = no_audio
+        ann.sandbox.scaper.txt_path = txt_path
+        ann.sandbox.scaper.txt_sep = txt_sep
+        ann.sandbox.scaper.disable_instantiation_warnings = disable_instantiation_warnings
+        ann.sandbox.scaper.peak_normalization_scale_factor = scale_factor
+        ann.sandbox.scaper.ref_db_change = ref_db_change
+        ann.sandbox.scaper.ref_db_generated = self.ref_db + ref_db_change
 
         # Save JAMS to disk too
         if jams_path is not None:
