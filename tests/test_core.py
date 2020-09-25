@@ -212,6 +212,50 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
         pytest.raises(ScaperError, scaper.generate_from_jams, jam_file.name,
                       gen_file.name)
 
+    # # Make sure we can load an old JAM file that doesn't have fix_cilpping or peak_normalization
+    old_jam_file = 'tests/data/regression/soundscape_20200501_44100_no_clipping_normalization_fields.jams'
+    tmpfiles = []
+    with _close_temp_files(tmpfiles):
+        gen_audio_file = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
+        gen_jam_file = tempfile.NamedTemporaryFile(suffix='.jams', delete=True)
+        gen_txt_file = tempfile.NamedTemporaryFile(suffix='.txt', delete=True)
+        tmpfiles.extend([gen_audio_file, gen_jam_file, gen_txt_file])
+
+        (fj_soundscape_audio, fj_soundscape_jam, fj_annotation_list, fj_event_audio_list) =  \
+            scaper.generate_from_jams(old_jam_file,
+                                      audio_outfile=gen_audio_file.name,
+                                      jams_outfile=gen_jam_file.name,
+                                      txt_path=gen_txt_file.name)
+
+        # validate return API
+        orig_wav, sr = soundfile.read(TEST_PATHS[44100]['REG'].wav, always_2d=True)
+        assert np.allclose(orig_wav, fj_soundscape_audio)
+
+        regjam = jams.load(TEST_PATHS[44100]['REG'].jams)
+        sandbox_exclude = ['fix_clipping', 'peak_normalization']
+        _compare_scaper_jams(
+            regjam, fj_soundscape_jam,
+            exclude_additional_scaper_sandbox_keys=sandbox_exclude)
+        # _compare_txt_annotation(annotation_list, fj_annotation_list)  # TODO
+
+        # TODO:
+        # for event, fj_event in zip(event_audio_list, fj_event_audio_list):
+        #     assert np.allclose(event, fj_event, atol=1e-8, rtol=rtol)
+
+        # validate soundscape audio written to disk
+        gen_wav, sr = soundfile.read(gen_audio_file.name, always_2d=True)
+        assert np.allclose(gen_wav, orig_wav, atol=atol, rtol=rtol)
+
+        # validate jams
+        sandbox_exclude = ['fix_clipping', 'peak_normalization']
+        gen_jam = jams.load(gen_jam_file.name)
+        _compare_scaper_jams(
+            regjam, gen_jam,
+            exclude_additional_scaper_sandbox_keys=sandbox_exclude)
+
+        # validate annotation txt
+        _compare_txt_annotation(TEST_PATHS[44100]['REG'].txt, gen_txt_file.name)
+
     # Test for valid jams file
     tmpfiles = []
     with _close_temp_files(tmpfiles):
