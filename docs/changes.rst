@@ -2,6 +2,14 @@
 
 Changelog
 ---------
+v1.6.3
+~~~~~~
+- Scaper.generate now accepts two new optional arguments for controlling audio clipping and normalization:
+    - fix_clipping: if True and the soundscape audio is clipping, it will be peak normalized and all isolated events will be scaled accordingly.
+    - peak_normalization: if True, sounscape audio will be peak normalized regardless of whether it's clipping or not and all isolated events will be scaled accordingly.
+- All generate arguments are now documented in the scaper sandbox inside the JAMS annotation.
+- Furthermore, we also document in the JAMS: the scale factor used for peak normalization, the change in ref_db, and the actual ref_db of the generated audio.
+
 v1.6.2
 ~~~~~~
 - Switching from FFMpeg LUFS calculation to pyloudnorm for better performance: runtime is reduced by approximately 30%
