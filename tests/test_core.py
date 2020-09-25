@@ -59,7 +59,7 @@ TEST_PATHS = {
 }
 
 
-def _compare_scaper_jams(jam, regjam):
+def _compare_scaper_jams(jam, regjam, exclude_additional_scaper_sandbox_keys=[]):
     """
     Check whether two scaper jams objects are equal up to floating point
     precision, ignoring jams_version and scaper_version.
@@ -113,6 +113,8 @@ def _compare_scaper_jams(jam, regjam):
         'bg_spec', 'fg_spec', 'scaper_version', 'soundscape_audio_path', 
         'isolated_events_audio_path',
     ]
+    excluded_scaper_sandbox_keys.extend(exclude_additional_scaper_sandbox_keys)
+
     # everything but the specs and version can be compared directly:
     for k in set(ann.sandbox.scaper.keys()) | set(regann.sandbox.scaper.keys()):
         if k not in excluded_scaper_sandbox_keys:
@@ -1300,9 +1302,30 @@ def test_scaper_instantiate():
             pitch_shift=None,
             time_stretch=('const', 1.2))
 
+        # Instantiate
         jam = sc._instantiate(disable_instantiation_warnings=True)
+
+        # Ignore all fields set by generate but not by instantiate
+        sandbox_exclude = [
+            'txt_path',
+            'jams_path',
+            'audio_path',
+            'no_audio',
+            'save_isolated_events',
+            'fix_clipping',
+            'peak_normalization',
+            'peak_normalization_scale_factor',
+            'ref_db_change',
+            'ref_db_generated',
+            'txt_sep',
+            'disable_sox_warnings',
+            'disable_instantiation_warnings'
+        ]
+
+        # Load regression jam
         regjam = jams.load(REG_JAM_PATH)
-        _compare_scaper_jams(jam, regjam)
+        _compare_scaper_jams(jam, regjam,
+                             exclude_additional_scaper_sandbox_keys=sandbox_exclude)
 
 
 def test_generate_with_seeding(atol=1e-4, rtol=1e-8):
@@ -1372,9 +1395,12 @@ def _compare_generators(generators, atol=1e-4, rtol=1e-8):
 
         # load all the jams data
         # make sure they are all the same as the first one
+        exclude_sandbox = ['audio_path', 'jams_path', 'txt_path']
         jams_data = [jams.load(jam_file.name) for jam_file in jam_files]
         for x in jams_data:
-            _compare_scaper_jams(x, jams_data[0])
+            _compare_scaper_jams(
+                x, jams_data[0],
+                exclude_additional_scaper_sandbox_keys=exclude_sandbox)
 
         # load the txt files and compare them
         def _load_txt(txt_file):
