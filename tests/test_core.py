@@ -1833,7 +1833,11 @@ def _test_generate(SR, REG_WAV_PATH, REG_JAM_PATH, REG_TXT_PATH, atol=1e-4, rtol
         # validate jams
         jam = jams.load(jam_file.name)
         regjam = jams.load(REG_JAM_PATH)
-        _compare_scaper_jams(jam, regjam)
+
+        sandbox_exclude = ['audio_path', 'jams_path', 'txt_path']
+        _compare_scaper_jams(
+            jam, regjam,
+            exclude_additional_scaper_sandbox_keys=sandbox_exclude)
 
         # validate txt
         _compare_txt_annotation(txt_file.name, REG_TXT_PATH)
@@ -1892,8 +1896,15 @@ def _test_generate_return_api(SR, REG_WAV_PATH, REG_JAM_PATH, REG_TXT_PATH,
             # validate jams
             jam = jams.load(jam_file.name)
             regjam = jams.load(REG_JAM_PATH)
+
+            sandbox_exclude = [
+                'isolated_events_path', 'save_isolated_events', 'jams_path',
+                'txt_path', 'audio_path']
             _compare_scaper_jams(soundscape_jam, jam)
-            _compare_scaper_jams(soundscape_jam, regjam)
+            _compare_scaper_jams(
+                soundscape_jam,
+                regjam,
+                exclude_additional_scaper_sandbox_keys=sandbox_exclude)
 
             # validate txt annotation
             txt_data = _load_txt_annotation(txt_file.name)
