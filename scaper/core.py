@@ -212,8 +212,16 @@ def generate_from_jams(jams_infile,
 
     # Pull generation parameters from annotation
     reverb = ann.sandbox.scaper['reverb']
-    fix_clipping = ann.sandbox.scaper['fix_clipping']
-    peak_normalization = ann.sandbox.scaper['peak_normalization']
+
+    if 'fix_clipping' in ann.sandbox.scaper.keys():
+        fix_clipping = ann.sandbox.scaper['fix_clipping']
+    else:
+        fix_clipping = False
+
+    if 'peak_normalization' in ann.sandbox.scaper.keys():
+        peak_normalization = ann.sandbox.scaper['peak_normalization']
+    else:
+        peak_normalization = False
 
     # Cast ann.sandbox.scaper to a Sandbox object
     ann.sandbox.scaper = jams.Sandbox(**ann.sandbox.scaper)
@@ -2235,7 +2243,6 @@ class Scaper(object):
 
         # TODO: Stick to heavy handed overwriting for now, in the future we
         #  should consolidate this with what happens inside _instantiate().
-        # print("THIS!!!", allow_repeated_label, type(allow_repeated_label))
         ann.sandbox.scaper.audio_path = audio_path
         ann.sandbox.scaper.jams_path = jams_path
         ann.sandbox.scaper.allow_repeated_label = allow_repeated_label
