@@ -1988,6 +1988,7 @@ def _generate_soundscape_with_short_background(background_file, audio_path, jams
 
         sc.generate(audio_path, jams_path)
 
+
 def test_scaper_generate_with_fade():
     # Test scaper generate with different fade lengths
     # Works by using a fade of 0 at first then comparing
@@ -2041,6 +2042,7 @@ def test_scaper_generate_with_fade():
             mask = np.invert(np.isnan(ratio))
             assert np.allclose(ratio[mask], fade_out_window[mask])
 
+
 def test_scaper_with_short_background():
     SHORT_BG_FILE = os.path.join(
         SHORT_BG_PATH, 'noise', 'noise-free-sound-0145.wav')
@@ -2083,3 +2085,92 @@ def test_scaper_with_short_background():
         audio1, sr = soundfile.read(wav1_file.name)
         audio2, sr = soundfile.read(wav2_file.name)
         assert np.allclose(audio1, audio2)
+
+
+def test_clipping_and_normalization():
+
+    for sr in [16000, 44100]:
+        sc = scaper.Scaper(10, FG_PATH, BG_PATH, random_state=0)
+        sc.sr = sr
+        sc.ref_db = -20
+
+        sc.add_event(
+            label=('const', 'siren'),
+            source_file=('choose', []),
+            source_time=('uniform', 0, 10),
+            event_time=('const', 0),
+            event_duration=('const', 10),
+            snr=('const', 20),
+            pitch_shift=None,
+            time_stretch=None)
+
+        # extreme clipping
+        sc_extreme = scaper.Scaper(10, FG_PATH, BG_PATH, random_state=0)
+        sc_extreme.sr = 16000
+        sc_extreme.ref_db = -20
+
+        sc_extreme.add_event(
+            label=('const', 'siren'),
+            source_file=('choose', []),
+            source_time=('uniform', 0, 10),
+            event_time=('const', 0),
+            event_duration=('const', 10),
+            snr=('const', 40),
+            pitch_shift=None,
+            time_stretch=None)
+
+        tmpfiles = []
+        with _close_temp_files(tmpfiles):
+
+            # Make sure a warning is raised when there's clipping
+            audio_path = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
+            tmpfiles.append(audio_path)
+            pytest.warns(ScaperWarning, sc.generate, audio_path, fix_clipping=False)
+
+            # Make sure a second warning is raised if we're fixing the clipping
+            audio_path2 = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
+            tmpfiles.append(audio_path2)
+            with pytest.warns(None) as record:
+                sc.generate(audio_path2, fix_clipping=True)
+
+            assert len(record) == 2
+            assert str(record[0].message) == 'Soundscape audio is clipping!'
+            assert 'Peak normalization applied to fix clipping' in str(record[1].message)
+
+            # Make sure we get a third warning when the scaling factor is < 0.05
+            audio_path3 = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
+            tmpfiles.append(audio_path3)
+            with pytest.warns(None) as record:
+                sc_extreme.generate(audio_path3, fix_clipping=True)
+
+            assert len(record) == 3
+            assert str(record[0].message) == 'Soundscape audio is clipping!'
+            assert 'Peak normalization applied to fix clipping' in str(record[1].message)
+            assert 'Scale factor for peak normalization is extreme' in str(record[2].message)
+
+            # PEAK NORMALIZATION TESTS
+            # Make sure a warning is raised when there's clipping
+            audio_path4 = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
+            tmpfiles.append(audio_path4)
+            pytest.warns(ScaperWarning, sc.generate, audio_path4,
+                         fix_clipping=False, peak_normalization=True)
+
+            # Make sure a second warning is NOT raised if we're peak normalizing by default
+            audio_path5 = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
+            tmpfiles.append(audio_path5)
+            with pytest.warns(None) as record:
+                sc.generate(audio_path5, fix_clipping=False, peak_normalization=True)
+
+            assert len(record) == 1
+            assert str(record[0].message) == 'Soundscape audio is clipping!'
+
+            # Make sure we get two warnings when w're normalizing but not fixing
+            # clipping explicitly and the scaling factor is < 0.05
+            audio_path6 = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
+            tmpfiles.append(audio_path6)
+            with pytest.warns(None) as record:
+                sc_extreme.generate(audio_path6, fix_clipping=False, peak_normalization=True)
+
+            assert len(record) == 2
+            assert str(record[0].message) == 'Soundscape audio is clipping!'
+            assert 'Scale factor for peak normalization is extreme' in str(record[1].message)

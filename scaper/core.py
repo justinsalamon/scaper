@@ -2004,6 +2004,7 @@ class Scaper(object):
                                 scale_factor, ref_db_change, self.ref_db),
                             ScaperWarning)
 
+                    # print(scale_factor)
                     if scale_factor < 0.05:
                         warnings.warn(
                             'Scale factor for peak normalization is extreme '
