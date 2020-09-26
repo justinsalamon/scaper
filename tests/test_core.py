@@ -297,7 +297,7 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
         # --- Define CLIPPING scaper --- *
         sc_clipping = scaper.Scaper(10, FG_PATH, BG_PATH)
         sc_clipping.protected_labels = []
-        sc_clipping.ref_db = -20
+        sc_clipping.ref_db = 0
         sc_clipping.add_background(label=('choose', []),
                           source_file=('choose', []),
                           source_time=('const', 0))

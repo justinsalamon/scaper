@@ -236,6 +236,19 @@ def generate_from_jams(jams_infile,
                            save_isolated_events=save_isolated_events,
                            isolated_events_path=isolated_events_path,
                            disable_sox_warnings=disable_sox_warnings)
+    
+    # TODO: Stick to heavy handed overwriting for now, in the future we
+    # should consolidate this with what happens inside _instantiate().
+    ann.sandbox.scaper.reverb = reverb
+    ann.sandbox.scaper.fix_clipping = fix_clipping
+    ann.sandbox.scaper.peak_normalization = peak_normalization
+    ann.sandbox.scaper.save_isolated_events = save_isolated_events
+    ann.sandbox.scaper.isolated_events_path = isolated_events_path
+    ann.sandbox.scaper.disable_sox_warnings = disable_sox_warnings
+    ann.sandbox.scaper.peak_normalization_scale_factor = scale_factor
+    ann.sandbox.scaper.ref_db_change = ref_db_change
+    ann.sandbox.scaper.ref_db_generated = sc.ref_db + ref_db_change
+    
 
     # If there are slice (trim) operations, need to perform them!
     # Need to add this logic for the isolated events too.
@@ -2012,7 +2025,6 @@ class Scaper(object):
                                 scale_factor, ref_db_change, self.ref_db),
                             ScaperWarning)
 
-                    # print(scale_factor)
                     if scale_factor < 0.05:
                         warnings.warn(
                             'Scale factor for peak normalization is extreme '
@@ -2076,7 +2088,7 @@ class Scaper(object):
         #  FUSS. Eventually we should remove this from here.
         ann.sandbox.scaper.soundscape_audio_path = audio_path
         ann.sandbox.scaper.isolated_events_audio_path = isolated_events_audio_path
-
+        
         # Return audio for in-memory processing
         return soundscape_audio, event_audio_list, scale_factor, ref_db_change
 
@@ -2260,7 +2272,7 @@ class Scaper(object):
         ann.sandbox.scaper.peak_normalization_scale_factor = scale_factor
         ann.sandbox.scaper.ref_db_change = ref_db_change
         ann.sandbox.scaper.ref_db_generated = self.ref_db + ref_db_change
-
+        
         # Save JAMS to disk too
         if jams_path is not None:
             soundscape_jam.save(jams_path)
