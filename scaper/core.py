@@ -238,7 +238,7 @@ def generate_from_jams(jams_infile,
                            disable_sox_warnings=disable_sox_warnings)
     
     # TODO: Stick to heavy handed overwriting for now, in the future we
-    # should consolidate this with what happens inside _instantiate().
+    #  should consolidate this with what happens inside _instantiate().
     ann.sandbox.scaper.reverb = reverb
     ann.sandbox.scaper.fix_clipping = fix_clipping
     ann.sandbox.scaper.peak_normalization = peak_normalization
@@ -249,7 +249,6 @@ def generate_from_jams(jams_infile,
     ann.sandbox.scaper.ref_db_change = ref_db_change
     ann.sandbox.scaper.ref_db_generated = sc.ref_db + ref_db_change
     
-
     # If there are slice (trim) operations, need to perform them!
     # Need to add this logic for the isolated events too.
     if 'slice' in ann.sandbox.keys():
@@ -2058,11 +2057,7 @@ class Scaper(object):
                     else:
                         event_folder = isolated_events_path
 
-                    if not os.path.exists(event_folder):
-                        # In Python 3.2 and above we could do
-                        # os.makedirs(..., exist_ok=True) but we test back to
-                        # Python 2.7.
-                        os.makedirs(event_folder)
+                    os.makedirs(event_folder, exist_ok=True)
 
                     iso_idx = 0
                     role_counter = {'background': 0, 'foreground': 0}
@@ -2088,9 +2083,11 @@ class Scaper(object):
                             "mixture", ScaperWarning)
 
         # Document output paths
-        # TODO: this is redundant with data stored in ann.sandbox.scaper.generate,
-        #  but we're keeping it here for now for backwards compatibility e.g. with
-        #  FUSS. Eventually we should remove this from here.
+        # TODO: this is redundant with audio_path and isolated_events_path that
+        #  are also stored in ann.sandbox.scaper. For now we're keeping these
+        #  here for now for backwards compatibility e.g. with FUSS. Eventually
+        #  we should remove these two lines and consolidate how/where JAMS
+        #  metadata is stored (cf. generate() and generate_from_jams()).
         ann.sandbox.scaper.soundscape_audio_path = audio_path
         ann.sandbox.scaper.isolated_events_audio_path = isolated_events_audio_path
         
