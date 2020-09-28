@@ -223,6 +223,11 @@ def generate_from_jams(jams_infile,
     else:
         peak_normalization = False
 
+    if 'quick_pitch_time' in ann.sandbox.scaper.keys():
+        quick_pitch_time = ann.sandbox.scaper['quick_pitch_time']
+    else:
+        quick_pitch_time = False
+
     # Cast ann.sandbox.scaper to a Sandbox object
     ann.sandbox.scaper = jams.Sandbox(**ann.sandbox.scaper)
 
@@ -233,6 +238,7 @@ def generate_from_jams(jams_infile,
                            reverb=reverb,
                            fix_clipping=fix_clipping,
                            peak_normalization=peak_normalization,
+                           quick_pitch_time=quick_pitch_time,
                            save_isolated_events=save_isolated_events,
                            isolated_events_path=isolated_events_path,
                            disable_sox_warnings=disable_sox_warnings)
@@ -242,6 +248,7 @@ def generate_from_jams(jams_infile,
     ann.sandbox.scaper.reverb = reverb
     ann.sandbox.scaper.fix_clipping = fix_clipping
     ann.sandbox.scaper.peak_normalization = peak_normalization
+    ann.sandbox.scaper.quick_pitch_time = quick_pitch_time
     ann.sandbox.scaper.save_isolated_events = save_isolated_events
     ann.sandbox.scaper.isolated_events_path = isolated_events_path
     ann.sandbox.scaper.disable_sox_warnings = disable_sox_warnings
@@ -1746,6 +1753,7 @@ class Scaper(object):
                         reverb=None,
                         fix_clipping=False,
                         peak_normalization=False,
+                        quick_pitch_time=False,
                         save_isolated_events=False,
                         isolated_events_path=None,
                         disable_sox_warnings=True):
@@ -1776,6 +1784,10 @@ class Scaper(object):
             each isolated event is also scaled accordingly. Note: this will change
             the actual value of `ref_db` in the generated audio. The scaling
             factor that was used is returned.
+        quick_pitch_time : bool
+            When True (default=False), time stretching and pitch shifting will be
+            applied with `quick=True`. This is much faster but the resultant 
+            audio is generally of lower audio quality.
         save_isolated_events : bool
             If True, this will save the isolated foreground events and
             backgrounds in a directory adjacent to the generated soundscape
@@ -1922,12 +1934,12 @@ class Scaper(object):
 
                     # Pitch shift
                     if e.value['pitch_shift'] is not None:
-                        tfm.pitch(e.value['pitch_shift'])
+                        tfm.pitch(e.value['pitch_shift'], quick=quick_pitch_time)
 
                     # Time stretch
                     if e.value['time_stretch'] is not None:
                         factor = 1.0 / float(e.value['time_stretch'])
-                        tfm.tempo(factor, audio_type='s', quick=False)
+                        tfm.tempo(factor, audio_type='s', quick=quick_pitch_time)
 
                     # PROCESS BEFORE COMPUTING LUFS
                     tmpfiles_internal = []
@@ -2102,6 +2114,7 @@ class Scaper(object):
                  reverb=None,
                  fix_clipping=False,
                  peak_normalization=False,
+                 quick_pitch_time=False,
                  save_isolated_events=False,
                  isolated_events_path=None,
                  disable_sox_warnings=True,
@@ -2154,6 +2167,10 @@ class Scaper(object):
             `ref_db` value will be stored in the JAMS annotation. The SNR of
             foreground events with respect to the background is unaffected except
             when extreme scaling is required to achieve peak normalization.
+        quick_pitch_time : bool
+            When True (default=False), time stretching and pitch shifting will be
+            applied with `quick=True`. This is much faster but the resultant 
+            audio is generally of lower audio quality.
         save_isolated_events : bool
             If True, this will save the isolated foreground events and
             backgrounds in a directory adjacent to the generated soundscape
@@ -2253,7 +2270,8 @@ class Scaper(object):
                                      isolated_events_path=isolated_events_path,
                                      disable_sox_warnings=disable_sox_warnings,
                                      fix_clipping=fix_clipping,
-                                     peak_normalization=peak_normalization)
+                                     peak_normalization=peak_normalization,
+                                     quick_pitch_time=quick_pitch_time)
 
         # TODO: Stick to heavy handed overwriting for now, in the future we
         #  should consolidate this with what happens inside _instantiate().
@@ -2264,6 +2282,7 @@ class Scaper(object):
         ann.sandbox.scaper.reverb = reverb
         ann.sandbox.scaper.fix_clipping = fix_clipping
         ann.sandbox.scaper.peak_normalization = peak_normalization
+        ann.sandbox.scaper.quick_pitch_time = quick_pitch_time
         ann.sandbox.scaper.save_isolated_events = save_isolated_events
         ann.sandbox.scaper.isolated_events_path = isolated_events_path
         ann.sandbox.scaper.disable_sox_warnings = disable_sox_warnings
