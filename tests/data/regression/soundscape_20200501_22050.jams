@@ -235,7 +235,7 @@
           "allow_repeated_label": true,
           "allow_repeated_source": true,
           "reverb": null,
-          "scaper_version": "1.6.3",
+          "scaper_version": "1.6.4",
           "soundscape_audio_path": "tests/data/regression/soundscape_20200501_22050.wav",
           "isolated_events_audio_path": [],
           "audio_path": "tests/data/regression/soundscape_20200501_22050.wav",
@@ -251,7 +251,8 @@
           "disable_instantiation_warnings": true,
           "peak_normalization_scale_factor": 1.0,
           "ref_db_change": 0,
-          "ref_db_generated": -50
+          "ref_db_generated": -50,
+          "quick_pitch_time": false
         }
       },
       "time": 0,
