@@ -240,8 +240,6 @@
           "isolated_events_audio_path": [],
           "audio_path": "tests/data/regression/soundscape_20200501_44100.wav",
           "jams_path": "tests/data/regression/soundscape_20200501_44100.jams",
-          "fix_clipping": false,
-          "peak_normalization": false,
           "save_isolated_events": false,
           "isolated_events_path": null,
           "disable_sox_warnings": true,

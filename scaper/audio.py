@@ -1,18 +1,10 @@
 # CREATED: 4/23/17 15:37 by Justin Salamon <justin.salamon@nyu.edu>
 
-'''
-Utility functions for audio processing using FFMPEG (beyond sox). Based on:
-https://github.com/mathos/neg23/
-'''
-
-import subprocess
-import sox
 import numpy as np
 import pyloudnorm
 import soundfile
-import tempfile
 from .scaper_exceptions import ScaperError
-from .util import _close_temp_files
+
 
 def get_integrated_lufs(audio_array, samplerate, min_duration=0.5,
                         filter_class='K-weighting', block_size=0.400):
@@ -104,5 +96,42 @@ def match_sample_length(audio_path, duration_in_samples):
 
         audio = np.pad(audio, pad_width, 'constant')
 
-    soundfile.write(audio_path, audio, sr, 
-        subtype=audio_info.subtype, format=audio_info.format)
+    soundfile.write(audio_path, audio, sr,
+                    subtype=audio_info.subtype, format=audio_info.format)
+
+
+def peak_normalize(soundscape_audio, event_audio_list):
+    """
+    Compute the scale factor required to peak normalize the audio such that
+    max(abs(soundscape_audio)) = 1.
+
+    Parameters
+    ----------
+    soundscape_audio : np.ndarray
+        The soudnscape audio.
+    event_audio_list : list
+        List of np.ndarrays containing the audio samples of each isolated
+        foreground event.
+
+    Returns
+    -------
+    scaled_soundscape_audio : np.ndarray
+        The peak normalized soundscape audio.
+    scaled_event_audio_list : list
+        List of np.ndarrays containing the scaled audio samples of
+        each isolated foreground event. All events are scaled by scale_factor.
+    scale_factor : float
+        The scale factor used to peak normalize the soundscape audio.
+    """
+    eps = 1e-10
+    max_sample = np.max(np.abs(soundscape_audio))
+    scale_factor = 1.0 / (max_sample + eps)
+
+    # scale the event audio and the soundscape audio:
+    scaled_soundscape_audio = soundscape_audio * scale_factor
+
+    scaled_event_audio_list = []
+    for event_audio in event_audio_list:
+        scaled_event_audio_list.append(event_audio * scale_factor)
+
+    return scaled_soundscape_audio, scaled_event_audio_list, scale_factor

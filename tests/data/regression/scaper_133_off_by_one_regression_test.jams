@@ -391,7 +391,9 @@
           "reverb": null,
           "scaper_version": "1.3.3",
           "soundscape_audio_path": "/var/folders/5h/6vxlzhys259350xz4nb3xbym0000gn/T/tmpw80q7jsa.wav",
-          "isolated_events_audio_path": []
+          "isolated_events_audio_path": [],
+          "fix_clipping": false,
+          "peak_normalization": false
         }
       },
       "time": 0,
