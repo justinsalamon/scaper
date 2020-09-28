@@ -2,6 +2,11 @@
 
 Changelog
 ---------
+v1.6.4
+~~~~~~
+- Scaper.generate now accepts a new argument for controlling trade-off between speed and quality in pitch shifting and time stretching:
+    - quick_pitch_time: if True, both time stretching and pitch shifting will be applied in quick mode, which is much faster but has lower quality.
+
 v1.6.3
 ~~~~~~
 - Scaper.generate now accepts two new optional arguments for controlling audio clipping and normalization:

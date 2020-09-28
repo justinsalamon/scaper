@@ -232,7 +232,7 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
         assert np.allclose(orig_wav, fj_soundscape_audio)
 
         regjam = jams.load(TEST_PATHS[44100]['REG'].jams)
-        sandbox_exclude = ['fix_clipping', 'peak_normalization']
+        sandbox_exclude = ['fix_clipping', 'peak_normalization', 'quick_pitch_time']
         _compare_scaper_jams(
             regjam, fj_soundscape_jam,
             exclude_additional_scaper_sandbox_keys=sandbox_exclude)
@@ -247,7 +247,7 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
         assert np.allclose(gen_wav, orig_wav, atol=atol, rtol=rtol)
 
         # validate jams
-        sandbox_exclude = ['fix_clipping', 'peak_normalization']
+        sandbox_exclude = ['fix_clipping', 'peak_normalization', 'quick_pitch_time']
         gen_jam = jams.load(gen_jam_file.name)
         _compare_scaper_jams(
             regjam, gen_jam,
@@ -390,6 +390,7 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
             assert ann.sandbox.scaper.jams_path == orig_jam_file.name
             assert ann.sandbox.scaper.fix_clipping is False
             assert ann.sandbox.scaper.peak_normalization is False
+            assert ann.sandbox.scaper.quick_pitch_time is False
             assert ann.sandbox.scaper.save_isolated_events is False
             assert ann.sandbox.scaper.isolated_events_path is None
             assert ann.sandbox.scaper.disable_sox_warnings is True
@@ -434,6 +435,7 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
             assert ann.sandbox.scaper.jams_path == orig_jam_file.name
             assert ann.sandbox.scaper.fix_clipping is True
             assert ann.sandbox.scaper.peak_normalization is False
+            assert ann.sandbox.scaper.quick_pitch_time is False
             assert ann.sandbox.scaper.save_isolated_events is False
             assert ann.sandbox.scaper.isolated_events_path is None
             assert ann.sandbox.scaper.disable_sox_warnings is True
@@ -463,6 +465,7 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
             # assert ann.sandbox.scaper.jams_path == gen_jam_file.name
             assert ann.sandbox.scaper.fix_clipping is True
             assert ann.sandbox.scaper.peak_normalization is False
+            assert ann.sandbox.scaper.quick_pitch_time is False
             assert ann.sandbox.scaper.save_isolated_events is False
             assert ann.sandbox.scaper.isolated_events_path is None
             assert ann.sandbox.scaper.disable_sox_warnings is True
@@ -473,6 +476,72 @@ def test_generate_from_jams(atol=1e-5, rtol=1e-8):
             assert ann.sandbox.scaper.peak_normalization_scale_factor != 1.0
             assert ann.sandbox.scaper.ref_db_change != 0
             assert ann.sandbox.scaper.ref_db_generated != \
+                   ann.sandbox.scaper.ref_db
+        
+        # Test when we generate ONLY a JAMS file, and then generate audio from the JAMS
+        # Case 3: WITH quick_pitch_time=True, no clipping
+        for _ in range(5):
+            (soundscape_audio, soundscape_jam, annotation_list, event_audio_list) = \
+                sc.generate(audio_path=orig_wav_file.name,
+                            jams_path=orig_jam_file.name,
+                            txt_path=orig_txt_file.name,
+                            no_audio=True,
+                            fix_clipping=True,
+                            quick_pitch_time=True,
+                            disable_instantiation_warnings=True)
+
+            assert soundscape_audio is None
+            assert event_audio_list is None
+            assert soundscape_jam is not None
+            assert annotation_list is not None
+
+            ann = soundscape_jam.annotations.search(namespace='scaper')[0]
+
+            assert ann.sandbox.scaper.audio_path == orig_wav_file.name
+            assert ann.sandbox.scaper.jams_path == orig_jam_file.name
+            assert ann.sandbox.scaper.fix_clipping is True
+            assert ann.sandbox.scaper.peak_normalization is False
+            assert ann.sandbox.scaper.quick_pitch_time is True
+            assert ann.sandbox.scaper.save_isolated_events is False
+            assert ann.sandbox.scaper.isolated_events_path is None
+            assert ann.sandbox.scaper.disable_sox_warnings is True
+            assert ann.sandbox.scaper.no_audio is True
+            assert ann.sandbox.scaper.txt_path == orig_txt_file.name
+            assert ann.sandbox.scaper.txt_sep is '\t'
+            assert ann.sandbox.scaper.disable_instantiation_warnings is True
+            assert ann.sandbox.scaper.peak_normalization_scale_factor == 1.0
+            assert ann.sandbox.scaper.ref_db_change == 0
+            assert ann.sandbox.scaper.ref_db_generated == \
+                   ann.sandbox.scaper.ref_db
+
+            (fj_soundscape_audio, fj_soundscape_jam, fj_annotation_list, fj_event_audio_list) = \
+                scaper.generate_from_jams(orig_jam_file.name,
+                                          audio_outfile=gen_wav_file.name,
+                                          jams_outfile=gen_jam_file.name,
+                                          txt_path=gen_txt_file.name)
+
+            assert fj_soundscape_audio is not None
+            assert fj_event_audio_list is not None
+            assert fj_soundscape_jam is not None
+            assert fj_annotation_list is not None
+
+            ann = fj_soundscape_jam.annotations.search(namespace='scaper')[0]
+
+            # assert ann.sandbox.scaper.audio_path == gen_wav_file.name
+            # assert ann.sandbox.scaper.jams_path == gen_jam_file.name
+            assert ann.sandbox.scaper.fix_clipping is True
+            assert ann.sandbox.scaper.peak_normalization is False
+            assert ann.sandbox.scaper.quick_pitch_time is True
+            assert ann.sandbox.scaper.save_isolated_events is False
+            assert ann.sandbox.scaper.isolated_events_path is None
+            assert ann.sandbox.scaper.disable_sox_warnings is True
+            assert ann.sandbox.scaper.no_audio is True  # TODO
+            # assert ann.sandbox.scaper.txt_path == gen_txt_file.name
+            assert ann.sandbox.scaper.txt_sep is '\t'
+            assert ann.sandbox.scaper.disable_instantiation_warnings is True
+            assert ann.sandbox.scaper.peak_normalization_scale_factor == 1.0
+            assert ann.sandbox.scaper.ref_db_change == 0
+            assert ann.sandbox.scaper.ref_db_generated == \
                    ann.sandbox.scaper.ref_db
 
             # validate return API
@@ -1489,6 +1558,7 @@ def test_scaper_instantiate():
             'fix_clipping',
             'peak_normalization',
             'peak_normalization_scale_factor',
+            'quick_pitch_time',
             'ref_db_change',
             'ref_db_generated',
             'txt_sep',

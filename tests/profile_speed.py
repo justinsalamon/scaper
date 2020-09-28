@@ -19,9 +19,18 @@ import psutil
 import datetime
 import math
 import multiprocessing
+import argparse
+import sys
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--quick', action='store_true')
+args = parser.parse_args()
+cmd_line = ' '.join(sys.argv)
+cmd_line = 'python ' + cmd_line
 
 # Download the audio automatically
 FIX_DIR = 'tests/data/'
+QUICK_PITCH_TIME = args.quick
 
 def get_git_commit_hash():
     process = subprocess.Popen(
@@ -130,6 +139,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
                     allow_repeated_source=True,
                     reverb=0.1,
                     disable_sox_warnings=True,
+                    quick_pitch_time=QUICK_PITCH_TIME,
                     no_audio=False,
                     txt_path=txtfile)
 
@@ -137,6 +147,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
     uname = platform.uname()
 
     row = {
+        'command': cmd_line,
         'time_of_run': str(datetime.datetime.now()),
         'scaper_version': scaper.__version__,
         'python_version': platform.python_version(),
