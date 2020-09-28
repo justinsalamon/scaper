@@ -1993,9 +1993,6 @@ class Scaper(object):
                     "No events to synthesize (silent soundscape), no audio "
                     "generated.", ScaperWarning)
             else:                        
-                tfm = sox.Transformer()
-                if reverb is not None:
-                    tfm.reverb(reverberance=reverb * 100)
 
                 # Sum all events to get soundscape audio
                 soundscape_audio = sum(event_audio_list)
@@ -2033,11 +2030,19 @@ class Scaper(object):
                             ScaperWarning
                         )
 
-                # Apply effects and reshape
-                soundscape_audio = tfm.build_array(
-                    input_array=soundscape_audio,
-                    sample_rate_in=self.sr,
-                )
+                # Optionally apply reverb
+                # NOTE: must apply AFTER peak normalization: applying reverb
+                # to a clipping signal with sox and then normalizing doesn't
+                # work as one would hope.
+                if reverb is not None:
+                    tfm = sox.Transformer()
+                    tfm.reverb(reverberance=reverb * 100)
+                    soundscape_audio = tfm.build_array(
+                        input_array=soundscape_audio,
+                        sample_rate_in=self.sr,
+                    )
+
+                # Reshape to ensure data are 2d
                 soundscape_audio = soundscape_audio.reshape(-1, self.n_channels)
 
                 # Optionally save soundscape audio to disk
