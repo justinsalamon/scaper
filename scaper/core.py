@@ -24,6 +24,7 @@ from .util import _check_random_state
 from .util import _sample_trunc_norm
 from .util import _sample_uniform
 from .util import _sample_choose
+from .util import _sample_choose_weighted
 from .util import _sample_normal
 from .util import _sample_const
 from .util import max_polyphony
@@ -35,6 +36,7 @@ from .version import version as scaper_version
 
 SUPPORTED_DIST = {"const": _sample_const,
                   "choose": _sample_choose,
+                  "choose_weighted": _sample_choose_weighted,
                   "uniform": _sample_uniform,
                   "normal": _sample_normal,
                   "truncnorm": _sample_trunc_norm}
@@ -450,6 +452,27 @@ def _validate_distribution(dist_tuple):
             raise ScaperError(
                 'The "choose" distribution tuple must be of length 2 where '
                 'the second item is a list.')
+    # If it's a choose_weighted, tuple must be of length 3, items 2 and 3 must
+    # be lists of the same length, and the list in item 3 must contain floats 
+    # in the range [0, 1] that sum to 1 (i.e. valid probabilities).
+    elif dist_tuple[0] == 'choose_weighted':
+        if len(dist_tuple) != 3:
+            raise ScaperError('"choose_weighted" distribution tuple must have length 3')
+        if not isinstance(dist_tuple[1], list) or \
+           not isinstance(dist_tuple[2], list) or \
+           len(dist_tuple[1]) != len(dist_tuple[2]):
+           msg = ('The 2nd and 3rd items of the "choose_weighted" distribution tuple '
+                  'must be lists of the same length.')
+           raise ScaperError(msg)
+        probabilities = np.asarray(dist_tuple[2])
+        if probabilities.min() < 0 or probabilities.max() > 1:
+            msg = ('Values in the probabilities list of the "choose_weighted" '
+                   'distirbution tuple must be in the range [0, 1].')
+            raise ScaperError(msg)
+        if not np.allclose(probabilities.sum(), 1):
+            msg = ('Values in the probabilities list of the "choose_weighted" '
+                   'distribution tuple must sum to 1.')
+            raise ScaperError(msg)
     # If it's a uniform distribution, tuple must be of length 3, 2nd item must
     # be a real number and 3rd item must be real and greater/equal to the 2nd.
     elif dist_tuple[0] == 'uniform':

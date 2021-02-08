@@ -295,25 +295,6 @@ def _sample_choose_weighted(list_of_options, probabilities, random_state):
         A random item chosen from ```list_of_options```.
 
     '''
-    if len(list_of_options) != len(probabilities):
-        msg = ("Couldn't sample from choose_wighted tuple, list_of_options and "
-               "probabilities lists must be same length, found {} and {}.".format(
-                   len(list_of_options), len(probabilities)
-               ))
-        raise ScaperError(msg)
-
-    probabilities = np.asarray(probabilities)
-
-    if probabilities.min() < 0 or probabilities.max() > 1:
-        msg = ("Couldn't sample from choose_wighted tuple, values in "
-               "probabilities are outside the allowed range [0, 1].")
-        raise ScaperError(msg)
-
-    if not np.allclose(probabilities.sum(), 1):
-        msg = ("Couldn't sample from choose_weighted tuple, probabilities do not"
-               "sum to 1.")
-        raise ScaperError(msg)
-    
     return random_state.choice(list_of_options, p=probabilities)
 
 
