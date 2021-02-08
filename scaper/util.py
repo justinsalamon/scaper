@@ -271,6 +271,52 @@ def _sample_choose(list_of_options, random_state):
     return new_list_of_options[index]
 
 
+def _sample_choose_weighted(list_of_options, probabilities, random_state):
+    '''
+    Return a random item from ```list_of_options``` using weighted sampling defined
+    by ```probabilities```, using random_state. The number of items in ```list_of_options```
+    and ```probabilities``` must match, and the values in ```probabilities``` must be in the 
+    range [0, 1] and sum to 1. Unlike ```_sample_choose```, duplicates in 
+    ```list_of_options``` are not removed prior to sampling.
+
+    Parameters
+    ----------
+    list_of_options : list
+        List of items to choose from.
+    probabilities : list of floats
+        List of probabilities corresponding to the elements in ```list_of_options```, such 
+        that the item in ```list_of_options[i]``` is chosen with probability ```probabilities[i]```.
+    random_state : mtrand.RandomState
+        RandomState object used to sample from this distribution.
+
+    Returns
+    -------
+    value : any
+        A random item chosen from ```list_of_options```.
+
+    '''
+    if len(list_of_options) != len(probabilities):
+        msg = ("Couldn't sample from choose_wighted tuple, list_of_options and "
+               "probabilities lists must be same length, found {} and {}.".format(
+                   len(list_of_options), len(probabilities)
+               ))
+        raise ScaperError(msg)
+
+    probabilities = np.asarray(probabilities)
+
+    if probabilities.min() < 0 or probabilities.max() > 1:
+        msg = ("Couldn't sample from choose_wighted tuple, values in "
+               "probabilities are outside the allowed range [0, 1].")
+        raise ScaperError(msg)
+
+    if not np.allclose(probabilities.sum(), 1):
+        msg = ("Couldn't sample from choose_weighted tuple, probabilities do not"
+               "sum to 1.")
+        raise ScaperError(msg)
+    
+    return random_state.choice(list_of_options, p=probabilities)
+
+
 def _sample_trunc_norm(mu, sigma, trunc_min, trunc_max, random_state):
     '''
     Return a random value sampled from a truncated normal distribution with
