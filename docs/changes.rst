@@ -2,6 +2,10 @@
 
 Changelog
 ---------
+v1.6.5
+~~~~~~
+- Added a new distirbution tuple: ``("choose_weighted", list_of_options, probabilities)``, which supports weighted sampling: ``list_of_options[i]`` is chosen with probability ``probabilities[i]``.
+
 v1.6.4
 ~~~~~~
 - Scaper.generate now accepts a new argument for controlling trade-off between speed and quality in pitch shifting and time stretching:
