@@ -2,8 +2,8 @@
 
 Changelog
 ---------
-v1.6.5
-~~~~~~
+v1.6.5.rc0
+~~~~~~~~~~
 - Added a new distirbution tuple: ``("choose_weighted", list_of_options, probabilities)``, which supports weighted sampling: ``list_of_options[i]`` is chosen with probability ``probabilities[i]``.
 
 v1.6.4
