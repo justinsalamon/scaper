@@ -483,7 +483,7 @@ def _validate_distribution(dist_tuple):
         probabilities = np.asarray(dist_tuple[2])
         if probabilities.min() < 0 or probabilities.max() > 1:
             msg = ('Values in the probabilities list of the "choose_weighted" '
-                   'distirbution tuple must be in the range [0, 1].')
+                   'distribution tuple must be in the range [0, 1].')
             raise ScaperError(msg)
         if not np.allclose(probabilities.sum(), 1):
             msg = ('Values in the probabilities list of the "choose_weighted" '
