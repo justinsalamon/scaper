@@ -37,18 +37,18 @@ from .version import version as scaper_version
 
 # HEADS UP! Adding a new distribution tuple?
 # Make sure it's properly handled in all of the following:
-# SUPPORTED_DIST x
-# _validate_distribution x
-# _validate_time x
-# _validate_duration x
-# _validate_time_stretch x
-# _validate_pitch_shift x
-# _validate_label x
-# _validate_source_file x
-# _validate_snr x
-# _ensure_satisfiable_source_time_tuple x
-# _instantiate_event x
-# add_background (docstring) x
+# SUPPORTED_DIST
+# _validate_distribution
+# _validate_time
+# _validate_duration
+# _validate_time_stretch
+# _validate_pitch_shift
+# _validate_label
+# _validate_source_file
+# _validate_snr
+# _ensure_satisfiable_source_time_tuple
+# _instantiate_event
+# add_background (docstring)
 # add_event (docstring)
 SUPPORTED_DIST = {"const": _sample_const,
                   "choose": _sample_choose,
