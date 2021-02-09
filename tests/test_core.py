@@ -915,6 +915,14 @@ def test_ensure_satisfiable_source_time_tuple():
     assert (warn)
     assert np.allclose(_adjusted[1], [0, 1, 2, 5])
 
+    _test_dist = ('choose_weighted', [0, 1, 2, 10, 12, 15, 20], 
+                  [0.1, 0.2, 0.05, 0.05, 0.3, 0.1, 0.2])
+    _adjusted, warn = scaper.core._ensure_satisfiable_source_time_tuple(
+        _test_dist, source_duration, event_duration)
+    assert (warn)
+    assert np.allclose(_adjusted[1], [0, 1, 2, 5, 5, 5, 5])
+    assert np.allclose(_adjusted[2], [0.1, 0.2, 0.05, 0.05, 0.3, 0.1, 0.2])
+
 
 def test_validate_distribution():
 
