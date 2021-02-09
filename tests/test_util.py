@@ -9,7 +9,7 @@ from scaper.util import _set_temp_logging_level
 from scaper.util import _validate_folder_path
 from scaper.util import _get_sorted_files
 from scaper.util import _populate_label_list
-from scaper.util import _sample_trunc_norm, _sample_choose
+from scaper.util import _sample_trunc_norm, _sample_choose, _sample_choose_weighted
 from scaper.util import max_polyphony
 from scaper.util import polyphony_gini
 from scaper.util import is_real_number, is_real_array
@@ -156,6 +156,24 @@ def test_sample_choose():
     # using choose with duplicates will issue a warning
     rng = _check_random_state(0)
     pytest.warns(ScaperWarning, _sample_choose, [0, 1, 2, 2, 2], rng)
+
+
+def test_sample_choose_weighted():
+    # make sure probabilities are factored in
+    rng = _check_random_state(0)
+    assert _sample_choose_weighted([0, 1, 2], [1, 0, 0], rng) == 0
+    assert _sample_choose_weighted([0, 1, 2], [0, 1, 0], rng) == 1
+    assert _sample_choose_weighted([0, 1, 2], [0, 0, 1], rng) == 2
+
+    samples = []
+    for _ in range(100000):
+        samples.append(_sample_choose_weighted([0, 1], [0.3, 0.7], rng))
+    
+    samples = np.asarray(samples)
+    zero_ratio = (samples == 0).sum() / len(samples)
+    one_ratio = (samples == 1).sum() / len(samples)
+    assert np.allclose(zero_ratio, 0.3, atol=1e-2)
+    assert np.allclose(one_ratio, 0.7, atol=1e-2)
 
 
 def test_sample_trunc_norm():
