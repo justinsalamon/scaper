@@ -34,6 +34,22 @@ from .audio import get_integrated_lufs
 from .audio import peak_normalize
 from .version import version as scaper_version
 
+
+# HEADS UP! Adding a new distribution tuple?
+# Make sure it's properly handled in all of the following:
+# SUPPORTED_DIST x
+# _validate_distribution x
+# _validate_time x
+# _validate_duration x
+# _validate_time_stretch x
+# _validate_pitch_shift x
+# _validate_label x
+# _validate_source_file x
+# _validate_snr x
+# _ensure_satisfiable_source_time_tuple x
+# _instantiate_event x
+# add_background (docstring) x
+# add_event (docstring)
 SUPPORTED_DIST = {"const": _sample_const,
                   "choose": _sample_choose,
                   "choose_weighted": _sample_choose_weighted,
@@ -550,6 +566,12 @@ def _ensure_satisfiable_source_time_tuple(source_time, source_duration, event_du
                 source_time[1][i] = max(0, source_duration - event_duration)
         source_time[1] = list(set(source_time[1]))
 
+    # For weighted_choose we do the same as choose but without removing duplicates
+    elif source_time[0] == 'choose_weighted':
+        for i, t in enumerate(source_time[1]):
+            if t + event_duration > source_duration:
+                source_time[1][i] = max(0, source_duration - event_duration)
+
     # If it's a uniform distribution, tuple must be of length 3, We change the 3rd
     # item to source_duration - event_duration so that we stay in bounds. If the min
     # out of bounds, we change it to be source_duration - event_duration.
@@ -619,7 +641,7 @@ def _validate_label(label, allowed_labels):
             raise ScaperError(
                 'Label value must match one of the available labels: '
                 '{:s}'.format(str(allowed_labels)))
-    elif label[0] == "choose":
+    elif label[0] == "choose" or label[0] == "choose_weighted":
         if label[1]:  # list is not empty
             if not set(label[1]).issubset(set(allowed_labels)):
                 raise ScaperError(
@@ -663,8 +685,8 @@ def _validate_source_file(source_file_tuple, label_tuple):
         if label_tuple[0] != "const" or label_tuple[1] != parent_name:
             raise ScaperError(
                 "Source file's parent folder name does not match label.")
-    # Otherwise it must be specified using "choose"
-    elif source_file_tuple[0] == "choose":
+    # Otherwise it must be specified using one of "choose" or "choose_weighted"
+    elif source_file_tuple[0] == "choose" or source_file_tuple[0] == "choose_weighted":
         if source_file_tuple[1]:  # list is not empty
             if not all(os.path.isfile(x) for x in source_file_tuple[1]):
                 raise ScaperError(
@@ -701,7 +723,7 @@ def _validate_time(time_tuple):
                 time_tuple[1] < 0):
             raise ScaperError(
                 'Time must be a real non-negative number.')
-    elif time_tuple[0] == "choose":
+    elif time_tuple[0] == "choose" or time_tuple[0] == "choose_weighted":
         if (not time_tuple[1] or
                 not is_real_array(time_tuple[1]) or
                 not all(x is not None for x in time_tuple[1]) or
@@ -753,7 +775,7 @@ def _validate_duration(duration_tuple):
                 duration_tuple[1] <= 0):
             raise ScaperError(
                 'Duration must be a real number greater than zero.')
-    elif duration_tuple[0] == "choose":
+    elif duration_tuple[0] == "choose" or duration_tuple[0] == "choose_weighted":
         if (not duration_tuple[1] or
                 not is_real_array(duration_tuple[1]) or
                 not all(x > 0 for x in duration_tuple[1])):
@@ -802,7 +824,7 @@ def _validate_snr(snr_tuple):
         if not is_real_number(snr_tuple[1]):
             raise ScaperError(
                 'SNR must be a real number.')
-    elif snr_tuple[0] == "choose":
+    elif snr_tuple[0] == "choose" or snr_tuple[0] == "choose_weighted":
         if (not snr_tuple[1] or
                 not is_real_array(snr_tuple[1])):
             raise ScaperError(
@@ -838,7 +860,7 @@ def _validate_pitch_shift(pitch_shift_tuple):
             if not is_real_number(pitch_shift_tuple[1]):
                 raise ScaperError(
                     'Pitch shift must be a real number.')
-        elif pitch_shift_tuple[0] == "choose":
+        elif pitch_shift_tuple[0] == "choose" or pitch_shift_tuple[0] == "choose_weighted":
             if (not pitch_shift_tuple[1] or
                     not is_real_array(pitch_shift_tuple[1])):
                 raise ScaperError(
@@ -877,7 +899,7 @@ def _validate_time_stretch(time_stretch_tuple):
                     time_stretch_tuple[1] <= 0):
                 raise ScaperError(
                     'Time stretch must be a real number greater than zero.')
-        elif time_stretch_tuple[0] == "choose":
+        elif time_stretch_tuple[0] == "choose" or time_stretch_tuple[0] == "choose_weighted":
             if (not time_stretch_tuple[1] or
                     not is_real_array(time_stretch_tuple[1]) or
                     not all(x > 0 for x in time_stretch_tuple[1])):
@@ -1157,18 +1179,26 @@ class Scaper(object):
           value will be chosen at random from all available labels or files
           as determined automatically by Scaper by examining the file
           structure of ``bg_path`` provided during initialization.
+        * ``("choose_weighted", valuelist, probabilities)``: choose a value
+          from ``valuelist`` via weighted sampling, where the probability of
+          sampling ``valuelist[i]`` is given by ``probabilities[i]``. The
+          ``probabilities`` list must contain a valid probability distribution,
+          i.e., all values must be in the range [0, 1] and sum to one.
         * ``("uniform", min_value, max_value)`` : sample a random
           value from a uniform distribution between ``min_value``
           and ``max_value``.
         * ``("normal", mean, stddev)`` : sample a random value from a
           normal distribution defined by its mean ``mean`` and
           standard deviation ``stddev``.
+        * ``("truncnorm", mean, stddev, min, max)``: sapmle a random value from 
+        a truncated normal distribution defined by its mean ``mean``, standard
+        deviation ``stddev``, minimum value ``min`` and maximum value ``max``.
 
         IMPORTANT: not all parameters support all distribution tuples. In
-        particular, ``label`` and ``source_file`` only support ``"const"`` and
-        ``"choose"``, whereas ``source_time`` supports all distribution tuples.
-        As noted above, only ``label`` and ``source_file`` support providing an
-        empty ``valuelist`` with ``"choose"``.
+        particular, ``label`` and ``source_file`` only support ``"const"``,
+        ``"choose"`` and ``choose_weighted``, whereas ``source_time`` supports 
+        all distribution tuples. As noted above, only ``label`` and ``source_file`` 
+        support providing an empty ``valuelist`` with ``"choose"``.
         '''
 
         # These values are fixed for the background sound
@@ -1268,18 +1298,26 @@ class Scaper(object):
           source files as determined automatically by Scaper by examining
           the file structure of ``fg_path`` provided during
           initialization.
+        * ``("choose_weighted", valuelist, probabilities)``: choose a value
+          from ``valuelist`` via weighted sampling, where the probability of
+          sampling ``valuelist[i]`` is given by ``probabilities[i]``. The
+          ``probabilities`` list must contain a valid probability distribution,
+          i.e., all values must be in the range [0, 1] and sum to one.
         * ``("uniform", min_value, max_value)`` : sample a random
           value from a uniform distribution between ``min_value``
           and ``max_value`` (including ``max_value``).
         * ``("normal", mean, stddev)`` : sample a random value from a
           normal distribution defined by its mean ``mean`` and
           standard deviation ``stddev``.
+        * ``("truncnorm", mean, stddev, min, max)``: sapmle a random value from 
+        a truncated normal distribution defined by its mean ``mean``, standard
+        deviation ``stddev``, minimum value ``min`` and maximum value ``max``.
 
         IMPORTANT: not all parameters support all distribution tuples. In
-        particular, ``label`` and ``source_file`` only support ``"const"`` and
-        ``"choose"``, whereas the remaining parameters support all distribution
-        tuples. As noted above, only ``label`` and ``source_file`` support
-        providing an empty ``valuelist`` with ``"choose"``.
+        particular, ``label`` and ``source_file`` only support ``"const"``,
+        ``"choose"`` and ``"choose_weighted"``, whereas the remaining parameters 
+        support all distribution tuples. As noted above, only ``label`` and 
+        ``source_file`` support providing an empty ``valuelist`` with ``"choose"``.
 
         See Also
         --------
@@ -1378,6 +1416,7 @@ class Scaper(object):
             allowed_labels = self.fg_labels
 
         # determine label
+        # special case: choose tuple with empty list
         if event.label[0] == "choose" and not event.label[1]:
             label_tuple = list(event.label)
             label_tuple[1] = allowed_labels
@@ -1403,9 +1442,9 @@ class Scaper(object):
             used_labels.append(label)
 
         # determine source file
+        # special case: choose tuple with empty list
         if event.source_file[0] == "choose" and not event.source_file[1]:
-            source_files = _get_sorted_files(
-                os.path.join(file_path, label))
+            source_files = _get_sorted_files(os.path.join(file_path, label))
             source_file_tuple = list(event.source_file)
             source_file_tuple[1] = source_files
             source_file_tuple = tuple(source_file_tuple)
