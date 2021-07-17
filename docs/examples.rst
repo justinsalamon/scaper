@@ -64,8 +64,11 @@ Example: synthesizing 1000 soundscapes in one go
 
         # reset the event specifications for foreground and background at the 
         # beginning of each loop to clear all previously added events
-        sc.reset_bg_spec()
-        sc.reset_fg_spec()
+        # These two donnot work anymore. Use the following ones.
+        # sc.reset_bg_spec()
+        # sc.reset_fg_spec()
+        sc.reset_bg_event_spec()
+        sc.reset_fg_event_spec()
 
         # add background
         sc.add_background(label=('const', 'noise'),
