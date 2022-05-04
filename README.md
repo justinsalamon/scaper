@@ -87,6 +87,7 @@ To help you get started with scaper, please see this [step-by-step tutorial](htt
 ```python
 import scaper
 import numpy as np
+import os
 
 # OUTPUT FOLDER
 outfolder = 'audio/soundscapes/'
